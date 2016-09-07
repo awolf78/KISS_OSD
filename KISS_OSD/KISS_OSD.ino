@@ -143,9 +143,10 @@ will allow you to change the bat_mAh_warning setting while the quad is disarmed.
 feature:
 - set BAT_AUX_DV_CHANNEL to the Aux channel you wish to use
 - setup your radio's DV to BAT_AUX_DV_CHANNEL
-Set the DV on the radio approximately in the middle. Once powered up, arm and disarm to be able 
-to change the mAh setting. Turning the dial up with increase bat_mAh_warning  by BAT_MAH_INCREMENT, 
-turning it down will decrease it by BAT_MAH_INCREMENT. Arm your quad to save the value.
+Set the DV on the radio approximately in the middle. Once powered up, arm and disarm immediately to be able 
+to change the mAh setting. You need to arm and disarm immediately every time your want to change this setting.
+Turning the dial up with increase bat_mAh_warning  by BAT_MAH_INCREMENT, turning it down will decrease it by 
+BAT_MAH_INCREMENT. Arm your quad to save the value.
 To turn the this feature off, set BAT_AUX_DV_CHANNEL = 0;
 To turn the battery warning off as well set bat_mAh_warning = -1;
 In a future version I will probably replace the mAh adjustment with a OSD menu entry - stay tuned :)
@@ -254,6 +255,7 @@ static unsigned long time = 0;
 static unsigned long total_time = 0;
 static boolean bat_clear = true;
 static boolean save_bat_warning = false;
+static boolean unblock_bat_DV = false;
 static int16_t last_Bat_Aux_Val = -10000;
 static boolean armedOnce = false;
 
@@ -483,6 +485,7 @@ void loop(){
                save_bat_warning = false;
                writeBatWarning();
              }
+             unblock_bat_DV = true;
            }
            // switch armed => disarmed
            else {
@@ -831,7 +834,10 @@ void loop(){
     if(BAT_AUX_DV_CHANNEL > 0 && armedOnce && armed != 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
       last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
     }
-    if(save_bat_warning || (armedOnce && armed == 0 && BAT_AUX_DV_CHANNEL > 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1])) {
+    if(start_time > 0 && (millis() - start_time) > 2000) {
+      unblock_bat_DV = false;
+    }
+    if(unblock_bat_DV && (save_bat_warning || (armedOnce && armed == 0 && BAT_AUX_DV_CHANNEL > 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]))) {
       if(!save_bat_warning) {
         cleanScreen();
       }
@@ -849,15 +855,15 @@ void loop(){
           }
         }
       }      
-        OSD.setCursor(3,7);
-        OSD.print( "new bat warning mah:" );
-        OSD.setCursor(8,8);
-        static char mAh_Warning[30];
-        print_int16(bat_mAh_warning, mAh_Warning,0,0);
-        OSD.print(mAh_Warning);
-        OSD.setCursor(6,9);
-        OSD.print( "arm to save" );
-        save_bat_warning = true;
+      OSD.setCursor(3,7);
+      OSD.print( "new bat warning mah:" );
+      OSD.setCursor(8,8);
+      static char mAh_Warning[30];
+      print_int16(bat_mAh_warning, mAh_Warning,0,0);
+      OSD.print(mAh_Warning);
+      OSD.setCursor(6,9);
+      OSD.print( "arm to save" );
+      save_bat_warning = true;
       if(abs(abs(last_Bat_Aux_Val) - abs(AuxChanVals[BAT_AUX_DV_CHANNEL-1])) > DV_JITTER) {
         last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
       }
