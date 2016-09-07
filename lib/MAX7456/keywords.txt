@@ -1,0 +1,149 @@
+#######################################
+# Syntax Coloring Map SPI
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+version	KEYWORD2
+
+begin	KEYWORD2
+end	KEYWORD2
+
+display	KEYWORD2
+noDisplay	KEYWORD2
+video	KEYWORD2
+noVideo	KEYWORD2
+
+reset	KEYWORD2
+resetIsBusy	KEYWORD2
+clear	KEYWORD2
+clearIsBusy	KEYWORD2
+videoIsBad	KEYWORD2
+status	KEYWORD2
+notInVSync	KEYWORD2
+notInHSync	KEYWORD2
+lossOfSync	KEYWORD2
+
+setSyncSource	KEYWORD2
+setSwitchingTime	KEYWORD2
+setBlinkingTime	KEYWORD2
+setBlinkingDuty	KEYWORD2
+
+setWhiteLevel	KEYWORD2
+setBlackLevel	KEYWORD2
+setGrayLevel	KEYWORD2
+
+videoSystem	KEYWORD2
+setDefaultSystem	KEYWORD2
+
+setTextOffset	KEYWORD2
+setTextArea	KEYWORD2
+setCharEncoding	KEYWORD2
+
+videoBackground	KEYWORD2
+grayBackground	KEYWORD2
+blink	KEYWORD2
+noBlink	KEYWORD2
+normalColor	KEYWORD2
+invertColor	KEYWORD2
+setTextAttributes	KEYWORD2
+
+lineWrap	KEYWORD2
+noLineWrap	KEYWORD2
+pageWrap	KEYWORD2
+noPageWrap	KEYWORD2
+cursor	KEYWORD2
+noCursor	KEYWORD2
+home	KEYWORD2
+setCursor	KEYWORD2
+moveCursor	KEYWORD2
+
+write	KEYWORD2
+
+readChar	KEYWORD2
+createChar	KEYWORD2
+
+columns	KEYWORD2
+rows	KEYWORD2
+cursorColumn	KEYWORD2
+cursorRow	KEYWORD2
+
+version	KEYWORD2
+
+
+#######################################
+# Classes (KEYWORD3)
+#######################################
+
+MAX7456	KEYWORD3
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+MAX7456_ASCII	LITERAL1
+MAX7456_MAXIM	LITERAL1
+MAX7456_NTSC	LITERAL1
+MAX7456_PAL	LITERAL1
+
+MAX7456_INTSYNC	LITERAL1
+MAX7456_EXTSYNC	LITERAL1
+MAX7456_AUTOSYNC	LITERAL1
+
+MAX7456_CUR_FWD	LITERAL1
+MAX7456_CUR_BACK	LITERAL1
+MAX7456_CUR_UP	LITERAL1
+MAX7456_CUR_DOWN	LITERAL1
+MAX7456_CUR_HT	LITERAL1
+MAX7456_CUR_FF	LITERAL1
+MAX7456_CUR_CR	LITERAL1
+
+MAX7456_FULLSCREEN	LITERAL1
+MAX7456_BORDERED	LITERAL1
+MAX7456_ACTIONSAFE	LITERAL1
+MAX7456_TITLESAFE	LITERAL1
+
+MAX7456_COLS_N0	LITERAL1
+MAX7456_COLS_N1	LITERAL1
+MAX7456_COLS_N2	LITERAL1
+MAX7456_COLS_N3	LITERAL1
+MAX7456_ROWS_N0	LITERAL1
+MAX7456_ROWS_N1	LITERAL1
+MAX7456_ROWS_N2	LITERAL1
+MAX7456_ROWS_N3	LITERAL1
+
+MAX7456_COLS_P0	LITERAL1
+MAX7456_COLS_P1	LITERAL1
+MAX7456_COLS_P2	LITERAL1
+MAX7456_COLS_P3	LITERAL1
+MAX7456_ROWS_P0	LITERAL1
+MAX7456_ROWS_P1	LITERAL1
+MAX7456_ROWS_P2	LITERAL1
+MAX7456_ROWS_P3	LITERAL1
+
+MAX7456_HPX_C	LITERAL1
+MAX7456_VPX_C	LITERAL1
+MAX7456_HPX_N	LITERAL1
+MAX7456_VPX_N	LITERAL1
+MAX7456_HPX_P	LITERAL1
+MAX7456_VPX_P	LITERAL1
+
+MAX7456_HOS_MAX	LITERAL1
+MAX7456_HOS_MIN	LITERAL1
+MAX7456_VOS_MAX	LITERAL1
+MAX7456_VOS_MIN	LITERAL1
+
+
+#######################################
+# Variables (LITERAL2)
+#######################################
+
+
