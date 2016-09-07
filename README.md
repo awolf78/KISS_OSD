@@ -20,3 +20,7 @@ The version on the flyduino page is very basic. Some people like that. This one 
 
 * You do not use KISS 24RE ESCs
 * Your radio does not have any digital volume control
+
+## You like what I did and want to support me
+
+* www.paypal.me/awolf78
