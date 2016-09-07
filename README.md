@@ -6,19 +6,17 @@
 
 ## How-to upload it in your MinimOSD
 
-How-to from shaydn: http://www.rcgroups.com/forums/showpost.php?p=34092758
+* http://kiss.flyduino.net/dwkb/flash-kiss-osd/
 
-How-to from RevsUK: http://www.rcgroups.com/forums/showpost.php?p=34195714
+## Why use this version? Why not use the one from flyduino?
 
-My successful sequence was as follows:
+The version on the flyduino page is very basic. Some people like that. This one can do more:
 
-1. Get MW_OSD firmware and open in Arduino IDE.
-2. Edit Config.h to comment out the line "#define LOADFONT_DEFAULT"
-3. Download the following perl script and make it executable (chmod 755 mcm2hl.pl) https://github.com/AeroQuad/AeroQuad/blob/master/MAX7456_Font_Updater/mcm2h.pl
-4. Run the perl script on the Kiss OSD font file included in the KISS OSD download
-5. Copy the contents of the output file (it'll have the same filename as the .mcm font file, but have a .h extension) and replace the contents of the fontD.h file in the MW_OSD project in Arduino IDE
-6. Upload that sketch to your Chinadoge
-7. Disconnect from USB, and power your quad by Lipo - watch on the VTX feed, you'll see some screens, then it will go blank, wait until the screen comes back with completed
-8. Now upload the KISS_OSD sketch to your Chinadoge
-9. Be Happy and informed during your flights
+* Displays statistics when you land (such as max amps, max watts, max RPM, etc.)
+* You can make the OSD more or less busy with information using a digital volume (DV) dial on your radio
+* You can set a battery low warning which will tell you at which mAh value you should land. You can set the value with a DV on your radio. It will be stored on the OSD and it will use the same value next time it gets plugged in.
 
+## When should you not use this version?
+
+* You do not use KISS 24RE ESCs
+* Your radio does not have any digital volume control
