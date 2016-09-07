@@ -14,6 +14,7 @@ by Greg
 
 KISS FC OSD v1.4
 by Alexander Wolf (awolf78@gmx.de)
+Donate: www.paypal.me/awolf78
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
