@@ -21,6 +21,16 @@ The version on the flyduino page is very basic. Some people like that. This one 
 * You do not use KISS 24RE ESCs
 * Your radio does not have any digital volume control
 
+## How do I get this to work?
+
+* Read this very carefully: http://kiss.flyduino.net/dwkb/flash-kiss-osd/
+* Make sure you have Arduino 1.0.5 installed
+* Make sure your FTDI is working and connected properly
+* Open KISS_OSD.ino with Arduino. Carefully read the configuration section in the beginning of the file.
+* Setup the digital volume dials on your radio matching the configuration in the .ino file
+* Flash to your KISS/minimOSD
+* Fly and enjoy!
+
 ## You like what I did and want to support me
 
 * www.paypal.me/awolf78
