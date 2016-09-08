@@ -92,7 +92,7 @@ For more information, please refer to <http://unlicense.org>
 
 // reduced mode channel config
 //=============================
-#define RED_MODE_AUX_CHAN 1 // 0-4, 0 = none
+#define RED_MODE_AUX_CHAN 1 // 1-4
 
 #define RED_ON_AUX_LOW
 //#define RED_ON_AUX_MID
@@ -253,10 +253,12 @@ static uint8_t  reducedMode = 0;
 static unsigned long start_time = 0;
 static unsigned long time = 0;
 static unsigned long total_time = 0;
+static unsigned long red_DV_change_time = 0;
 static boolean bat_clear = true;
 static boolean save_bat_warning = false;
 static boolean unblock_bat_DV = false;
 static int16_t last_Bat_Aux_Val = -10000;
+static int16_t last_Red_Aux_Val = -10000;
 static boolean armedOnce = false;
 
 uint8_t print_int16(int16_t p_int, char *str, uint8_t dec, uint8_t AlignLeft){
@@ -481,11 +483,13 @@ void loop(){
              if(BAT_AUX_DV_CHANNEL > 0) {
                last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
              }
+             last_Red_Aux_Val = AuxChanVals[RED_MODE_AUX_CHAN-1];
              if(save_bat_warning) {
                save_bat_warning = false;
                writeBatWarning();
              }
              unblock_bat_DV = true;
+             red_DV_change_time = 0;
            }
            // switch armed => disarmed
            else {
@@ -831,6 +835,9 @@ void loop(){
     }
 
     print_time(time, Time);
+    if(armed == 0 && armedOnce && last_Red_Aux_Val != AuxChanVals[RED_MODE_AUX_CHAN-1]) {
+      red_DV_change_time = millis();
+    }
     if(BAT_AUX_DV_CHANNEL > 0 && armedOnce && armed != 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
       last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
     }
@@ -869,7 +876,7 @@ void loop(){
       }
     }
     else {
-      if(armed == 0 && (displayStats || (AuxChanVals[RED_MODE_AUX_CHAN-1] > RED_DISPLAY_STATS_DV)) && armedOnce) {
+      if(red_DV_change_time == 0 && armed == 0 && (displayStats || (AuxChanVals[RED_MODE_AUX_CHAN-1] > RED_DISPLAY_STATS_DV)) && armedOnce) {
         if(displayStats || (AuxChanVals[RED_MODE_AUX_CHAN-1] > RED_DISPLAY_STATS_DV)){
           middle_infos_y = middle_infos_y - 4;
         }
@@ -1004,6 +1011,9 @@ void loop(){
               bat_clear = true;
             }
           }
+        }
+        if(red_DV_change_time > 0 && (millis() - red_DV_change_time) > 3000 && last_Red_Aux_Val == AuxChanVals[RED_MODE_AUX_CHAN-1]) {
+          red_DV_change_time = 0;
         }
       }
     }
