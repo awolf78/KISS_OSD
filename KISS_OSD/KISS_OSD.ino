@@ -426,7 +426,7 @@ void loop(){
    
     while(recBytes < minBytes && micros()-LastLoopTime < 20000){
       #define STARTCOUNT 2
-      while(Serial.available()) serialBuf[recBytes++] = Serial.read();
+      while(Serial.available() && recBytes < 255) serialBuf[recBytes++] = Serial.read();
       if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
       if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
       if(recBytes == minBytes){
@@ -735,6 +735,7 @@ void loop(){
     print_time(time, Time);
     if(armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[DV_CHAN-1]) {
       DV_change_time = millis();
+      last_Aux_Val = AuxChanVals[DV_CHAN-1];
     }
     if(BAT_AUX_DV_CHANNEL > 0 && armedOnce && armed != 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
       last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
