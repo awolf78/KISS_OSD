@@ -3,6 +3,8 @@
 #include <WiFiServer.h>
 #include <WiFiUdp.h>
 #include <EEPROM.h>
+//#include <iterator>
+//#include <vector>
 
 /*
 KISS FC OSD v1.0
