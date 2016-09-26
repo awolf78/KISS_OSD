@@ -1,11 +1,3 @@
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <WiFiServer.h>
-#include <WiFiUdp.h>
-#include <EEPROM.h>
-//#include <iterator>
-//#include <vector>
-
 /*
 KISS FC OSD v1.0
 By Felix Niessen (felix.niessen@googlemail.com)
@@ -149,6 +141,10 @@ static const int16_t DV_JITTER = 40; // increase in 10s if the mAh number keeps 
 
 #include <SPI.h>
 #include <MAX7456.h>
+#include <EEPROM.h>
+#include "CMenu.h"
+#include "CSettings.h"
+
 
 const byte osdChipSelect             =            6;
 const byte masterOutSlaveIn          =            MOSI;
@@ -157,6 +153,8 @@ const byte slaveClock                =            SCK;
 const byte osdReset                  =            2;
 
 MAX7456 OSD( osdChipSelect );
+CMenu OSDMenu;
+CSettings settings;
 
 #ifdef PAL
 static const uint8_t ROWS = MAX7456_ROWS_P1;
@@ -213,10 +211,15 @@ void setup(){
   DISPLAY_ESC_CURRENT_DV = setupPPM(DISPLAY_ESC_CURRENT_DV);
   DISPLAY_STATS_DV = setupPPM(DISPLAY_STATS_DV);
   DISPLAY_ESC_TEMPERATURE_DV = setupPPM(DISPLAY_ESC_TEMPERATURE_DV);
+  settings.ReadSettings();
+  OSDMenu.Setup(&settings, &OSD);
   Serial.begin(115200);
 }
 
 static int16_t  throttle = 0;
+static int16_t  roll = 0;
+static int16_t  pitch = 0;
+static int16_t  yaw = 0;
 static uint16_t current = 0;
 static int8_t armed = 0;
 static int8_t calybGyro = 0;
@@ -428,7 +431,7 @@ void loop(){
    
     while(recBytes < minBytes && micros()-LastLoopTime < 20000){
       #define STARTCOUNT 2
-      while(Serial.available() && recBytes < 255) serialBuf[recBytes++] = Serial.read();
+      while(Serial.available()) serialBuf[recBytes++] = Serial.read();
       if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
       if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
       if(recBytes == minBytes){
@@ -441,13 +444,16 @@ void loop(){
          if(checksum == serialBuf[recBytes-1]){
           
            throttle = ((serialBuf[STARTCOUNT]<<8) | serialBuf[1+STARTCOUNT])/10;
+           roll = 1000 + ((serialBuf[2+STARTCOUNT]<<8) | serialBuf[3+STARTCOUNT]);
+           pitch = 1000 + ((serialBuf[4+STARTCOUNT]<<8) | serialBuf[5+STARTCOUNT]);
+           yaw = 1000 + ((serialBuf[6+STARTCOUNT]<<8) | serialBuf[7+STARTCOUNT]);
            LipoVoltage =   ((serialBuf[17+STARTCOUNT]<<8) | serialBuf[18+STARTCOUNT]);
 
            int8_t current_armed = serialBuf[16+STARTCOUNT];
            // switch disarmed => armed
            if (armed == 0 && current_armed > 0) {
              start_time = millis();
-						 triggerCleanScreen = true;
+	     triggerCleanScreen = true;
              armedOnce = true;
              if(BAT_AUX_DV_CHANNEL > 0) {
                last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
@@ -584,344 +590,350 @@ void loop(){
     
   
     while (!OSD.notInVSync());
-    
-    
-    for(i=0;i<10;i++){
-      Motor1KERPM[i] = ' ';
-      Motor2KERPM[i] = ' ';
-      Motor3KERPM[i] = ' ';
-      Motor4KERPM[i] = ' ';
+    OSDMenu.GetDispatcher()->ProcessStickInputs(roll, pitch, yaw, armed);
+    if(OSDMenu.IsActive())
+    {
+      OSDMenu.Show();
+    }
+    else
+    {
+      for(i=0;i<10;i++){
+        Motor1KERPM[i] = ' ';
+        Motor2KERPM[i] = ' ';
+        Motor3KERPM[i] = ' ';
+        Motor4KERPM[i] = ' ';
+        
+        Motor1Current[i] = ' ';
+        Motor2Current[i] = ' ';
+        Motor3Current[i] = ' ';
+        Motor4Current[i] = ' ';
+        
+        ESC1Temp[i] = ' ';
+        ESC2Temp[i] = ' ';
+        ESC3Temp[i] = ' ';
+        ESC4Temp[i] = ' ';
+        
+        LipoVoltC[i] = ' ';
+        LipoMinVoltC[i] = ' ';
+        LipoMAHC[i] = ' ';
+        Throttle[i] = ' ';
+        MaxTempC[i] = ' ';
+        MaxAmpC[i] = ' ';
+        MaxRPMC[i] = ' ';
+        MaxWattC[i] = ' ';
+      }
       
-      Motor1Current[i] = ' ';
-      Motor2Current[i] = ' ';
-      Motor3Current[i] = ' ';
-      Motor4Current[i] = ' ';
       
-      ESC1Temp[i] = ' ';
-      ESC2Temp[i] = ' ';
-      ESC3Temp[i] = ' ';
-      ESC4Temp[i] = ' ';
+      uint8_t ThrottlePos = print_int16(throttle, Throttle,0,1);
+      Throttle[ThrottlePos++] = '%';
       
-      LipoVoltC[i] = ' ';
-      LipoMinVoltC[i] = ' ';
-      LipoMAHC[i] = ' ';
-      Throttle[i] = ' ';
-      MaxTempC[i] = ' ';
-      MaxAmpC[i] = ' ';
-      MaxRPMC[i] = ' ';
-      MaxWattC[i] = ' ';
-    }
-    
-    
-    uint8_t ThrottlePos = print_int16(throttle, Throttle,0,1);
-    Throttle[ThrottlePos++] = '%';
-    
-    uint8_t CurrentPos = print_int16(current, Current,1,0);
-    Current[CurrentPos++] = 'a';
-    Current[CurrentPos++] = 't';
-
-    KRPMPoses[0] = print_int16(motorKERPM[0], Motor1KERPM,1,1);
-    Motor1KERPM[KRPMPoses[0]++] = 'k';
-    Motor1KERPM[KRPMPoses[0]++] = 'r';
-    
-    KRPMPoses[1] = print_int16(motorKERPM[1], Motor2KERPM,1,0);
-    Motor2KERPM[KRPMPoses[1]++] = 'k';
-    Motor2KERPM[KRPMPoses[1]++] = 'r';
-    
-    KRPMPoses[2] = print_int16(motorKERPM[2], Motor3KERPM,1,0);
-    Motor3KERPM[KRPMPoses[2]++] = 'k';
-    Motor3KERPM[KRPMPoses[2]++] = 'r';
-   
-    KRPMPoses[3] = print_int16(motorKERPM[3], Motor4KERPM,1,1);
-    Motor4KERPM[KRPMPoses[3]++] = 'k';
-    Motor4KERPM[KRPMPoses[3]++] = 'r';
-    
-    
-    CurrentPoses[0] = print_int16(motorCurrent[0], Motor1Current,2,1);
-    Motor1Current[CurrentPoses[0]++] = 'a';
-    
-    CurrentPoses[1] = print_int16(motorCurrent[1], Motor2Current,2,0);
-    Motor2Current[CurrentPoses[1]++] = 'a';
-    
-    CurrentPoses[2] = print_int16(motorCurrent[2], Motor3Current,2,0);
-    Motor3Current[CurrentPoses[2]++] = 'a';
-   
-    CurrentPoses[3] = print_int16(motorCurrent[3], Motor4Current,2,1);
-    Motor4Current[CurrentPoses[3]++] = 'a';
-    
-    
-    
-    TempPoses[0] = print_int16(ESCTemps[0], ESC1Temp,0,1);
-    ESC1Temp[TempPoses[0]++] = '°';
-    
-    TempPoses[1] = print_int16(ESCTemps[1], ESC2Temp,0,0);
-    ESC2Temp[TempPoses[1]++] = '°';
-    
-    TempPoses[2] = print_int16(ESCTemps[2], ESC3Temp,0,0);
-    ESC3Temp[TempPoses[2]++] = '°';
-   
-    TempPoses[3] = print_int16(ESCTemps[3], ESC4Temp,0,1);
-    ESC4Temp[TempPoses[3]++] = '°';
-
-    uint8_t lipoVoltPos = print_int16(LipoVoltage, LipoVoltC,2,1);
-    LipoVoltC[lipoVoltPos++] = 'v';
-    uint8_t lipoMinVoltPos = print_int16(MinBat, LipoMinVoltC,2,1);
-    LipoMinVoltC[lipoMinVoltPos++] = 'v';
-    
-    uint8_t lipoMAHPos = print_int16(LipoMAH, LipoMAHC,0,1);
-    LipoMAHC[lipoMAHPos++] = 'm';
-    LipoMAHC[lipoMAHPos++] = 'a';
-    LipoMAHC[lipoMAHPos++] = 'h';
-    
-    uint8_t pos = print_int16(MaxAmps, MaxAmpC,1,1);
-    MaxAmpC[pos++] = 'a';
-
-    pos = print_int16(MaxRPMs, MaxRPMC,1,1);
-    MaxRPMC[pos++] = 'k';
-    MaxRPMC[pos++] = 'r';
-    
-    pos = print_int16(MaxWatt, MaxWattC,1,1);
-    MaxWattC[pos++] = 'w';
-
-    uint8_t ESCmarginBot       = 0;
-    uint8_t ESCmarginTop       = 0;
-    uint8_t TMPmargin          = 0;
-    uint8_t CurrentMargin      = 0;
-    uint8_t middle_infos_y     = 7;
-
-    uint8_t displayNickname    = 0;
-    uint8_t displayRCthrottle  = 0;
-    uint8_t displayCombCurrent = 0;
-    uint8_t displayLipoVoltage = 0;
-    uint8_t displayConsumption = 0;
-    uint8_t displayKRPM        = 0;
-    uint8_t displayCurrent     = 0;
-    uint8_t displayTemperature = 0;
-    uint8_t displayStats       = 0;
-    uint8_t displayTime        = 0;
-    
-    if(triggerCleanScreen || lastAuxVal != AuxChanVals[DV_CHAN-1]){
-      lastAuxVal = AuxChanVals[DV_CHAN-1];
-      triggerCleanScreen = false;
-      cleanScreen();
-    }
-	
-    #if defined(DISPLAY_NICKNAME)
-    displayNickname = 1;
-    #endif
-    #if defined(DISPLAY_RC_THROTTLE)
-    displayRCthrottle = 1;
-    #endif
-    #if defined(DISPLAY_COMB_CURRENT)
-    displayCombCurrent = 1;
-    #endif
-    #if defined(DISPLAY_LIPO_VOLTAGE)                                                                                 
-    displayLipoVoltage = 1;
-    #endif
-    #if defined(DISPLAY_MA_CONSUMPTION)
-    displayConsumption = 1;
-    #endif
-    #if defined(DISPLAY_ESC_KRPM)
-    displayKRPM = 1;
-    #endif
-    #if defined(DISPLAY_ESC_CURRENT)
-    displayCurrent = 1;
-    #endif
-    #if defined(DISPLAY_ESC_TEMPERATURE)
-    displayTemperature = 1;
-    #endif   
-    #if defined(DISPLAY_TIMER)
-    displayTime = 1;
-    #endif
-
-    print_time(time, Time);
-    if(armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[DV_CHAN-1]) {
-      DV_change_time = millis();
-      last_Aux_Val = AuxChanVals[DV_CHAN-1];
-    }
-    if(BAT_AUX_DV_CHANNEL > 0 && armedOnce && armed != 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
-      last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
-    }
-    if(start_time > 0 && (millis() - start_time) > 2000) {
-      unblock_bat_DV = false;
-    }
-    if(unblock_bat_DV && (save_bat_warning || (armedOnce && armed == 0 && BAT_AUX_DV_CHANNEL > 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]))) {
-      if(!save_bat_warning) {
+      uint8_t CurrentPos = print_int16(current, Current,1,0);
+      Current[CurrentPos++] = 'a';
+      Current[CurrentPos++] = 't';
+  
+      KRPMPoses[0] = print_int16(motorKERPM[0], Motor1KERPM,1,1);
+      Motor1KERPM[KRPMPoses[0]++] = 'k';
+      Motor1KERPM[KRPMPoses[0]++] = 'r';
+      
+      KRPMPoses[1] = print_int16(motorKERPM[1], Motor2KERPM,1,0);
+      Motor2KERPM[KRPMPoses[1]++] = 'k';
+      Motor2KERPM[KRPMPoses[1]++] = 'r';
+      
+      KRPMPoses[2] = print_int16(motorKERPM[2], Motor3KERPM,1,0);
+      Motor3KERPM[KRPMPoses[2]++] = 'k';
+      Motor3KERPM[KRPMPoses[2]++] = 'r';
+     
+      KRPMPoses[3] = print_int16(motorKERPM[3], Motor4KERPM,1,1);
+      Motor4KERPM[KRPMPoses[3]++] = 'k';
+      Motor4KERPM[KRPMPoses[3]++] = 'r';
+      
+      
+      CurrentPoses[0] = print_int16(motorCurrent[0], Motor1Current,2,1);
+      Motor1Current[CurrentPoses[0]++] = 'a';
+      
+      CurrentPoses[1] = print_int16(motorCurrent[1], Motor2Current,2,0);
+      Motor2Current[CurrentPoses[1]++] = 'a';
+      
+      CurrentPoses[2] = print_int16(motorCurrent[2], Motor3Current,2,0);
+      Motor3Current[CurrentPoses[2]++] = 'a';
+     
+      CurrentPoses[3] = print_int16(motorCurrent[3], Motor4Current,2,1);
+      Motor4Current[CurrentPoses[3]++] = 'a';
+      
+      
+      
+      TempPoses[0] = print_int16(ESCTemps[0], ESC1Temp,0,1);
+      ESC1Temp[TempPoses[0]++] = '°';
+      
+      TempPoses[1] = print_int16(ESCTemps[1], ESC2Temp,0,0);
+      ESC2Temp[TempPoses[1]++] = '°';
+      
+      TempPoses[2] = print_int16(ESCTemps[2], ESC3Temp,0,0);
+      ESC3Temp[TempPoses[2]++] = '°';
+     
+      TempPoses[3] = print_int16(ESCTemps[3], ESC4Temp,0,1);
+      ESC4Temp[TempPoses[3]++] = '°';
+  
+      uint8_t lipoVoltPos = print_int16(LipoVoltage, LipoVoltC,2,1);
+      LipoVoltC[lipoVoltPos++] = 'v';
+      uint8_t lipoMinVoltPos = print_int16(MinBat, LipoMinVoltC,2,1);
+      LipoMinVoltC[lipoMinVoltPos++] = 'v';
+      
+      uint8_t lipoMAHPos = print_int16(LipoMAH, LipoMAHC,0,1);
+      LipoMAHC[lipoMAHPos++] = 'm';
+      LipoMAHC[lipoMAHPos++] = 'a';
+      LipoMAHC[lipoMAHPos++] = 'h';
+      
+      uint8_t pos = print_int16(MaxAmps, MaxAmpC,1,1);
+      MaxAmpC[pos++] = 'a';
+  
+      pos = print_int16(MaxRPMs, MaxRPMC,1,1);
+      MaxRPMC[pos++] = 'k';
+      MaxRPMC[pos++] = 'r';
+      
+      pos = print_int16(MaxWatt, MaxWattC,1,1);
+      MaxWattC[pos++] = 'w';
+  
+      uint8_t ESCmarginBot       = 0;
+      uint8_t ESCmarginTop       = 0;
+      uint8_t TMPmargin          = 0;
+      uint8_t CurrentMargin      = 0;
+      uint8_t middle_infos_y     = 7;
+  
+      uint8_t displayNickname    = 0;
+      uint8_t displayRCthrottle  = 0;
+      uint8_t displayCombCurrent = 0;
+      uint8_t displayLipoVoltage = 0;
+      uint8_t displayConsumption = 0;
+      uint8_t displayKRPM        = 0;
+      uint8_t displayCurrent     = 0;
+      uint8_t displayTemperature = 0;
+      uint8_t displayStats       = 0;
+      uint8_t displayTime        = 0;
+      
+      if(triggerCleanScreen || lastAuxVal != AuxChanVals[DV_CHAN-1]){
+        lastAuxVal = AuxChanVals[DV_CHAN-1];
+        triggerCleanScreen = false;
         cleanScreen();
       }
-      else {
-        if(abs(abs(last_Bat_Aux_Val) - abs(AuxChanVals[BAT_AUX_DV_CHANNEL-1])) > DV_JITTER) {
-          if(last_Bat_Aux_Val < AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
-            if((bat_mAh_warning + BAT_MAH_INCREMENT) < 32000) {
-              bat_mAh_warning += BAT_MAH_INCREMENT;
-            }
-          }
-          if(last_Bat_Aux_Val > AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
-            if((bat_mAh_warning - BAT_MAH_INCREMENT) >= 300) {
-              bat_mAh_warning -= BAT_MAH_INCREMENT;
-            }
-          }
-        }
-      }      
-      OSD.setCursor(3,7);
-      OSD.print( "new bat warning mah:" );
-      OSD.setCursor(8,8);
-      static char mAh_Warning[30];
-      print_int16(bat_mAh_warning, mAh_Warning,0,0);
-      OSD.print(mAh_Warning);
-      OSD.setCursor(6,9);
-      OSD.print( "arm to save" );
-      save_bat_warning = true;
-      if(abs(abs(last_Bat_Aux_Val) - abs(AuxChanVals[BAT_AUX_DV_CHANNEL-1])) > DV_JITTER) {
+  	
+      #if defined(DISPLAY_NICKNAME)
+      displayNickname = 1;
+      #endif
+      #if defined(DISPLAY_RC_THROTTLE)
+      displayRCthrottle = 1;
+      #endif
+      #if defined(DISPLAY_COMB_CURRENT)
+      displayCombCurrent = 1;
+      #endif
+      #if defined(DISPLAY_LIPO_VOLTAGE)                                                                                 
+      displayLipoVoltage = 1;
+      #endif
+      #if defined(DISPLAY_MA_CONSUMPTION)
+      displayConsumption = 1;
+      #endif
+      #if defined(DISPLAY_ESC_KRPM)
+      displayKRPM = 1;
+      #endif
+      #if defined(DISPLAY_ESC_CURRENT)
+      displayCurrent = 1;
+      #endif
+      #if defined(DISPLAY_ESC_TEMPERATURE)
+      displayTemperature = 1;
+      #endif   
+      #if defined(DISPLAY_TIMER)
+      displayTime = 1;
+      #endif
+  
+      print_time(time, Time);
+      if(armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[DV_CHAN-1]) {
+        DV_change_time = millis();
+        last_Aux_Val = AuxChanVals[DV_CHAN-1];
+      }
+      if(BAT_AUX_DV_CHANNEL > 0 && armedOnce && armed != 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
         last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
       }
-    }
-    else {
-      if(DV_change_time == 0 && armed == 0 && (displayStats || (AuxChanVals[DV_CHAN-1] > DISPLAY_STATS_DV)) && armedOnce) {
-        if(displayStats || (AuxChanVals[DV_CHAN-1] > DISPLAY_STATS_DV)){
-          middle_infos_y = middle_infos_y - 4;
+      if(start_time > 0 && (millis() - start_time) > 2000) {
+        unblock_bat_DV = false;
+      }
+      if(unblock_bat_DV && (save_bat_warning || (armedOnce && armed == 0 && BAT_AUX_DV_CHANNEL > 0 && last_Bat_Aux_Val != AuxChanVals[BAT_AUX_DV_CHANNEL-1]))) {
+        if(!save_bat_warning) {
+          cleanScreen();
         }
-        if(displayNickname || (AuxChanVals[DV_CHAN-1] > DISPLAY_NICKNAME_DV)){
-          OSD.setCursor( 11, middle_infos_y );
-          OSD.print( NICKNAME );
-        }
-        if (displayStats || (AuxChanVals[DV_CHAN-1] > DISPLAY_STATS_DV)){
-          middle_infos_y++;
-  
-          print_time(total_time, TotalTime);
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "time     : " );
-          OSD.print( TotalTime );
-  
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "max amps : " );
-          OSD.print( MaxAmpC );
-          if (MaxC > 0) {
-            OSD.print( "a | " );
-            OSD.print( MaxC );
-            OSD.print( "c     " );
+        else {
+          if(abs(abs(last_Bat_Aux_Val) - abs(AuxChanVals[BAT_AUX_DV_CHANNEL-1])) > DV_JITTER) {
+            if(last_Bat_Aux_Val < AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
+              if((bat_mAh_warning + BAT_MAH_INCREMENT) < 32000) {
+                bat_mAh_warning += BAT_MAH_INCREMENT;
+              }
+            }
+            if(last_Bat_Aux_Val > AuxChanVals[BAT_AUX_DV_CHANNEL-1]) {
+              if((bat_mAh_warning - BAT_MAH_INCREMENT) >= 300) {
+                bat_mAh_warning -= BAT_MAH_INCREMENT;
+              }
+            }
           }
-  
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "mah      : " );
-          OSD.print( LipoMAHC );
-  
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "max rpm : " );
-          OSD.print( MaxRPMC );
-  
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "max watt : " );
-          OSD.print( MaxWattC );
-  
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "max temp : " );
-          uint8_t MaxTempPos = print_int16(MaxTemp, MaxTempC,0,1);
-          MaxTempC[MaxTempPos++] = '°';
-          OSD.print( MaxTempC );
-          OSD.print( "        " );
-  
-          OSD.setCursor( 5, ++middle_infos_y );
-          OSD.print( "min v    : " );
-          OSD.print( LipoMinVoltC );
+        }      
+        OSD.setCursor(3,7);
+        OSD.print( "new bat warning mah:" );
+        OSD.setCursor(8,8);
+        static char mAh_Warning[30];
+        print_int16(bat_mAh_warning, mAh_Warning,0,0);
+        OSD.print(mAh_Warning);
+        OSD.setCursor(6,9);
+        OSD.print( "arm to save" );
+        save_bat_warning = true;
+        if(abs(abs(last_Bat_Aux_Val) - abs(AuxChanVals[BAT_AUX_DV_CHANNEL-1])) > DV_JITTER) {
+          last_Bat_Aux_Val = AuxChanVals[BAT_AUX_DV_CHANNEL-1];
         }
       }
       else {
-        if(displayRCthrottle || (AuxChanVals[DV_CHAN-1] > DISPLAY_RC_THROTTLE_DV)){
-          OSD.setCursor( 0, 0 );
-          //OSD.print( "throt:" );
-          OSD.print( Throttle );
-          ESCmarginTop = 1;
-        }
-          
-        if(displayNickname || (AuxChanVals[DV_CHAN-1] > DISPLAY_NICKNAME_DV)){
-          OSD.setCursor( 10, -1 );
-          OSD.print( NICKNAME );
-        }
+        if(DV_change_time == 0 && armed == 0 && (displayStats || (AuxChanVals[DV_CHAN-1] > DISPLAY_STATS_DV)) && armedOnce) {
+          if(displayStats || (AuxChanVals[DV_CHAN-1] > DISPLAY_STATS_DV)){
+            middle_infos_y = middle_infos_y - 4;
+          }
+          if(displayNickname || (AuxChanVals[DV_CHAN-1] > DISPLAY_NICKNAME_DV)){
+            OSD.setCursor( 11, middle_infos_y );
+            OSD.print( NICKNAME );
+          }
+          if (displayStats || (AuxChanVals[DV_CHAN-1] > DISPLAY_STATS_DV)){
+            middle_infos_y++;
     
-        if(displayCombCurrent || (AuxChanVals[DV_CHAN-1] > DISPLAY_COMB_CURRENT_DV)){
-          OSD.setCursor( -CurrentPos, 0 );
-          OSD.print( Current );
-          ESCmarginTop = 1;
-        }
-        
-        if(displayLipoVoltage || (AuxChanVals[DV_CHAN-1] > DISPLAY_LIPO_VOLTAGE_DV)){
-          OSD.setCursor( 0, -1 );
-          //OSD.print( "bat:" );
-          OSD.print( LipoVoltC );
-          ESCmarginBot = 1;
-        }
-        
-        if(displayConsumption || (AuxChanVals[DV_CHAN-1] > DISPLAY_MA_CONSUMPTION_DV)){
-          OSD.setCursor( -(1+lipoMAHPos), -1 );
-          OSD.print( LipoMAHC );
-          ESCmarginBot = 1;
-        }
-        
-        if(displayKRPM  || (AuxChanVals[DV_CHAN-1] > DISPLAY_ESC_KRPM_DV)){
-          OSD.setCursor( 0, ESCmarginTop );
-          OSD.print( Motor1KERPM );
-          OSD.setCursor( -KRPMPoses[1], ESCmarginTop );
-          OSD.print( Motor2KERPM );
-          OSD.setCursor( -KRPMPoses[2], -(1+ESCmarginBot) );
-          OSD.print( Motor3KERPM );
-          OSD.setCursor( 0, -(1+ESCmarginBot) );
-          OSD.print( Motor4KERPM );
-          TMPmargin++;
-          CurrentMargin++;
-        }
-     
-        if(displayCurrent  || (AuxChanVals[DV_CHAN-1] > DISPLAY_ESC_CURRENT_DV)){
-          OSD.setCursor( 0, CurrentMargin+ESCmarginTop );
-          OSD.print( Motor1Current );
-          OSD.setCursor( -CurrentPoses[1], CurrentMargin+ESCmarginTop );
-          OSD.print( Motor2Current );
-          OSD.setCursor( -CurrentPoses[2], -(1+CurrentMargin+ESCmarginBot) );
-          OSD.print( Motor3Current );
-          OSD.setCursor( 0, -(1+CurrentMargin+ESCmarginBot) );
-          OSD.print( Motor4Current );
-          TMPmargin++;
-        }
+            print_time(total_time, TotalTime);
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "time     : " );
+            OSD.print( TotalTime );
     
-        if(displayTemperature  || (AuxChanVals[DV_CHAN-1] > DISPLAY_ESC_TEMPERATURE_DV)){
-          OSD.setCursor( 0, TMPmargin+ESCmarginTop );
-          OSD.print( ESC1Temp );
-          OSD.setCursor( -TempPoses[1], TMPmargin+ESCmarginTop );
-          OSD.print( ESC2Temp );
-          OSD.setCursor( -TempPoses[2], -(1+TMPmargin+ESCmarginBot) );
-          OSD.print( ESC3Temp );
-          OSD.setCursor( 0, -(1+TMPmargin+ESCmarginBot) );
-          OSD.print( ESC4Temp );
-        }  
-    
-        if((displayTime || (AuxChanVals[DV_CHAN-1] > DISPLAY_TIMER_DV)) && time > 0) {
-          OSD.setCursor( 12, -2 );
-          OSD.print( Time );
-          //ESCmarginTop = 1;
-        }
-        
-        if(bat_mAh_warning > 0 && LipoMAH >= bat_mAh_warning){
-          OSD.setCursor(9,9);
-          if (blink_i % 20 == 0) {
-            if(bat_clear) {
-              OSD.print( "BAT LOW!!!" );
-              bat_clear = false;
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "max amps : " );
+            OSD.print( MaxAmpC );
+            if (MaxC > 0) {
+              OSD.print( "a | " );
+              OSD.print( MaxC );
+              OSD.print( "c     " );
             }
-            else {
-              OSD.print( "          " );
-              bat_clear = true;
-            }
+    
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "mah      : " );
+            OSD.print( LipoMAHC );
+    
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "max rpm : " );
+            OSD.print( MaxRPMC );
+    
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "max watt : " );
+            OSD.print( MaxWattC );
+    
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "max temp : " );
+            uint8_t MaxTempPos = print_int16(MaxTemp, MaxTempC,0,1);
+            MaxTempC[MaxTempPos++] = '°';
+            OSD.print( MaxTempC );
+            OSD.print( "        " );
+    
+            OSD.setCursor( 5, ++middle_infos_y );
+            OSD.print( "min v    : " );
+            OSD.print( LipoMinVoltC );
           }
         }
-        if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[DV_CHAN-1]) {
-          DV_change_time = 0;
+        else {
+          if(displayRCthrottle || (AuxChanVals[DV_CHAN-1] > DISPLAY_RC_THROTTLE_DV)){
+            OSD.setCursor( 0, 0 );
+            //OSD.print( "throt:" );
+            OSD.print( Throttle );
+            ESCmarginTop = 1;
+          }
+            
+          if(displayNickname || (AuxChanVals[DV_CHAN-1] > DISPLAY_NICKNAME_DV)){
+            OSD.setCursor( 10, -1 );
+            OSD.print( NICKNAME );
+          }
+      
+          if(displayCombCurrent || (AuxChanVals[DV_CHAN-1] > DISPLAY_COMB_CURRENT_DV)){
+            OSD.setCursor( -CurrentPos, 0 );
+            OSD.print( Current );
+            ESCmarginTop = 1;
+          }
+          
+          if(displayLipoVoltage || (AuxChanVals[DV_CHAN-1] > DISPLAY_LIPO_VOLTAGE_DV)){
+            OSD.setCursor( 0, -1 );
+            //OSD.print( "bat:" );
+            OSD.print( LipoVoltC );
+            ESCmarginBot = 1;
+          }
+          
+          if(displayConsumption || (AuxChanVals[DV_CHAN-1] > DISPLAY_MA_CONSUMPTION_DV)){
+            OSD.setCursor( -(1+lipoMAHPos), -1 );
+            OSD.print( LipoMAHC );
+            ESCmarginBot = 1;
+          }
+          
+          if(displayKRPM  || (AuxChanVals[DV_CHAN-1] > DISPLAY_ESC_KRPM_DV)){
+            OSD.setCursor( 0, ESCmarginTop );
+            OSD.print( Motor1KERPM );
+            OSD.setCursor( -KRPMPoses[1], ESCmarginTop );
+            OSD.print( Motor2KERPM );
+            OSD.setCursor( -KRPMPoses[2], -(1+ESCmarginBot) );
+            OSD.print( Motor3KERPM );
+            OSD.setCursor( 0, -(1+ESCmarginBot) );
+            OSD.print( Motor4KERPM );
+            TMPmargin++;
+            CurrentMargin++;
+          }
+       
+          if(displayCurrent  || (AuxChanVals[DV_CHAN-1] > DISPLAY_ESC_CURRENT_DV)){
+            OSD.setCursor( 0, CurrentMargin+ESCmarginTop );
+            OSD.print( Motor1Current );
+            OSD.setCursor( -CurrentPoses[1], CurrentMargin+ESCmarginTop );
+            OSD.print( Motor2Current );
+            OSD.setCursor( -CurrentPoses[2], -(1+CurrentMargin+ESCmarginBot) );
+            OSD.print( Motor3Current );
+            OSD.setCursor( 0, -(1+CurrentMargin+ESCmarginBot) );
+            OSD.print( Motor4Current );
+            TMPmargin++;
+          }
+      
+          if(displayTemperature  || (AuxChanVals[DV_CHAN-1] > DISPLAY_ESC_TEMPERATURE_DV)){
+            OSD.setCursor( 0, TMPmargin+ESCmarginTop );
+            OSD.print( ESC1Temp );
+            OSD.setCursor( -TempPoses[1], TMPmargin+ESCmarginTop );
+            OSD.print( ESC2Temp );
+            OSD.setCursor( -TempPoses[2], -(1+TMPmargin+ESCmarginBot) );
+            OSD.print( ESC3Temp );
+            OSD.setCursor( 0, -(1+TMPmargin+ESCmarginBot) );
+            OSD.print( ESC4Temp );
+          }  
+      
+          if((displayTime || (AuxChanVals[DV_CHAN-1] > DISPLAY_TIMER_DV)) && time > 0) {
+            OSD.setCursor( 12, -2 );
+            OSD.print( Time );
+            //ESCmarginTop = 1;
+          }
+          
+          if(bat_mAh_warning > 0 && LipoMAH >= bat_mAh_warning){
+            OSD.setCursor(9,9);
+            if (blink_i % 20 == 0) {
+              if(bat_clear) {
+                OSD.print( "BAT LOW!!!" );
+                bat_clear = false;
+              }
+              else {
+                OSD.print( "          " );
+                bat_clear = true;
+              }
+            }
+          }
+          if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[DV_CHAN-1]) {
+            DV_change_time = 0;
+          }
         }
       }
+      /*static char Aux1[30];
+      print_int16(AuxChanVals[DV_CHAN-1], Aux1,0,0);
+      OSD.setCursor(8,10);
+      OSD.print(Aux1);*/
     }
-    /*static char Aux1[30];
-    print_int16(AuxChanVals[DV_CHAN-1], Aux1,0,0);
-    OSD.setCursor(8,10);
-    OSD.print(Aux1);*/
   }    
 }
 
