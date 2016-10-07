@@ -1,26 +1,19 @@
 #include "CSettings.h"
+#include <EEPROM.h>
 
 CSettings::CSettings()
 {
-  m_aspectRatio = 0; //4:3 as standard
   m_batWarning = 1; //on by default
-  m_bat_mAh_warning = 1000; // 1000 mAh default
-  m_BAT_AUX_DV_CHANNEL = m_DVchannel = 1; //AUX2 default
-  strcpy(m_displayOrder[0], "lipo voltage");
-  strcpy(m_displayOrder[1], "ma consumption");
-  strcpy(m_displayOrder[2], "statistics");
-  strcpy(m_displayOrder[3], "timer");
-  strcpy(m_displayOrder[4], "nickname");
-  strcpy(m_displayOrder[5], "total current");
-  strcpy(m_displayOrder[6], "esc current");
-  strcpy(m_displayOrder[7], "esc rpm");
-  strcpy(m_displayOrder[8], "throttle %");
-  strcpy(m_displayOrder[9], "esc temperature");
-  uint8_t i;
-  for(i=0; i < MAX_DISPLAY_ITEMS; i++)
+  int16_t i;
+  for(i=0; i<4; i++)
   {
-    strcpy(m_defaultOrder[i], m_displayOrder[i]);
+    m_batMAH[i] = 1300; //1300 mAh by default
   }
+  m_activeBattery = 0;
+  m_batWarningPercent = 23; //23% by default
+  m_batWarningMAH = 1000;
+  m_DVchannel = 0; //AUX1 default
+  m_tempUnit = 0; //°C default
 }
 
 CSettings::~CSettings()
@@ -37,29 +30,34 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
   int16_t value = msb;
   value = value << 8;
   value |= lsb;
+  return value;
 }
 
 void CSettings::ReadSettings()
 {
-  if(EEPROM.read(0x01) == 0x00) //first start of OSD
+  if(EEPROM.read(0x01) < 0x02) //first start of OSD
+  //if(true)
   {
     WriteSettings(); //write defaults
-    EEPROM.write(0x01,0x01);
+    EEPROM.write(0x01,0x02);
   }
   else
   {
-    m_bat_mAh_warning = ReadInt16_t(0x03,0x04);
-    m_aspectRatio = (int16_t) EEPROM.read(0x05);
-    m_batWarning = (int16_t) EEPROM.read(0x06);
-    m_BAT_AUX_DV_CHANNEL = (int16_t) EEPROM.read(0x07);
-    m_DVchannel = (int16_t) EEPROM.read(0x08);
+    m_batWarningMAH = ReadInt16_t(0x03,0x04);
+    m_batWarning = (int16_t) EEPROM.read(0x05);
+    m_activeBattery = (int16_t) EEPROM.read(0x06);
+    m_DVchannel = (int16_t) EEPROM.read(0x07);
     uint8_t i;
-    byte pos = 0x09;
-    for(i = 0; i < MAX_DISPLAY_ITEMS; i++)
+    byte pos = 0x08;
+    for(i=0; i < 4; i++)
     {
-      strcpy(m_displayOrder[EEPROM.read(pos)], m_defaultOrder[i]);
-      pos++;
+      m_batMAH[i] = ReadInt16_t(pos, pos+1);
+      pos += 2;
     }
+    m_batWarningPercent = EEPROM.read(pos);
+    pos++;
+    m_tempUnit = EEPROM.read(pos);
+    pos++;
   }
 }
 
@@ -75,24 +73,24 @@ void CSettings::WriteInt16_t(byte lsbPos, byte msbPos, int16_t value)
 
 void CSettings::WriteSettings()
 {
-  WriteInt16_t(0x03,0x04,m_bat_mAh_warning);
-  EEPROM.write(0x05,(byte)m_aspectRatio);
-  EEPROM.write(0x06,(byte)m_batWarning);
-  EEPROM.write(0x07,(byte)m_BAT_AUX_DV_CHANNEL);
-  EEPROM.write(0x08,(byte)m_DVchannel);
+  WriteInt16_t(0x03,0x04,m_batWarningMAH);
+  EEPROM.write(0x05,(byte)m_batWarning);
+  EEPROM.write(0x06,(byte)m_activeBattery);
+  EEPROM.write(0x07,(byte)m_DVchannel);
   uint8_t i;
-  byte pos = 0x09;
-  for(i = 0; i < MAX_DISPLAY_ITEMS; i++)
+  byte pos = 0x08;
+  for(i=0; i < 4; i++)
   {
-    uint8_t j;
-    for(j = 0; j < MAX_DISPLAY_ITEMS; j++)
-    {
-      if(strcmp(m_defaultOrder[i], m_displayOrder[j]) == 0)
-      {
-        break;
-      }
-    }
-    EEPROM.write(pos,(byte)j);
-    pos++;
+    WriteInt16_t(pos, pos+1, m_batMAH[i]);
+    pos += 2;
   }
+  EEPROM.write(pos, m_batWarningPercent); 
+  pos++;
+  EEPROM.write(pos, m_tempUnit); 
+}
+
+void CSettings::FixBatWarning()
+{
+  uint32_t temp = ((uint32_t)m_batMAH[m_activeBattery] * (uint32_t)m_batWarningPercent) / (uint32_t)100;
+  m_batWarningMAH = m_batMAH[m_activeBattery] - (int16_t)temp;
 }

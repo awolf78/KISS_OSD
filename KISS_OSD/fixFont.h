@@ -1,15 +1,18 @@
 #ifndef Fixfonth
 #define Fixfonth
+#include "Flash.h"
+
+#define COMPRESSED_FONT
 
 inline char fixNo(char no)
 {
-#ifdef COMPRESSED_FONT
-  return no - (char) 0x2A;
-#else
-  return no;
-#endif
+  return no - 0x2A;
 }
 
 char* fixStr(char* str);
+
+char fixChar(char str);
+
+char* fixFlashStr(_FLASH_STRING *str);
 
 #endif
