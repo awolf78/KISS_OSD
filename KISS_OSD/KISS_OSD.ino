@@ -3,12 +3,9 @@ KISS FC OSD v1.0
 By Felix Niessen (felix.niessen@googlemail.com)
 for Flyduino.net
 
-KISS FC OSD v1.3
-by Greg
-
-KISS FC OSD v1.4
+KISS FC OSD v2.0
 by Alexander Wolf (awolf78@gmx.de)
-Donate: www.paypal.me/awolf78
+for everyone who loves KISS
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
@@ -59,19 +56,6 @@ For more information, please refer to <http://unlicense.org>
 //=============================
 #define ESC_FILTER 10
 
-// remove "//" from all the data items you wish to display permanently
-//=============================
-//#define DISPLAY_NICKNAME
-//#define DISPLAY_TIMER
-//#define DISPLAY_RC_THROTTLE
-//#define DISPLAY_COMB_CURRENT
-#define DISPLAY_LIPO_VOLTAGE
-#define DISPLAY_MA_CONSUMPTION
-//#define DISPLAY_ESC_KRPM
-//#define DISPLAY_ESC_CURRENT
-#define DISPLAY_STATS
-//#define DISPLAY_ESC_TEMPERATURE
-
 /*
 Digital Volume configuration tool
 ---------------------------------
@@ -105,23 +89,15 @@ static int16_t DISPLAY_ESC_TEMPERATURE_DV =    7; // 0-10, 0 = always on, -1 = n
 
 /* Low battery warning config
 -----------------------------
-This feature will show a flashing BATT LOW!!! warning just below the center of your 
-display when bat_mAh_warning is exceeded. I have found the mAh calculation of my KISS
-setup (KISS FC with 24RE ESCs using ESC telemetry) to be very accurate, so be careful
-when using other ESCs - mAh calculation might not be as accurate. Simply change bat_mAh_warning
-to the maximum mAh you are comfortable with for your battery just before you land. If
-you use different sizes batteries, you might want to check out the Digital volume feature. This
-will allow you to change the bat_mAh_warning setting while the quad is disarmed. To activate this
-feature:
-- set BAT_AUX_DV_CHANNEL to the Aux channel you wish to use
-- setup your radio's DV to BAT_AUX_DV_CHANNEL
-Set the DV on the radio approximately in the middle. Once powered up, arm and disarm immediately to be able 
-to change the mAh setting. You need to arm and disarm immediately every time your want to change this setting.
-Turning the dial up with increase bat_mAh_warning  by BAT_MAH_INCREMENT, turning it down will decrease it by 
-BAT_MAH_INCREMENT. Arm your quad to save the value.
-To turn the this feature off, set BAT_AUX_DV_CHANNEL = 0;
-To turn the battery warning off as well set bat_mAh_warning = -1;
-In a future version I will probably replace the mAh adjustment with a OSD menu entry - stay tuned :)
+This feature will show a flashing "BATTERY LOW" warning just below the center of your 
+display when bat_mAh_warning is exceeded - letting you know when it is time to land. 
+I have found the mAh calculation of my KISS setup (KISS FC with 24RE ESCs using ESC telemetry) to 
+be very accurate, so be careful when using other ESCs - mAh calculation might not be as accurate. 
+While disarmed, yaw to the right. This will display the selected battery. Roll left or right to 
+select a different battery. Pitch up or down to change the battery capacity. The warning will be 
+displayed according to the percentage configured in the menu. Enter the menu with a yaw to the left 
+for more than 3 seconds. Default is 23%, so if you have a 1300 mAh battery, it would start warning 
+you at 1001 mAh used capacity.
 =============================*/
 static const int16_t BAT_MAH_INCREMENT = 50;
 

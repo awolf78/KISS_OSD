@@ -6,8 +6,8 @@
 
 ## How-to upload it in your MinimOSD
 
-* Follow the manual here, with a small modification http://kiss.flyduino.net/dwkb/flash-kiss-osd/
-* Before you flash MW-OSD, do the following:
+* http://kiss.flyduino.net/dwkb/flash-kiss-osd/
+* Follow the above manual, however before you flash MW-OSD, do the following:
 * Copy the fontD.h file from the KISS-OSD folder to your MW-OSD folder containing the MW_OSD.ino file. It will ask you to overwrite, which is ok.
 * Open MW_OSD.ino. Click on the tab "Config.h" in Arduino. Uncomment (remove "//") from "#define LOADFONT_DEFAULT".
 * Now flash MW_OSD.ino. 
