@@ -6,7 +6,14 @@
 
 ## How-to upload it in your MinimOSD
 
-* http://kiss.flyduino.net/dwkb/flash-kiss-osd/
+* Follow the manual here, with a small modification http://kiss.flyduino.net/dwkb/flash-kiss-osd/
+* Before you flash MW-OSD, do the following:
+* Copy the fontD.h file from the KISS-OSD folder to your MW-OSD folder containing the MW_OSD.ino file. It will ask you to overwrite, which is ok.
+* Open MW_OSD.ino. Click on the tab "Config.h" in Arduino. Uncomment (remove "//") from "#define LOADFONT_DEFAULT".
+* Now flash MW_OSD.ino. 
+* After flashing is done, disconnect your FTDI and connect a battery. THIS IS VERY IMPORTANT. The font might not be properly uploaded if not using a battery. And you will get all kinds of strange symbols on your screen.
+* Wait for about 30 seconds after you connect the battery. You can see the green LED flashing around, then staying lit and then go out. Then you can disconnect the battery again.
+* Connect your FTDI again and flash KISS-OSD as shown in the flyduino manual.
 
 ## Why use this version? Why not use the one from flyduino?
 
@@ -14,22 +21,13 @@ The version on the flyduino page is very basic. Some people like that. This one 
 
 * Displays statistics when you land (such as max amps, max watts, max RPM, etc.)
 * You can make the OSD more or less busy using a digital volume (DV) dial on your radio
-* You can set a battery low warning which will tell you at which mAh value you should land. You can set the value with a DV on your radio. It will be stored on the OSD and it will use the same value next time it gets plugged in.
+* You can configure 5 battery sizes and easily switch between them using stick controls. While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
+* Menu: Yaw all the way to the left (while disarmed) for 3 seconds will enter the Menu. You can configure some of the settings. The menu will get bigger soon :)
 
 ## When should you not use this version?
 
 * You do not use KISS 24RE ESCs
 * Your radio does not have a digital volume control (you most probably use Taranis X9D - that one has two :))
-
-## How do I get this to work?
-
-* Read this very carefully: http://kiss.flyduino.net/dwkb/flash-kiss-osd/
-* Make sure you have Arduino 1.0.5 installed
-* Make sure your FTDI is working and connected properly
-* Open KISS_OSD.ino with Arduino. Carefully read the configuration section in the beginning of the file.
-* Setup the digital volume dials on your radio matching the configuration in the .ino file
-* Flash to your KISS/minimOSD
-* Fly and enjoy!
 
 ## You like what I did and want to support me
 

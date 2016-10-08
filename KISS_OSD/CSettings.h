@@ -8,7 +8,6 @@ class CSettings
 {
   public:
   CSettings();
-  ~CSettings();
   void ReadSettings();
   void WriteSettings();
   void FixBatWarning();

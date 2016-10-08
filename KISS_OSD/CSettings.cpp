@@ -16,10 +16,6 @@ CSettings::CSettings()
   m_tempUnit = 0; //°C default
 }
 
-CSettings::~CSettings()
-{
-}
-
 int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
 {
   byte msb, lsb;
