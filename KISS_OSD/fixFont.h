@@ -9,7 +9,7 @@ inline char fixNo(char no)
   return no - 0x2A;
 }
 
-char* fixStr(char* str);
+char* fixStr(const char* str);
 
 char fixChar(char str);
 

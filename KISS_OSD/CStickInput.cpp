@@ -3,13 +3,16 @@
 CStickInput::CStickInput():
 startYawTime(0),
 startRollTime(0),
-startPitchTime(0)
+startPitchTime(0),
+startYawLongTime(0)
 {
   rollDelay = ROLL_PITCH_DELAY;
   pitchDelay = ROLL_PITCH_DELAY;
-  yawDelay = YAW_DELAY;
+  yawDelay = ROLL_PITCH_DELAY;
+  yawLongDelay = YAW_LONG_DELAY;
   rollCount = 0;
   pitchCount = 0;
+  yawCount = 0;
 }
 
 uint8_t CStickInput::ProcessStickInputs(int16_t roll, int16_t pitch, int16_t yaw, int16_t armed)
@@ -27,8 +30,13 @@ uint8_t CStickInput::ProcessStickInputs(int16_t roll, int16_t pitch, int16_t yaw
     {
       pitchDelay = ROLL_PITCH_DELAY;
     }
-    uint16_t yawCount = 0;
-    code |= CheckInput(yaw, &startYawTime, &yawDelay, &yawCount, YAW_LEFT, YAW_RIGHT, true);
+    code |= CheckInput(yaw, &startYawTime, &yawDelay, &yawCount, YAW_LEFT, YAW_RIGHT);
+    if(startYawTime == 0)
+    {
+      yawDelay = ROLL_PITCH_DELAY;
+    }
+    uint16_t temp = 0;
+    code |= CheckInput(yaw, &startYawLongTime, &yawLongDelay, &temp, YAW_LONG_LEFT, YAW_LONG_RIGHT, true);    
   }
   return code;
 }

@@ -35,7 +35,7 @@ char fixChar(char str)
 static const uint8_t MAX_FIX_STR = 30;
 static char fixedString[MAX_FIX_STR];
 
-char* fixStr(char* str)
+char* fixStr(const char* str)
 {
   uint8_t i;
   for(i=0; i<strlen(str) && i < MAX_FIX_STR-1; i++)

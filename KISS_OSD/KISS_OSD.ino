@@ -111,6 +111,8 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 #define LOCATION_BAT_WARNING_MAH_MSB	0x04
 //#define DEBUG
 
+const char KISS_OSD_VER[] = "kiss osd v2.0";
+
 #include <SPI.h>
 #include <MAX7456.h>
 #include <EEPROM.h>
@@ -616,45 +618,45 @@ static const int16_t RATE_STEP = 50;
 
 extern void* RatesMenu();
 
+int16_t checkCode(int16_t value, int16_t STEP)
+{
+  if((code &  inputChecker.ROLL_LEFT) && (value-STEP) >= 0)
+  {
+    value -= STEP;
+  }
+  if((code &  inputChecker.YAW_LEFT) && (value-(STEP/10)) >= 0)
+  {
+    value -= STEP/10;
+  }
+  if((code &  inputChecker.ROLL_RIGHT) && (value+STEP) <= 32000)
+  {
+    value += STEP;
+  }
+  if((code &  inputChecker.YAW_RIGHT) && (value+(STEP/10)) <= 32000)
+  {
+    value += STEP/10;
+  }
+  return value;
+}
+
 boolean RatesGeneralMenu(uint8_t &activeGeneralMenuItem, int16_t &rcRate, int16_t &rate, int16_t &rcCurve, char* title)
 {
   if(activeGeneralMenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
   {
     fcSettingChanged = true;
   }
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  if(code > 0)
   {
     switch(activeGeneralMenuItem)
     {
       case 0:
-        if((code &  inputChecker.ROLL_LEFT) && (rcRate-RATE_STEP) > 0)
-        {
-          rcRate -= RATE_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (rcRate+RATE_STEP) < 32000)
-        {
-          rcRate += RATE_STEP;
-        }
+        rcRate = checkCode(rcRate, RATE_STEP);
       break;
       case 1:
-        if((code &  inputChecker.ROLL_LEFT) && (rate-RATE_STEP) > 0)
-        {
-          rate -= RATE_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (rate+RATE_STEP) < 32000)
-        {
-          rate += RATE_STEP;
-        }
+        rate = checkCode(rate, RATE_STEP);        
       break;
       case 2:
-        if((code &  inputChecker.ROLL_LEFT) && (rcCurve-RATE_STEP) > 0)
-        {
-          rcCurve -= RATE_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (rcCurve+RATE_STEP) < 32000)
-        {
-          rcCurve += RATE_STEP;
-        }
+        rcCurve = checkCode(rcCurve, RATE_STEP);        
       break;
       case 3:
         activeGeneralMenuItem = 0;
@@ -680,8 +682,8 @@ boolean RatesGeneralMenu(uint8_t &activeGeneralMenuItem, int16_t &rcRate, int16_
   FLASH_STRING(BACK5_STR,    "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = 7;
-  OSD.setCursor( 11, ++startRow );
+  uint8_t startCol = COLS/2 - (RC_RATE_STR.length()+6)/2;
+  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
   
   OSD.setCursor( startCol, ++startRow );
@@ -776,15 +778,16 @@ void* RatesMenu()
     activeRatesMenuItem++;
   } 
   
-  FLASH_STRING(ROLL_STR,  "roll");
-  FLASH_STRING(PITCH_STR, "pitch");
-  FLASH_STRING(YAW_STR,   "yaw");
-  FLASH_STRING(BACK2_STR, "back");
+  FLASH_STRING(ROLL_STR,  "roll  ");
+  FLASH_STRING(PITCH_STR, "pitch ");
+  FLASH_STRING(YAW_STR,   "yaw   ");
+  FLASH_STRING(BACK2_STR, "back  ");
   
   uint8_t startRow = 1;
-  uint8_t startCol = 10;
-  OSD.setCursor( 9, ++startRow );
-  OSD.print( fixStr("rates menu") );
+  uint8_t startCol = COLS/2 - ROLL_STR.length()/2;
+  const char title[] = "rates menu";
+  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );   
+  OSD.print( fixStr(title) );
   
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeRatesMenuItem);
@@ -816,39 +819,25 @@ boolean PIDGeneralMenu(uint8_t &activeGeneralMenuItem, int16_t &p, int16_t &i, i
   {
     fcSettingChanged = true;
   }
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  if(code > 0)
   {
     switch(activeGeneralMenuItem)
     {
       case 0:
-        if((code &  inputChecker.ROLL_LEFT) && (p-P_STEP) > 0)
-        {
-          p -= P_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (p+P_STEP) < 32000)
-        {
-          p += P_STEP;
-        }
+        p = checkCode(p, P_STEP);
       break;
       case 1:
-        if((code &  inputChecker.ROLL_LEFT) && (i-I_STEP) > 0)
+        if((code &  inputChecker.ROLL_LEFT) && (i-I_STEP) >= 0)
         {
           i -= I_STEP;
         }
-        if((code &  inputChecker.ROLL_RIGHT) && (i+I_STEP) < 32000)
+        if((code &  inputChecker.ROLL_RIGHT) && (i+I_STEP) <= 32000)
         {
           i += I_STEP;
         }
       break;
       case 2:
-        if((code &  inputChecker.ROLL_LEFT) && (d-D_STEP) > 0)
-        {
-          d -= D_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (d+D_STEP) < 32000)
-        {
-          d += D_STEP;
-        }
+        d = checkCode(d, D_STEP);
       break;
       case 3:
         activeGeneralMenuItem = 0;
@@ -874,8 +863,8 @@ boolean PIDGeneralMenu(uint8_t &activeGeneralMenuItem, int16_t &p, int16_t &i, i
   FLASH_STRING(BACK3_STR, "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = 10;
-  OSD.setCursor( 11, ++startRow );
+  uint8_t startCol = COLS/2 - (P_STR.length()+6)/2;
+  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
   
   OSD.setCursor( startCol, ++startRow );
@@ -939,39 +928,18 @@ void* TPAMenu()
   {
     fcSettingChanged = true;
   }
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  if(code > 0)
   {
     switch(activeTPAMenuItem)
     {
       case 0:
-        if((code &  inputChecker.ROLL_LEFT) && (p_tpa-TPA_STEP) > 0)
-        {
-          p_tpa -= TPA_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (p_tpa+TPA_STEP) < 32000)
-        {
-          p_tpa += TPA_STEP;
-        }
+        p_tpa = checkCode(p_tpa, TPA_STEP);        
       break;
       case 1:
-        if((code &  inputChecker.ROLL_LEFT) && (i_tpa-TPA_STEP) > 0)
-        {
-          i_tpa -= TPA_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (i_tpa+TPA_STEP) < 32000)
-        {
-          i_tpa += TPA_STEP;
-        }
+        i_tpa = checkCode(i_tpa, TPA_STEP);        
       break;
       case 2:
-        if((code &  inputChecker.ROLL_LEFT) && (d_tpa-TPA_STEP) > 0)
-        {
-          d_tpa -= TPA_STEP;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && (d_tpa+TPA_STEP) < 32000)
-        {
-          d_tpa += TPA_STEP;
-        }
+        d_tpa = checkCode(d_tpa, TPA_STEP);        
       break;
       case 3:
         cleanScreen();
@@ -998,9 +966,10 @@ void* TPAMenu()
   FLASH_STRING(BACK4_STR, "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = 8;
-  OSD.setCursor( 9, ++startRow );
-  OSD.print( fixStr("tpa menu") );
+  uint8_t startCol = COLS/2 - (TPA_P_STR.length()+6)/2;
+  const char title[] = "tpa menu";
+  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
+  OSD.print( fixStr(title) );
   
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeTPAMenuItem);
@@ -1068,16 +1037,17 @@ void* PIDMenu()
     activePIDMenuItem++;
   } 
   
-  FLASH_STRING(ROLL_STR,  "roll");
-  FLASH_STRING(PITCH_STR, "pitch");
-  FLASH_STRING(YAW_STR,   "yaw");
-  FLASH_STRING(TPA_STR,   "tpa");
-  FLASH_STRING(BACK2_STR, "back");
+  FLASH_STRING(ROLL_STR,  "roll  ");
+  FLASH_STRING(PITCH_STR, "pitch ");
+  FLASH_STRING(YAW_STR,   "yaw   ");
+  FLASH_STRING(TPA_STR,   "tpa   ");
+  FLASH_STRING(BACK2_STR, "back  ");
   
   uint8_t startRow = 1;
-  uint8_t startCol = 10;
-  OSD.setCursor( 9, ++startRow );
-  OSD.print( fixStr("pid menu") );
+  uint8_t startCol = COLS/2 - ROLL_STR.length()/2;
+  const char title[] = "pid menu";
+  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
+  OSD.print( fixStr(title) );
   
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activePIDMenuItem);
@@ -1112,6 +1082,20 @@ void* MainMenu()
     switch(activeMenuItem)
     {
       case 0:
+        if(fcSettingsReceived)
+        {
+          cleanScreen();
+          return (void*)PIDMenu;
+        }
+      break;
+      case 1:
+        if(fcSettingsReceived)
+        {
+          cleanScreen();
+          return (void*)RatesMenu;
+        }
+      break;
+      case 2:
         if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarning == 1)
         {
           settings.m_batWarning = 0;
@@ -1123,7 +1107,7 @@ void* MainMenu()
           settingChanged = true;
         }
       break;
-      case 1:
+      case 3:
         if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarningPercent > 0)
         {
           settings.m_batWarningPercent--;
@@ -1135,20 +1119,6 @@ void* MainMenu()
           settings.m_batWarningPercent++;
           settings.FixBatWarning();
           settingChanged = true;
-        }
-      break;
-      case 2:
-        if(fcSettingsReceived)
-        {
-          cleanScreen();
-          return (void*)PIDMenu;
-        }
-      break;
-      case 3:
-        if(fcSettingsReceived)
-        {
-          cleanScreen();
-          return (void*)RatesMenu;
         }
       break;
       case 4:
@@ -1199,21 +1169,32 @@ void* MainMenu()
     activeMenuItem++;
   } 
   
-  FLASH_STRING(BATTERY_WARNING_STR, "battery warning : ");
-  FLASH_STRING(BATTERY_PERCENT_STR, "battery % alarm : ");
   FLASH_STRING(PID_STR,             "pid");
   FLASH_STRING(RATES_STR,           "rates");
-  FLASH_STRING(DV_CHANNEL_STR,      "dv channel      : ");
-  FLASH_STRING(TEMP_UNIT_STR,       "temperature unit: ");
+  FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
+  FLASH_STRING(BATTERY_PERCENT_STR, "batt. % alarm: ");
+  FLASH_STRING(DV_CHANNEL_STR,      "dv channel   : ");
+  FLASH_STRING(TEMP_UNIT_STR,       "temp. unit   : ");
   FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
   FLASH_STRING(CANCEL_STR,          "cancel");
   FLASH_STRING_ARRAY(ON_OFF_STR,  PSTR("off"), PSTR("on "));
   FLASH_STRING_ARRAY(AUX_CHANNEL_STR,  PSTR("aux1"), PSTR("aux2"), PSTR("aux3"), PSTR("aux4"));
   
-  uint8_t startRow = 1;
-  uint8_t startCol = 3;
-  OSD.setCursor( 9, ++startRow );
-  OSD.print( fixStr("main menu") );
+  uint8_t startRow = 0;
+  uint8_t startCol = COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
+  OSD.setCursor( COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
+  OSD.print( fixStr(KISS_OSD_VER) );
+  const char title[] = "main menu";
+  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
+  OSD.print( fixStr(title) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&PID_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&RATES_STR) );
   
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
@@ -1228,14 +1209,6 @@ void* MainMenu()
   OSD.print( fixChar('%') );
   OSD.print( fixFlashStr(&TWO_BLANKS) );
   
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&PID_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&RATES_STR) );
- 
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
   OSD.print( fixFlashStr(&DV_CHANNEL_STR) );
@@ -1312,7 +1285,7 @@ void loop(){
       }
       
       code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
-      if(armed == 0 && ((code &  inputChecker.YAW_LEFT) || menuActive))
+      if(armed == 0 && ((code &  inputChecker.YAW_LONG_LEFT) || menuActive))
       {
         if(!menuActive)
         {
@@ -1370,19 +1343,19 @@ void loop(){
           settingChanged = true;
         }
         FLASH_STRING(BATTERY_STR, "battery ");
-        OSD.setCursor(9,7);
+        OSD.setCursor(COLS/2 - (BATTERY_STR.length()+1)/2,ROWS/2 - 1);
         OSD.print( fixFlashStr(&BATTERY_STR) );
         print_int16(settings.m_activeBattery+1, printBuf,0,1);
         OSD.print( printBuf );
-        OSD.setCursor(10,8);
         print_int16(settings.m_batMAH[settings.m_activeBattery], printBuf,0,1);
+        OSD.setCursor(COLS/2 - (strlen(printBuf)+3)/2,ROWS/2);
         OSD.print( printBuf );
         OSD.print( fixStr("mah") );
         OSD.print( fixFlashStr(&TWO_BLANKS) );
-        OSD.setCursor(5,9);
         FLASH_STRING(WARN_STR, "warn at ");
-        OSD.print( fixFlashStr(&WARN_STR) );
         print_int16(settings.m_batWarningMAH, printBuf,0,1);
+        OSD.setCursor(COLS/2 - (WARN_STR.length() + strlen(printBuf) + 3)/2,ROWS/2 + 1);
+        OSD.print( fixFlashStr(&WARN_STR) );
         OSD.print( printBuf );
         OSD.print( fixStr("mah") );
         OSD.print( fixFlashStr(&TWO_BLANKS) );
@@ -1419,8 +1392,8 @@ void loop(){
           cleanScreen();
         }
         uint8_t middle_infos_y     = 2;    
-        OSD.setCursor( 9, middle_infos_y );
         FLASH_STRING(STATS_STR, "stats ");
+        OSD.setCursor( COLS/2 - (STATS_STR.length()+4)/2, middle_infos_y );
         OSD.print( fixFlashStr(&STATS_STR) );
         print_int16(statPage+1, printBuf,0,1);
         OSD.print(printBuf);
@@ -1438,47 +1411,48 @@ void loop(){
           FLASH_STRING(MAX_TEMP_STR, "max temp : ");
           FLASH_STRING(MIN_V_STR,    "min v    : ");
           print_time(total_time, printBuf);
-          OSD.setCursor( 5, ++middle_infos_y );
+          uint8_t statCol = COLS/2 - (TIME_STR.length()+7)/2;
+          OSD.setCursor( statCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&TIME_STR) );
           OSD.print( printBuf );
   
-          OSD.setCursor( 5, ++middle_infos_y ); 
+          OSD.setCursor( statCol, ++middle_infos_y ); 
           OSD.print( fixFlashStr(&MAX_AMP_STR) );
           print_int16(MaxAmps, printBuf,1,1);
           OSD.print( printBuf );
           OSD.print( fixChar('a') );
           
-          OSD.setCursor( 5, ++middle_infos_y );
+          OSD.setCursor( statCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&MAX_C_STR) ); 
           print_int16(MaxC, printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( fixChar('c') );
           
-          OSD.setCursor( 5, ++middle_infos_y );
+          OSD.setCursor( statCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&MAH_STR) );
           print_int16(LipoMAH, printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( fixStr("mah") );        
   
-          OSD.setCursor( 5, ++middle_infos_y );
+          OSD.setCursor( statCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&MAX_RPM_STR) );
           print_int16(MaxRPMs, printBuf,1,1);
           OSD.print( printBuf );
           OSD.print( fixStr("kr") );
   
-          OSD.setCursor( 5, ++middle_infos_y );
+          OSD.setCursor( statCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&MAX_WATT_STR) );
           print_int16(MaxWatt, printBuf,1,1);
           OSD.print( printBuf );
           OSD.print( fixChar('w') );
   
-          OSD.setCursor( 5, ++middle_infos_y );          
+          OSD.setCursor( statCol, ++middle_infos_y );          
           OSD.print( fixFlashStr(&MAX_TEMP_STR) );
           print_int16(MaxTemp, printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( tempSymbol );
   
-          OSD.setCursor( 5, ++middle_infos_y );          
+          OSD.setCursor( statCol, ++middle_infos_y );          
           OSD.print( fixFlashStr(&MIN_V_STR) );
           print_int16(MinBat, printBuf,2,1);
           OSD.print( printBuf );
@@ -1490,19 +1464,20 @@ void loop(){
           FLASH_STRING_ARRAY(ESC_A_STR,    PSTR("esc1 max a   : "), PSTR("esc2 max a   : "), PSTR("esc3 max a   : "), PSTR("esc4 max a   : "));
           FLASH_STRING_ARRAY(ESC_TEMP_STR, PSTR("esc1 max temp: "), PSTR("esc2 max temp: "), PSTR("esc3 max temp: "), PSTR("esc4 max temp: "));
           
-          OSD.setCursor( 5, ++middle_infos_y );
+          uint8_t startCol = COLS/2 - (ESC_RPM_STR[0].length()+6)/2;
+          OSD.setCursor( startCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&ESC_RPM_STR[statPage-1]) );
           print_int16(maxKERPM[statPage-1], printBuf,1,1);
           OSD.print( printBuf );
           OSD.print( fixStr("kr") );
           
-          OSD.setCursor( 5, ++middle_infos_y );
+          OSD.setCursor( startCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&ESC_A_STR[statPage-1]) );
           print_int16(maxCurrent[statPage-1], printBuf,2,1);
           OSD.print( printBuf );
           OSD.print( fixChar('a') );
           
-          OSD.setCursor( 5, ++middle_infos_y );
+          OSD.setCursor( startCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&ESC_TEMP_STR[statPage-1]) );
           print_int16(maxTemps[statPage-1], printBuf,0,1);
           OSD.print( printBuf );
@@ -1646,19 +1621,20 @@ void loop(){
           OSD.print( printBuf );
         }
         
-        if(settings.m_batWarning > 0 && LipoMAH >= settings.m_batWarningMAH){
-          OSD.setCursor(9,9);
+        if(settings.m_batWarning > 0 && LipoMAH >= settings.m_batWarningMAH)
+        {
+          FLASH_STRING(BATTERY_LOW,   "battery low");
+          FLASH_STRING(BATTERY_EMPTY, "           ");
+          OSD.setCursor(COLS/2 - BATTERY_LOW.length()/2,ROWS/2 +3);
           if (blink_i % 20 == 0) 
           {
             if(bat_clear) 
             {
-              FLASH_STRING(BATTERY_LOW, "battery low");
               OSD.print( fixFlashStr(&BATTERY_LOW) );
               bat_clear = false;
             }
             else 
-            {
-              FLASH_STRING(BATTERY_EMPTY, "           ");
+            {              
               OSD.print( fixFlashStr(&BATTERY_EMPTY) );
               bat_clear = true;
             }

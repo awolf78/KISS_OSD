@@ -13,18 +13,18 @@ public:
   static const uint8_t ROLL_RIGHT = 0x08; // hex for 0000 1000
   static const uint8_t PITCH_UP = 0x10; // hex for 0001 0000
   static const uint8_t PITCH_DOWN = 0x20; // hex for 0010 0000
-  /*static const uint8_t option7 = 0x40; // hex for 0100 0000
-  static const uint8_t option8 = 0x80; // hex for 1000 0000*/
+  static const uint8_t YAW_LONG_LEFT = 0x40; // hex for 0100 0000
+  static const uint8_t YAW_LONG_RIGHT = 0x80; // hex for 1000 0000
   
   
 private:
-  static const uint16_t YAW_DELAY = 3000;
+  static const uint16_t YAW_LONG_DELAY = 3000;
   static const uint16_t ROLL_PITCH_DELAY = 1250;
   static const uint16_t SPEEDUP = 1000;
   static const uint16_t MAXSPEED = 250;
-  uint16_t rollDelay, pitchDelay, yawDelay;
-  uint16_t rollCount, pitchCount;
-  unsigned long startYawTime, startRollTime, startPitchTime;
+  uint16_t rollDelay, pitchDelay, yawDelay, yawLongDelay;
+  uint16_t rollCount, pitchCount, yawCount;
+  unsigned long startYawTime, startRollTime, startPitchTime, startYawLongTime;
   
   uint8_t CheckInput(int16_t input, unsigned long *startTime, uint16_t *timedelay, uint16_t *count, uint8_t smallMask, uint8_t bigMask, boolean skip = false);
 };
