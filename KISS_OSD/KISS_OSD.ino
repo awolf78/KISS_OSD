@@ -1127,11 +1127,13 @@ void* MainMenu()
         if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarningPercent > 0)
         {
           settings.m_batWarningPercent--;
+          settings.FixBatWarning();
           settingChanged = true;
         }
         if((code &  inputChecker.ROLL_RIGHT) && settings.m_batWarningPercent < 100)
         {
           settings.m_batWarningPercent++;
+          settings.FixBatWarning();
           settingChanged = true;
         }
       break;
