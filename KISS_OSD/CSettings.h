@@ -4,6 +4,7 @@
 #ifndef CSettingsh
 #define CSettingsh
 
+
 class CSettings
 {
   public:

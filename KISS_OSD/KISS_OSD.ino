@@ -238,9 +238,6 @@ static boolean triggerCleanScreen = false;
 static boolean showBat = false;
 static boolean settingChanged = false;
 static uint8_t statPage = 0;
-static boolean menuActive = false;
-static boolean menuWasActive = false;
-static uint8_t activeMenuItem = 0;
 
 
 uint32_t ESC_filter(uint32_t oldVal, uint32_t newVal){
@@ -267,9 +264,9 @@ uint16_t findMax(uint16_t maxV, uint16_t newVal)
   return maxV;
 }
 
-void checkArrow(uint8_t currentRow)
+void checkArrow(uint8_t currentRow, uint8_t menuItem)
 {
-  if(currentRow-4 == activeMenuItem)
+  if(currentRow-3 == menuItem)
   {
     OSD.print(fixChar('>'));
   }
@@ -279,14 +276,990 @@ void checkArrow(uint8_t currentRow)
   }
 }
 
+
+static int16_t lastAuxVal = 0;  
+static uint8_t serialBuf[256];
+static uint8_t minBytes = 0;
+static uint8_t recBytes = 0;
+static uint32_t LastLoopTime = 0;
+
+void ReadTelemetry()
+{
+  uint16_t i = 0;
+  minBytes = 100;
+  recBytes = 0;
+   
+  while(recBytes < minBytes && micros()-LastLoopTime < 20000)
+  {
+    #define STARTCOUNT 2
+    while(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
+    if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
+    if(recBytes == minBytes){
+       uint32_t checksum = 0;
+       for(i=2;i<minBytes;i++){
+          checksum += serialBuf[i];
+       }
+       checksum = (uint32_t)checksum/(minBytes-3);
+       
+       if(checksum == serialBuf[recBytes-1]){
+        
+         throttle = ((serialBuf[STARTCOUNT]<<8) | serialBuf[1+STARTCOUNT])/10;
+         roll = 1000 + ((serialBuf[2+STARTCOUNT]<<8) | serialBuf[3+STARTCOUNT]);
+         pitch = 1000 + ((serialBuf[4+STARTCOUNT]<<8) | serialBuf[5+STARTCOUNT]);
+         yaw = 1000 + ((serialBuf[6+STARTCOUNT]<<8) | serialBuf[7+STARTCOUNT]);
+         LipoVoltage =   ((serialBuf[17+STARTCOUNT]<<8) | serialBuf[18+STARTCOUNT]);
+
+         int8_t current_armed = serialBuf[16+STARTCOUNT];
+         // switch disarmed => armed
+         if (armed == 0 && current_armed > 0) {
+           start_time = millis();
+	     triggerCleanScreen = true;
+           armedOnce = true;
+           last_Aux_Val = AuxChanVals[settings.m_DVchannel];
+           DV_change_time = 0;
+         }
+         // switch armed => disarmed
+         else {
+           if (armed > 0 && current_armed == 0) {
+             total_time = total_time + (millis() - start_time);
+             start_time = 0;
+             triggerCleanScreen = true;
+           } 
+           else if (armed > 0) {
+             time = millis() - start_time;
+           }
+         }
+         armed = current_armed;
+         
+         uint32_t tmpVoltage = 0;
+         uint32_t voltDev = 0;
+         if(((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]) > 5){ // the ESC's read the voltage better then the FC
+           tmpVoltage += ((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]);
+           voltDev++;
+         }
+         if(((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]) > 5){ 
+           tmpVoltage += ((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]);
+           voltDev++;
+         }
+         if(((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]) > 5){
+           tmpVoltage += ((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]);
+           voltDev++;
+         }
+         if(((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]) > 5){ 
+           tmpVoltage += ((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]);
+           voltDev++;
+         }
+         if(((serialBuf[125+STARTCOUNT]<<8) | serialBuf[126+STARTCOUNT]) > 5){
+           tmpVoltage += ((serialBuf[125+STARTCOUNT]<<8) | serialBuf[126+STARTCOUNT]);
+           voltDev++;
+         }
+         
+         if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;           
+         
+         LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]); 
+         
+         static uint32_t windedupfilterdatas[8];
+         
+         windedupfilterdatas[0] = ESC_filter((uint32_t)windedupfilterdatas[0],(uint32_t)((serialBuf[91+STARTCOUNT]<<8) | serialBuf[92+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
+         windedupfilterdatas[1] = ESC_filter((uint32_t)windedupfilterdatas[1],(uint32_t)((serialBuf[101+STARTCOUNT]<<8) | serialBuf[102+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
+         windedupfilterdatas[2] = ESC_filter((uint32_t)windedupfilterdatas[2],(uint32_t)((serialBuf[111+STARTCOUNT]<<8) | serialBuf[112+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
+         windedupfilterdatas[3] = ESC_filter((uint32_t)windedupfilterdatas[3],(uint32_t)((serialBuf[121+STARTCOUNT]<<8) | serialBuf[122+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
+         
+         motorKERPM[0] = windedupfilterdatas[0]>>4;
+         motorKERPM[1] = windedupfilterdatas[1]>>4;
+         motorKERPM[2] = windedupfilterdatas[2]>>4;
+         motorKERPM[3] = windedupfilterdatas[3]>>4;           
+         
+         windedupfilterdatas[4] = ESC_filter((uint32_t)windedupfilterdatas[4],(uint32_t)((serialBuf[87+STARTCOUNT]<<8) | serialBuf[88+STARTCOUNT])<<4);
+         windedupfilterdatas[5] = ESC_filter((uint32_t)windedupfilterdatas[5],(uint32_t)((serialBuf[97+STARTCOUNT]<<8) | serialBuf[98+STARTCOUNT])<<4);
+         windedupfilterdatas[6] = ESC_filter((uint32_t)windedupfilterdatas[6],(uint32_t)((serialBuf[107+STARTCOUNT]<<8) | serialBuf[108+STARTCOUNT])<<4);
+         windedupfilterdatas[7] = ESC_filter((uint32_t)windedupfilterdatas[7],(uint32_t)((serialBuf[117+STARTCOUNT]<<8) | serialBuf[118+STARTCOUNT])<<4);
+         
+         motorCurrent[0] = windedupfilterdatas[4]>>4;
+         motorCurrent[1] = windedupfilterdatas[5]>>4;
+         motorCurrent[2] = windedupfilterdatas[6]>>4;
+         motorCurrent[3] = windedupfilterdatas[7]>>4;
+         
+         
+         ESCTemps[0] = ((serialBuf[83+STARTCOUNT]<<8) | serialBuf[84+STARTCOUNT]);
+         ESCTemps[1] = ((serialBuf[93+STARTCOUNT]<<8) | serialBuf[94+STARTCOUNT]);
+         ESCTemps[2] = ((serialBuf[103+STARTCOUNT]<<8) | serialBuf[104+STARTCOUNT]);
+         ESCTemps[3] = ((serialBuf[113+STARTCOUNT]<<8) | serialBuf[114+STARTCOUNT]);           
+
+         AuxChanVals[0] = ((serialBuf[8+STARTCOUNT]<<8) | serialBuf[9+STARTCOUNT]);
+         AuxChanVals[1] = ((serialBuf[10+STARTCOUNT]<<8) | serialBuf[11+STARTCOUNT]);
+         AuxChanVals[2] = ((serialBuf[12+STARTCOUNT]<<8) | serialBuf[13+STARTCOUNT]);
+         AuxChanVals[3] = ((serialBuf[14+STARTCOUNT]<<8) | serialBuf[15+STARTCOUNT]);
+         
+         current = (uint16_t)(motorCurrent[0]+motorCurrent[1]+motorCurrent[2]+motorCurrent[3])/10;
+         
+         uint8_t i;
+         if(settings.m_tempUnit == 1)
+         {
+           for(i=0; i<4; i++)
+           {
+             ESCTemps[i] = 9 * ESCTemps[i] / 5 + 32;
+           }
+         }
+         if(armedOnce) 
+         {
+           MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
+           MaxRPMs = findMax4(MaxRPMs, motorKERPM, 4);
+           if (MinBat == 0)
+           {
+             MinBat = LipoVoltage;
+           }
+           else if (LipoVoltage < MinBat)
+           {
+             MinBat = LipoVoltage;
+           }
+           MaxAmps = findMax(MaxAmps, current);
+           uint32_t temp = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
+           MaxC = (int16_t) temp;
+           uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
+           MaxWatt = findMax(MaxWatt, (uint16_t) (Watts / 1000));
+           for(i=0; i<4; i++)
+           {
+             maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
+             maxCurrent[i] = findMax(maxCurrent[i], motorCurrent[i]);
+             maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
+           }
+         }
+      }
+    }
+  }
+}
+
+static int16_t p_roll = 0;
+static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
+static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
+static uint8_t minBytesSettings = 0;
+static boolean fcSettingsReceived = false;
+static uint8_t serialBuf2[256];
+
+void ReadFCSettings(boolean skipValues = false)
+{
+  uint8_t i = 0;
+  minBytes = 100;
+  recBytes = 0;
+   
+  while(recBytes < minBytes && micros()-LastLoopTime < 20000)
+  {
+    #define STARTCOUNT 2
+    while(NewSerial.available()) serialBuf2[recBytes++] = NewSerial.read();
+    if(recBytes == 1 && serialBuf2[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
+    if(recBytes == 2) minBytes = serialBuf2[1]+STARTCOUNT+1; // got the transmission length
+    if(recBytes == minBytes)
+    {
+       uint32_t checksum = 0;
+       for(i=2;i<minBytes;i++){
+          checksum += serialBuf2[i];
+       }
+       checksum = (uint32_t)checksum/(minBytes-3);
+       
+       if(checksum == serialBuf2[recBytes-1])
+       {
+         minBytesSettings = minBytes;
+         fcSettingsReceived = true;
+         if(!skipValues)
+         {
+           uint8_t index = 0;
+           p_roll = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           p_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           p_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           i_roll = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           i_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           i_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           d_roll = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           d_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           d_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           
+           index = 28;
+           rcrate_roll = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rcrate_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rcrate_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rate_roll = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rate_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rate_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rccurve_roll = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rccurve_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           rccurve_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           
+           index = 93;
+           p_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           i_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           index += 2;
+           d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+         }
+       }
+    }
+  }
+}
+
+boolean SendFCSettings()
+{
+  if(fcSettingsReceived)
+  {
+    #define STARTCOUNT 2
+    uint8_t index = 0;
+    
+    serialBuf2[STARTCOUNT+index++] = (byte)((p_roll & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(p_roll & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((p_pitch & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(p_pitch & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((p_yaw & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(p_yaw & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((i_roll & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(i_roll & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((i_pitch & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(i_pitch & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((i_yaw & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(i_yaw & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((d_roll & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(d_roll & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((d_pitch & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(d_pitch & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((d_yaw & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(d_yaw & 0x00FF);
+    
+    index = 28;
+    serialBuf2[STARTCOUNT+index++] = (byte)((rcrate_roll & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rcrate_roll & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rcrate_pitch & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rcrate_pitch & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rcrate_yaw & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rcrate_yaw & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rate_roll & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rate_roll & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rate_pitch & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rate_pitch & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rate_yaw & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rate_yaw & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rccurve_roll & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_roll & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rccurve_pitch & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_pitch & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_yaw & 0x00FF);
+    
+    index = 93;
+    serialBuf2[STARTCOUNT+index++] = (byte)((p_tpa & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(p_tpa & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((i_tpa & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(i_tpa & 0x00FF);
+    serialBuf2[STARTCOUNT+index++] = (byte)((d_tpa & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)(d_tpa & 0x00FF);
+    
+    uint32_t checksum = 0;
+    uint16_t i;
+    for(i=2;i<minBytesSettings;i++)
+    {
+     checksum += serialBuf2[i];
+    }
+    checksum = (uint32_t)checksum/(minBytesSettings-3);
+    serialBuf2[minBytesSettings-1] = checksum;
+    
+    NewSerial.write(0x10); //Set settings
+    for(i=0;i<minBytesSettings;i++)
+    {
+      NewSerial.write(serialBuf2[i]);
+    }
+    return true;
+  }
+  return false;
+}
+
+
+typedef void* (*fptr)();
+extern void* MainMenu();
+static char printBuf[15];
+static char tempSymbol = 0x30;
+FLASH_STRING(TWO_BLANKS, "  ");
+static uint8_t code = 0;
+static boolean menuActive = false;
+static boolean menuWasActive = false;
+static boolean fcSettingChanged = false;
+static uint8_t activeMenuItem = 0;
+static uint8_t activePIDMenuItem = 0;
+static uint8_t activePIDRollMenuItem = 0;
+static uint8_t activePIDYawMenuItem = 0;
+static uint8_t activePIDPitchMenuItem = 0;
+static uint8_t activeTPAMenuItem = 0;
+static uint8_t activeRatesMenuItem = 0;
+static uint8_t activeRatesRollMenuItem = 0;
+static uint8_t activeRatesPitchMenuItem = 0;
+static uint8_t activeRatesYawMenuItem = 0;
+static const int16_t P_STEP = 100;
+static const int16_t I_STEP = 1;
+static const int16_t D_STEP = 1000;
+static const int16_t TPA_STEP = 50;
+static const int16_t RATE_STEP = 50;
+
+extern void* RatesMenu();
+
+boolean RatesGeneralMenu(uint8_t &activeGeneralMenuItem, int16_t &rcRate, int16_t &rate, int16_t &rcCurve, char* title)
+{
+  if(activeGeneralMenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
+  {
+    fcSettingChanged = true;
+  }
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeGeneralMenuItem)
+    {
+      case 0:
+        if((code &  inputChecker.ROLL_LEFT) && (rcRate-RATE_STEP) > 0)
+        {
+          rcRate -= RATE_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (rcRate+RATE_STEP) < 32000)
+        {
+          rcRate += RATE_STEP;
+        }
+      break;
+      case 1:
+        if((code &  inputChecker.ROLL_LEFT) && (rate-RATE_STEP) > 0)
+        {
+          rate -= RATE_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (rate+RATE_STEP) < 32000)
+        {
+          rate += RATE_STEP;
+        }
+      break;
+      case 2:
+        if((code &  inputChecker.ROLL_LEFT) && (rcCurve-RATE_STEP) > 0)
+        {
+          rcCurve -= RATE_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (rcCurve+RATE_STEP) < 32000)
+        {
+          rcCurve += RATE_STEP;
+        }
+      break;
+      case 3:
+        activeGeneralMenuItem = 0;
+        return false;
+      break;
+    }
+  }
+  if((code &  inputChecker.PITCH_UP) && activeGeneralMenuItem > 0)
+  {
+    activeGeneralMenuItem--;
+  }
+  
+  static const uint8_t RATES_GENERAL_MENU_ITEMS = 4;
+  
+  if((code &  inputChecker.PITCH_DOWN) && activeGeneralMenuItem < (RATES_GENERAL_MENU_ITEMS-1))
+  {
+    activeGeneralMenuItem++;
+  } 
+  
+  FLASH_STRING(RC_RATE_STR,  "rc rate  : ");
+  FLASH_STRING(RATE_STR,     "rate     : ");
+  FLASH_STRING(RC_CURVE_STR, "rc curve : ");
+  FLASH_STRING(BACK5_STR,    "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = 7;
+  OSD.setCursor( 11, ++startRow );
+  OSD.print( fixStr(title) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&RC_RATE_STR) );
+  print_int16(rcRate, printBuf,3,1);
+  OSD.print( printBuf );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&RATE_STR) );
+  print_int16(rate, printBuf,3,1);
+  OSD.print( printBuf );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&RC_CURVE_STR) );
+  print_int16(rcCurve, printBuf,3,1);
+  OSD.print( printBuf );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&BACK5_STR) );
+  
+  return true;
+}
+
+void* RatesRollMenu()
+{
+  if(RatesGeneralMenu(activeRatesRollMenuItem, rcrate_roll, rate_roll, rccurve_roll, "roll"))
+  {
+    return (void*) RatesRollMenu;
+  }
+  cleanScreen();
+  return (void*)RatesMenu;
+}
+
+void* RatesPitchMenu()
+{
+  if(RatesGeneralMenu(activeRatesPitchMenuItem, rcrate_pitch, rate_pitch, rccurve_pitch, "pitch"))
+  {
+    return (void*) RatesPitchMenu;
+  }
+  cleanScreen();
+  return (void*)RatesMenu;
+}
+
+void* RatesYawMenu()
+{
+  if(RatesGeneralMenu(activeRatesYawMenuItem, rcrate_yaw, rate_yaw, rccurve_yaw, "yaw"))
+  {
+    return (void*) RatesYawMenu;
+  }
+  cleanScreen();
+  return (void*)RatesMenu;
+}
+
+void* RatesMenu()
+{
+  if(code &  inputChecker.ROLL_RIGHT)
+  {
+    switch(activeRatesMenuItem)
+    {
+      case 0:
+        cleanScreen();
+        return (void*)RatesRollMenu;
+      break;
+      case 1:
+        cleanScreen();
+        return (void*)RatesPitchMenu;
+      break;
+      case 2:
+        cleanScreen();
+        return (void*)RatesYawMenu;
+      break;
+      case 3:
+        cleanScreen();
+        activeRatesMenuItem = 0;
+        return (void*)MainMenu;
+      break;
+    }
+  }
+  if((code &  inputChecker.PITCH_UP) && activeRatesMenuItem > 0)
+  {
+    activeRatesMenuItem--;
+  }
+  
+  static const uint8_t RATES_MENU_ITEMS = 4;
+  
+  if((code &  inputChecker.PITCH_DOWN) && activeRatesMenuItem < (RATES_MENU_ITEMS-1))
+  {
+    activeRatesMenuItem++;
+  } 
+  
+  FLASH_STRING(ROLL_STR,  "roll");
+  FLASH_STRING(PITCH_STR, "pitch");
+  FLASH_STRING(YAW_STR,   "yaw");
+  FLASH_STRING(BACK2_STR, "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = 10;
+  OSD.setCursor( 9, ++startRow );
+  OSD.print( fixStr("rates menu") );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeRatesMenuItem);
+  OSD.print( fixFlashStr(&ROLL_STR) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeRatesMenuItem);
+  OSD.print( fixFlashStr(&PITCH_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeRatesMenuItem);
+  OSD.print( fixFlashStr(&YAW_STR) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeRatesMenuItem);
+  OSD.print( fixFlashStr(&BACK2_STR) );
+ 
+  return (void*)RatesMenu;
+}
+
+
+
+
+extern void* PIDMenu();
+
+boolean PIDGeneralMenu(uint8_t &activeGeneralMenuItem, int16_t &p, int16_t &i, int16_t &d, char* title)
+{
+  if(activeGeneralMenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
+  {
+    fcSettingChanged = true;
+  }
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeGeneralMenuItem)
+    {
+      case 0:
+        if((code &  inputChecker.ROLL_LEFT) && (p-P_STEP) > 0)
+        {
+          p -= P_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (p+P_STEP) < 32000)
+        {
+          p += P_STEP;
+        }
+      break;
+      case 1:
+        if((code &  inputChecker.ROLL_LEFT) && (i-I_STEP) > 0)
+        {
+          i -= I_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (i+I_STEP) < 32000)
+        {
+          i += I_STEP;
+        }
+      break;
+      case 2:
+        if((code &  inputChecker.ROLL_LEFT) && (d-D_STEP) > 0)
+        {
+          d -= D_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (d+D_STEP) < 32000)
+        {
+          d += D_STEP;
+        }
+      break;
+      case 3:
+        activeGeneralMenuItem = 0;
+        return false;
+      break;
+    }
+  }
+  if((code &  inputChecker.PITCH_UP) && activeGeneralMenuItem > 0)
+  {
+    activeGeneralMenuItem--;
+  }
+  
+  static const uint8_t PID_GENERAL_MENU_ITEMS = 4;
+  
+  if((code &  inputChecker.PITCH_DOWN) && activeGeneralMenuItem < (PID_GENERAL_MENU_ITEMS-1))
+  {
+    activeGeneralMenuItem++;
+  } 
+  
+  FLASH_STRING(P_STR,     "p : ");
+  FLASH_STRING(I_STR,     "i : ");
+  FLASH_STRING(D_STR,     "d : ");
+  FLASH_STRING(BACK3_STR, "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = 10;
+  OSD.setCursor( 11, ++startRow );
+  OSD.print( fixStr(title) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&P_STR) );
+  print_int16(p, printBuf,3,1);
+  OSD.print( printBuf );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&I_STR) );
+  print_int16(i, printBuf,3,1);
+  OSD.print( printBuf );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&D_STR) );
+  print_int16(d, printBuf,3,1);
+  OSD.print( printBuf );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeGeneralMenuItem);
+  OSD.print( fixFlashStr(&BACK3_STR) );
+  
+  return true;
+}
+
+void* PIDRollMenu()
+{
+  if(PIDGeneralMenu(activePIDRollMenuItem, p_roll, i_roll, d_roll, "roll"))
+  {
+    return (void*) PIDRollMenu;
+  }
+  cleanScreen();
+  return (void*)PIDMenu;
+}
+
+void* PIDPitchMenu()
+{
+  if(PIDGeneralMenu(activePIDPitchMenuItem, p_pitch, i_pitch, d_pitch, "pitch"))
+  {
+    return (void*) PIDPitchMenu;
+  }
+  cleanScreen();
+  return (void*)PIDMenu;
+}
+
+void* PIDYawMenu()
+{
+  if(PIDGeneralMenu(activePIDYawMenuItem, p_yaw, i_yaw, d_yaw, "yaw"))
+  {
+    return (void*) PIDYawMenu;
+  }
+  cleanScreen();
+  return (void*)PIDMenu;
+}
+
+void* TPAMenu()
+{
+  if(activeTPAMenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
+  {
+    fcSettingChanged = true;
+  }
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeTPAMenuItem)
+    {
+      case 0:
+        if((code &  inputChecker.ROLL_LEFT) && (p_tpa-TPA_STEP) > 0)
+        {
+          p_tpa -= TPA_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (p_tpa+TPA_STEP) < 32000)
+        {
+          p_tpa += TPA_STEP;
+        }
+      break;
+      case 1:
+        if((code &  inputChecker.ROLL_LEFT) && (i_tpa-TPA_STEP) > 0)
+        {
+          i_tpa -= TPA_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (i_tpa+TPA_STEP) < 32000)
+        {
+          i_tpa += TPA_STEP;
+        }
+      break;
+      case 2:
+        if((code &  inputChecker.ROLL_LEFT) && (d_tpa-TPA_STEP) > 0)
+        {
+          d_tpa -= TPA_STEP;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && (d_tpa+TPA_STEP) < 32000)
+        {
+          d_tpa += TPA_STEP;
+        }
+      break;
+      case 3:
+        cleanScreen();
+        activeTPAMenuItem = 0;
+        return (void*)PIDMenu;
+      break;
+    }
+  }
+  if((code &  inputChecker.PITCH_UP) && activeTPAMenuItem > 0)
+  {
+    activeTPAMenuItem--;
+  }
+  
+  static const uint8_t TPA_MENU_ITEMS = 4;
+  
+  if((code &  inputChecker.PITCH_DOWN) && activeTPAMenuItem < (TPA_MENU_ITEMS-1))
+  {
+    activeTPAMenuItem++;
+  } 
+  
+  FLASH_STRING(TPA_P_STR, "tpa p : ");
+  FLASH_STRING(TPA_I_STR, "tpa i : ");
+  FLASH_STRING(TPA_D_STR, "tpa d : ");
+  FLASH_STRING(BACK4_STR, "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = 8;
+  OSD.setCursor( 9, ++startRow );
+  OSD.print( fixStr("tpa menu") );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeTPAMenuItem);
+  OSD.print( fixFlashStr(&TPA_P_STR) );
+  print_int16(p_tpa, printBuf,3,1);
+  OSD.print( printBuf );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeTPAMenuItem);
+  OSD.print( fixFlashStr(&TPA_I_STR) );
+  print_int16(i_tpa, printBuf,3,1);
+  OSD.print( printBuf );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeTPAMenuItem);
+  OSD.print( fixFlashStr(&TPA_D_STR) );
+  print_int16(d_tpa, printBuf,3,1);
+  OSD.print( printBuf );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeTPAMenuItem);
+  OSD.print( fixFlashStr(&BACK4_STR) );
+  
+  return (void*)TPAMenu;
+}
+
+void* PIDMenu()
+{
+  if(code &  inputChecker.ROLL_RIGHT)
+  {
+    switch(activePIDMenuItem)
+    {
+      case 0:
+        cleanScreen();
+        return (void*)PIDRollMenu;
+      break;
+      case 1:
+        cleanScreen();
+        return (void*)PIDPitchMenu;
+      break;
+      case 2:
+        cleanScreen();
+        return (void*)PIDYawMenu;
+      break;
+      case 3:
+        cleanScreen();
+        return (void*)TPAMenu;
+      break;
+      case 4:
+        cleanScreen();
+        activePIDMenuItem = 0;
+        return (void*)MainMenu;
+      break;
+    }
+  }
+  if((code &  inputChecker.PITCH_UP) && activePIDMenuItem > 0)
+  {
+    activePIDMenuItem--;
+  }
+  
+  static const uint8_t PID_MENU_ITEMS = 5;
+  
+  if((code &  inputChecker.PITCH_DOWN) && activePIDMenuItem < (PID_MENU_ITEMS-1))
+  {
+    activePIDMenuItem++;
+  } 
+  
+  FLASH_STRING(ROLL_STR,  "roll");
+  FLASH_STRING(PITCH_STR, "pitch");
+  FLASH_STRING(YAW_STR,   "yaw");
+  FLASH_STRING(TPA_STR,   "tpa");
+  FLASH_STRING(BACK2_STR, "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = 10;
+  OSD.setCursor( 9, ++startRow );
+  OSD.print( fixStr("pid menu") );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activePIDMenuItem);
+  OSD.print( fixFlashStr(&ROLL_STR) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activePIDMenuItem);
+  OSD.print( fixFlashStr(&PITCH_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activePIDMenuItem);
+  OSD.print( fixFlashStr(&YAW_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activePIDMenuItem);
+  OSD.print( fixFlashStr(&TPA_STR) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activePIDMenuItem);
+  OSD.print( fixFlashStr(&BACK2_STR) );
+ 
+  return (void*)PIDMenu;
+}
+
+
+
+
+void* MainMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeMenuItem)
+    {
+      case 0:
+        if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarning == 1)
+        {
+          settings.m_batWarning = 0;
+          settingChanged = true;
+        }
+        if(code &  inputChecker.ROLL_RIGHT && settings.m_batWarning == 0)
+        {
+          settings.m_batWarning = 1;
+          settingChanged = true;
+        }
+      break;
+      case 1:
+        if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarningPercent > 0)
+        {
+          settings.m_batWarningPercent--;
+          settingChanged = true;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && settings.m_batWarningPercent < 100)
+        {
+          settings.m_batWarningPercent++;
+          settingChanged = true;
+        }
+      break;
+      case 2:
+        if(fcSettingsReceived)
+        {
+          cleanScreen();
+          return (void*)PIDMenu;
+        }
+      break;
+      case 3:
+        if(fcSettingsReceived)
+        {
+          cleanScreen();
+          return (void*)RatesMenu;
+        }
+      break;
+      case 4:
+        if((code &  inputChecker.ROLL_LEFT) && settings.m_DVchannel > 0)
+        {
+          settings.m_DVchannel--;
+          settingChanged = true;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && settings.m_DVchannel < 3)
+        {
+          settings.m_DVchannel++;
+          settingChanged = true;
+        }
+      break;
+      case 5:
+        if((code &  inputChecker.ROLL_LEFT) && settings.m_tempUnit == 1)
+        {
+          settings.m_tempUnit = 0;
+          settingChanged = true;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && settings.m_tempUnit == 0)
+        {
+          settings.m_tempUnit = 1;
+          settingChanged = true;
+        }
+      break;
+      case 6:
+        menuActive = false;
+      break;
+      case 7:
+        menuActive = false;
+        settingChanged = false;
+        fcSettingChanged = false;
+        settings.ReadSettings();
+        fcSettingsReceived = false;
+      break;
+    }
+  }
+  if((code &  inputChecker.PITCH_UP) && activeMenuItem > 0)
+  {
+    activeMenuItem--;
+  }
+  
+  static const uint8_t MAIN_MENU_ITEMS = 8;
+  
+  if((code &  inputChecker.PITCH_DOWN) && activeMenuItem < (MAIN_MENU_ITEMS-1))
+  {
+    activeMenuItem++;
+  } 
+  
+  FLASH_STRING(BATTERY_WARNING_STR, "battery warning : ");
+  FLASH_STRING(BATTERY_PERCENT_STR, "battery % alarm : ");
+  FLASH_STRING(PID_STR,             "pid");
+  FLASH_STRING(RATES_STR,           "rates");
+  FLASH_STRING(DV_CHANNEL_STR,      "dv channel      : ");
+  FLASH_STRING(TEMP_UNIT_STR,       "temperature unit: ");
+  FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
+  FLASH_STRING(CANCEL_STR,          "cancel");
+  FLASH_STRING_ARRAY(ON_OFF_STR,  PSTR("off"), PSTR("on "));
+  FLASH_STRING_ARRAY(AUX_CHANNEL_STR,  PSTR("aux1"), PSTR("aux2"), PSTR("aux3"), PSTR("aux4"));
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = 3;
+  OSD.setCursor( 9, ++startRow );
+  OSD.print( fixStr("main menu") );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&BATTERY_WARNING_STR) );
+  OSD.print( fixFlashStr(&ON_OFF_STR[settings.m_batWarning]) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&BATTERY_PERCENT_STR) );
+  print_int16(settings.m_batWarningPercent, printBuf,0,1);
+  OSD.print( printBuf );
+  OSD.print( fixChar('%') );
+  OSD.print( fixFlashStr(&TWO_BLANKS) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&PID_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&RATES_STR) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&DV_CHANNEL_STR) );
+  OSD.print( fixFlashStr(&AUX_CHANNEL_STR[settings.m_DVchannel]) );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&TEMP_UNIT_STR) );
+  static const char tempSymbols[][2] = { {0x30,0x00} , {0x31, 0x00}};
+  OSD.print( tempSymbols[settings.m_tempUnit] );
+ 
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&SAVE_EXIT_STR) ); 
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&CANCEL_STR) );
+  
+  return (void*)MainMenu;
+}
+
+static void* activePage = NULL;
+
 void loop(){
   uint16_t i = 0;
-  static int16_t lastAuxVal = 0;  
-  static uint8_t serialBuf[256];
-  uint8_t minBytes = 0;
-  uint8_t recBytes = 0;
-  
-  static uint32_t LastLoopTime = 0;
   static uint8_t blink_i = 1;
   
   if(micros()-LastLoopTime > 10000)
@@ -296,153 +1269,17 @@ void loop(){
     if (blink_i > 100){
       blink_i = 1;
     }
-  
-    NewSerial.write(0x20); // request telemetrie
     
-    minBytes = 100;
-    recBytes = 0;
-   
-    while(recBytes < minBytes && micros()-LastLoopTime < 20000)
+    if(menuActive && !fcSettingsReceived)
     {
-      #define STARTCOUNT 2
-      while(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
-      if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
-      if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
-      if(recBytes == minBytes){
-         uint32_t checksum = 0;
-         for(i=2;i<minBytes;i++){
-            checksum += serialBuf[i];
-         }
-         checksum = (uint32_t)checksum/(minBytes-3);
-         
-         if(checksum == serialBuf[recBytes-1]){
-          
-           throttle = ((serialBuf[STARTCOUNT]<<8) | serialBuf[1+STARTCOUNT])/10;
-           roll = 1000 + ((serialBuf[2+STARTCOUNT]<<8) | serialBuf[3+STARTCOUNT]);
-           pitch = 1000 + ((serialBuf[4+STARTCOUNT]<<8) | serialBuf[5+STARTCOUNT]);
-           yaw = 1000 + ((serialBuf[6+STARTCOUNT]<<8) | serialBuf[7+STARTCOUNT]);
-           LipoVoltage =   ((serialBuf[17+STARTCOUNT]<<8) | serialBuf[18+STARTCOUNT]);
-
-           int8_t current_armed = serialBuf[16+STARTCOUNT];
-           // switch disarmed => armed
-           if (armed == 0 && current_armed > 0) {
-             start_time = millis();
-	     triggerCleanScreen = true;
-             armedOnce = true;
-             last_Aux_Val = AuxChanVals[settings.m_DVchannel];
-             DV_change_time = 0;
-           }
-           // switch armed => disarmed
-           else {
-             if (armed > 0 && current_armed == 0) {
-               total_time = total_time + (millis() - start_time);
-               start_time = 0;
-               triggerCleanScreen = true;
-             } 
-             else if (armed > 0) {
-               time = millis() - start_time;
-             }
-           }
-           armed = current_armed;
-           
-           uint32_t tmpVoltage = 0;
-           uint32_t voltDev = 0;
-           if(((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]) > 5){ // the ESC's read the voltage better then the FC
-             tmpVoltage += ((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]);
-             voltDev++;
-           }
-           if(((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]) > 5){ 
-             tmpVoltage += ((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]);
-             voltDev++;
-           }
-           if(((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]) > 5){
-             tmpVoltage += ((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]);
-             voltDev++;
-           }
-           if(((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]) > 5){ 
-             tmpVoltage += ((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]);
-             voltDev++;
-           }
-           if(((serialBuf[125+STARTCOUNT]<<8) | serialBuf[126+STARTCOUNT]) > 5){
-             tmpVoltage += ((serialBuf[125+STARTCOUNT]<<8) | serialBuf[126+STARTCOUNT]);
-             voltDev++;
-           }
-           
-           if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;           
-           
-           LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]); 
-           
-           static uint32_t windedupfilterdatas[8];
-           
-           windedupfilterdatas[0] = ESC_filter((uint32_t)windedupfilterdatas[0],(uint32_t)((serialBuf[91+STARTCOUNT]<<8) | serialBuf[92+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
-           windedupfilterdatas[1] = ESC_filter((uint32_t)windedupfilterdatas[1],(uint32_t)((serialBuf[101+STARTCOUNT]<<8) | serialBuf[102+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
-           windedupfilterdatas[2] = ESC_filter((uint32_t)windedupfilterdatas[2],(uint32_t)((serialBuf[111+STARTCOUNT]<<8) | serialBuf[112+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
-           windedupfilterdatas[3] = ESC_filter((uint32_t)windedupfilterdatas[3],(uint32_t)((serialBuf[121+STARTCOUNT]<<8) | serialBuf[122+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
-           
-           motorKERPM[0] = windedupfilterdatas[0]>>4;
-           motorKERPM[1] = windedupfilterdatas[1]>>4;
-           motorKERPM[2] = windedupfilterdatas[2]>>4;
-           motorKERPM[3] = windedupfilterdatas[3]>>4;           
-           
-           windedupfilterdatas[4] = ESC_filter((uint32_t)windedupfilterdatas[4],(uint32_t)((serialBuf[87+STARTCOUNT]<<8) | serialBuf[88+STARTCOUNT])<<4);
-           windedupfilterdatas[5] = ESC_filter((uint32_t)windedupfilterdatas[5],(uint32_t)((serialBuf[97+STARTCOUNT]<<8) | serialBuf[98+STARTCOUNT])<<4);
-           windedupfilterdatas[6] = ESC_filter((uint32_t)windedupfilterdatas[6],(uint32_t)((serialBuf[107+STARTCOUNT]<<8) | serialBuf[108+STARTCOUNT])<<4);
-           windedupfilterdatas[7] = ESC_filter((uint32_t)windedupfilterdatas[7],(uint32_t)((serialBuf[117+STARTCOUNT]<<8) | serialBuf[118+STARTCOUNT])<<4);
-           
-           motorCurrent[0] = windedupfilterdatas[4]>>4;
-           motorCurrent[1] = windedupfilterdatas[5]>>4;
-           motorCurrent[2] = windedupfilterdatas[6]>>4;
-           motorCurrent[3] = windedupfilterdatas[7]>>4;
-           
-           
-           ESCTemps[0] = ((serialBuf[83+STARTCOUNT]<<8) | serialBuf[84+STARTCOUNT]);
-           ESCTemps[1] = ((serialBuf[93+STARTCOUNT]<<8) | serialBuf[94+STARTCOUNT]);
-           ESCTemps[2] = ((serialBuf[103+STARTCOUNT]<<8) | serialBuf[104+STARTCOUNT]);
-           ESCTemps[3] = ((serialBuf[113+STARTCOUNT]<<8) | serialBuf[114+STARTCOUNT]);           
-
-           AuxChanVals[0] = ((serialBuf[8+STARTCOUNT]<<8) | serialBuf[9+STARTCOUNT]);
-           AuxChanVals[1] = ((serialBuf[10+STARTCOUNT]<<8) | serialBuf[11+STARTCOUNT]);
-           AuxChanVals[2] = ((serialBuf[12+STARTCOUNT]<<8) | serialBuf[13+STARTCOUNT]);
-           AuxChanVals[3] = ((serialBuf[14+STARTCOUNT]<<8) | serialBuf[15+STARTCOUNT]);
-           
-           current = (uint16_t)(motorCurrent[0]+motorCurrent[1]+motorCurrent[2]+motorCurrent[3])/10;
-           
-           uint8_t i;
-           if(settings.m_tempUnit == 1)
-           {
-             for(i=0; i<4; i++)
-             {
-               ESCTemps[i] = 9 * ESCTemps[i] / 5 + 32;
-             }
-           }
-           if(armedOnce) 
-           {
-             MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
-             MaxRPMs = findMax4(MaxRPMs, motorKERPM, 4);
-             if (MinBat == 0)
-             {
-               MinBat = LipoVoltage;
-             }
-             else if (LipoVoltage < MinBat)
-             {
-               MinBat = LipoVoltage;
-             }
-             MaxAmps = findMax(MaxAmps, current);
-             uint32_t temp = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
-             MaxC = (int16_t) temp;
-             uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
-             MaxWatt = findMax(MaxWatt, (uint16_t) (Watts / 1000));
-             for(i=0; i<4; i++)
-             {
-               maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
-               maxCurrent[i] = findMax(maxCurrent[i], motorCurrent[i]);
-               maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
-             }
-           }
-        }
-      }
+      NewSerial.write(0x30); // request settings
+      ReadFCSettings(fcSettingChanged);
     }
-    
+    else
+    {
+      NewSerial.write(0x20); // request telemetry
+      ReadTelemetry();
+    }    
   
     while (!OSD.notInVSync());
 
@@ -463,15 +1300,16 @@ void loop(){
         cleanScreen();
       }
       
-      static char printBuf[15];
-      char tempSymbol = 0x30;
       if(settings.m_tempUnit == 1)
       {
-        tempSymbol++;
+        tempSymbol = 0x31;
+      }
+      else
+      {
+        tempSymbol = 0x30;
       }
       
-      FLASH_STRING(TWO_BLANKS, "  ");
-      uint8_t code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
+      code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
       if(armed == 0 && ((code &  inputChecker.YAW_LEFT) || menuActive))
       {
         if(!menuActive)
@@ -479,125 +1317,10 @@ void loop(){
           menuActive = true;
           menuWasActive = true;
           cleanScreen();
+          activePage = (void*)MainMenu;
         }
-        if(activeMenuItem < 4 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
-        {
-          settingChanged = true;
-        }
-        int8_t increase = 1;
-        if(code &  inputChecker.ROLL_LEFT)
-        {
-          increase = -1;
-        }
-        if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
-        {
-          switch(activeMenuItem)
-          {
-            case 0:
-              if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarning == 1)
-              {
-                settings.m_batWarning = 0;
-              }
-              if(code &  inputChecker.ROLL_RIGHT && settings.m_batWarning == 0)
-              {
-                settings.m_batWarning = 1;
-              }
-            break;
-            case 1:
-              if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarningPercent > 0)
-              {
-                settings.m_batWarningPercent--;
-              }
-              if((code &  inputChecker.ROLL_RIGHT) && settings.m_batWarningPercent < 100)
-              {
-                settings.m_batWarningPercent++;
-              }
-            break;
-            case 2:
-              if((code &  inputChecker.ROLL_LEFT) && settings.m_DVchannel > 0)
-              {
-                settings.m_DVchannel--;
-              }
-              if((code &  inputChecker.ROLL_RIGHT) && settings.m_DVchannel < 3)
-              {
-                settings.m_DVchannel++;
-              }
-            break;
-            case 3:
-              if((code &  inputChecker.ROLL_LEFT) && settings.m_tempUnit == 1)
-              {
-                settings.m_tempUnit = 0;
-              }
-              if((code &  inputChecker.ROLL_RIGHT) && settings.m_tempUnit == 0)
-              {
-                settings.m_tempUnit = 1;
-              }
-            break;
-            case 4:
-              menuActive = false;
-            break;
-            case 5:
-              menuActive = false;
-              settingChanged = false;
-            break;
-          }
-        }
-        if((code &  inputChecker.PITCH_UP) && activeMenuItem > 0)
-        {
-          activeMenuItem--;
-        }
-        
-        static const uint8_t MAIN_MENU_ITEMS = 6;
-        
-        if((code &  inputChecker.PITCH_DOWN) && activeMenuItem < (MAIN_MENU_ITEMS-1))
-        {
-          activeMenuItem++;
-        } 
-        
-        FLASH_STRING(BATTERY_WARNING_STR, "battery warning : ");
-        FLASH_STRING(BATTERY_PERCENT_STR, "battery % alarm : ");
-        FLASH_STRING(DV_CHANNEL_STR,      "dv channel      : ");
-        FLASH_STRING(TEMP_UNIT_STR,       "temperature unit: ");
-        FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
-        FLASH_STRING(CANCEL_STR,          "cancel");
-        FLASH_STRING_ARRAY(ON_OFF_STR,  PSTR("off"), PSTR("on "));
-        FLASH_STRING_ARRAY(AUX_CHANNEL_STR,  PSTR("aux1"), PSTR("aux2"), PSTR("aux3"), PSTR("aux4"));
-        
-        uint8_t startRow = 2;
-        OSD.setCursor( 9, ++startRow );
-        OSD.print( fixStr("main menu") );
-        
-        OSD.setCursor( 3, ++startRow );
-        checkArrow(startRow);
-        OSD.print( fixFlashStr(&BATTERY_WARNING_STR) );
-        OSD.print( fixFlashStr(&ON_OFF_STR[settings.m_batWarning]) );
- 
-        OSD.setCursor( 3, ++startRow );
-        checkArrow(startRow);
-        OSD.print( fixFlashStr(&BATTERY_PERCENT_STR) );
-        print_int16(settings.m_batWarningPercent, printBuf,0,1);
-        OSD.print( printBuf );
-        OSD.print( fixChar('%') );
-        OSD.print( fixFlashStr(&TWO_BLANKS) );
- 
-        OSD.setCursor( 3, ++startRow );
-        checkArrow(startRow);
-        OSD.print( fixFlashStr(&DV_CHANNEL_STR) );
-        OSD.print( fixFlashStr(&AUX_CHANNEL_STR[settings.m_DVchannel]) );
- 
-        OSD.setCursor( 3, ++startRow );
-        checkArrow(startRow);
-        OSD.print( fixFlashStr(&TEMP_UNIT_STR) );
-        static const char tempSymbols[][2] = { {0x30,0x00} , {0x31, 0x00}};
-        OSD.print( tempSymbols[settings.m_tempUnit] );
- 
-        OSD.setCursor( 3, ++startRow );
-        checkArrow(startRow);
-        OSD.print( fixFlashStr(&SAVE_EXIT_STR) ); 
-        
-        OSD.setCursor( 3, ++startRow );
-        checkArrow(startRow);
-        OSD.print( fixFlashStr(&CANCEL_STR) );       
+        fptr temp = (fptr) activePage;
+        activePage = (void*)temp();
         return;
       }
       else
@@ -605,7 +1328,12 @@ void loop(){
         if(menuWasActive)
         {
           menuWasActive = false;
+          activeMenuItem = 0;
           cleanScreen();
+          if(fcSettingChanged)
+          {
+            SendFCSettings();
+          }
         }        
       }
       if(yaw > 1750 && armed == 0)
@@ -646,6 +1374,13 @@ void loop(){
         OSD.print( printBuf );
         OSD.setCursor(10,8);
         print_int16(settings.m_batMAH[settings.m_activeBattery], printBuf,0,1);
+        OSD.print( printBuf );
+        OSD.print( fixStr("mah") );
+        OSD.print( fixFlashStr(&TWO_BLANKS) );
+        OSD.setCursor(5,9);
+        FLASH_STRING(WARN_STR, "warn at ");
+        OSD.print( fixFlashStr(&WARN_STR) );
+        print_int16(settings.m_batWarningMAH, printBuf,0,1);
         OSD.print( printBuf );
         OSD.print( fixStr("mah") );
         OSD.print( fixFlashStr(&TWO_BLANKS) );

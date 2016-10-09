@@ -40,9 +40,9 @@ void CSettings::ReadSettings()
   else
   {
     m_batWarningMAH = ReadInt16_t(0x03,0x04);
-    m_batWarning = (int16_t) EEPROM.read(0x05);
-    m_activeBattery = (int16_t) EEPROM.read(0x06);
-    m_DVchannel = (int16_t) EEPROM.read(0x07);
+    m_batWarning = EEPROM.read(0x05);
+    m_activeBattery = EEPROM.read(0x06);
+    m_DVchannel = EEPROM.read(0x07);
     uint8_t i;
     byte pos = 0x08;
     for(i=0; i < 4; i++)
@@ -80,9 +80,9 @@ void CSettings::WriteSettings()
     WriteInt16_t(pos, pos+1, m_batMAH[i]);
     pos += 2;
   }
-  EEPROM.write(pos, m_batWarningPercent); 
+  EEPROM.write(pos, (byte)m_batWarningPercent); 
   pos++;
-  EEPROM.write(pos, m_tempUnit); 
+  EEPROM.write(pos, (byte)m_tempUnit); 
 }
 
 void CSettings::FixBatWarning()
