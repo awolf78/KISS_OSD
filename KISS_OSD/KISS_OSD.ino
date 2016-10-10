@@ -205,6 +205,7 @@ void setup()
   DISPLAY_STATS_DV = setupPPM(DISPLAY_STATS_DV);
   DISPLAY_ESC_TEMPERATURE_DV = setupPPM(DISPLAY_ESC_TEMPERATURE_DV);
   NewSerial.begin(115200);
+  delay(3000); // Wait until FC is ready - otherwise we get garbage data
 }
 
 static int16_t  throttle = 0;
@@ -216,6 +217,8 @@ static int8_t armed = 0;
 static int8_t idleTime = 0;
 static uint16_t LipoVoltage = 0;
 static uint16_t LipoMAH = 0;
+static int16_t  previousMAH = 0;
+static int16_t totalMAH = 0;
 static uint16_t MaxAmps = 0;
 static uint16_t MaxC    = 0;
 static uint16_t MaxRPMs = 0;
@@ -314,21 +317,36 @@ void ReadTelemetry()
 
          int8_t current_armed = serialBuf[16+STARTCOUNT];
          // switch disarmed => armed
-         if (armed == 0 && current_armed > 0) {
+         if (armed == 0 && current_armed > 0) 
+         {
            start_time = millis();
-	     triggerCleanScreen = true;
+	   triggerCleanScreen = true;
            armedOnce = true;
            last_Aux_Val = AuxChanVals[settings.m_DVchannel];
            DV_change_time = 0;
          }
          // switch armed => disarmed
-         else {
-           if (armed > 0 && current_armed == 0) {
+         else 
+         {
+           if (armed > 0 && current_armed == 0) 
+           {
              total_time = total_time + (millis() - start_time);
              start_time = 0;
              triggerCleanScreen = true;
+             if(settings.m_batWarning > 0)
+             {
+               settings.m_lastMAH = totalMAH;
+               settings.WriteLastMAH();
+               settings.m_lastMAH = 0;
+             }
+             else
+             {
+               settings.m_lastMAH = 0;
+               settings.WriteLastMAH();
+             }
            } 
-           else if (armed > 0) {
+           else if (armed > 0) 
+           {
              time = millis() - start_time;
            }
          }
@@ -1285,6 +1303,32 @@ void loop(){
       }
       
       code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
+      
+      if(armed == 0 && settings.m_lastMAH > 0)
+      {
+        FLASH_STRING(LAST_BATTERY_STR, "continue last battery?");
+        OSD.setCursor(COLS/2 - (LAST_BATTERY_STR.length())/2,ROWS/2 - 1);
+        OSD.print( fixFlashStr(&LAST_BATTERY_STR) );
+        
+        FLASH_STRING(ROLL_RIGHT_STR, "roll right to confirm");
+        OSD.setCursor(COLS/2 - ROLL_RIGHT_STR.length()/2,ROWS/2);
+        OSD.print( fixFlashStr(&ROLL_RIGHT_STR) );
+        FLASH_STRING(ARM_CANCEL_STR, "arm to cancel");
+        OSD.setCursor(COLS/2 - ARM_CANCEL_STR.length()/2,ROWS/2 + 1);
+        OSD.print( fixFlashStr(&ARM_CANCEL_STR) );
+                
+        if(roll > 1950)
+        {
+          previousMAH = settings.m_lastMAH;
+          settings.m_lastMAH = 0;
+          cleanScreen();
+        }
+        else
+        {
+          return;
+        }
+      }
+      
       if(armed == 0 && ((code &  inputChecker.YAW_LONG_LEFT) || menuActive))
       {
         if(!menuActive)
@@ -1430,7 +1474,7 @@ void loop(){
           
           OSD.setCursor( statCol, ++middle_infos_y );
           OSD.print( fixFlashStr(&MAH_STR) );
-          print_int16(LipoMAH, printBuf,0,1);
+          print_int16(LipoMAH+previousMAH, printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( fixStr("mah") );        
   
@@ -1527,7 +1571,7 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_MA_CONSUMPTION_DV)
         {
-          uint8_t lipoMAHPos = print_int16(LipoMAH, printBuf,0,1);
+          uint8_t lipoMAHPos = print_int16(LipoMAH+previousMAH, printBuf,0,1);
           OSD.setCursor( -(4+lipoMAHPos), -1 );
           OSD.print( printBuf );
           OSD.print( fixStr("mah") );
@@ -1621,8 +1665,9 @@ void loop(){
           OSD.print( printBuf );
         }
         
-        if(settings.m_batWarning > 0 && LipoMAH >= settings.m_batWarningMAH)
+        if(settings.m_batWarning > 0 && (LipoMAH+previousMAH) >= settings.m_batWarningMAH)
         {
+          totalMAH = 0;
           FLASH_STRING(BATTERY_LOW,   "battery low");
           FLASH_STRING(BATTERY_EMPTY, "           ");
           OSD.setCursor(COLS/2 - BATTERY_LOW.length()/2,ROWS/2 +3);
@@ -1638,6 +1683,17 @@ void loop(){
               OSD.print( fixFlashStr(&BATTERY_EMPTY) );
               bat_clear = true;
             }
+          }
+        }
+        else
+        {
+          if(settings.m_batWarning > 0)
+          {
+            totalMAH = LipoMAH+previousMAH;
+          }
+          else
+          {
+            totalMAH = 0;
           }
         }
         if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel]) 

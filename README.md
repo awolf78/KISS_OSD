@@ -21,8 +21,14 @@ The version on the flyduino page is very basic. Some people like that. This one 
 
 * Displays statistics when you land (such as max amps, max watts, max RPM, etc.)
 * You can make the OSD more or less busy using a digital volume (DV) dial on your radio
-* You can configure 5 battery sizes and easily switch between them using stick controls. While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
-* Menu: Yaw all the way to the left (while disarmed) for 3 seconds will enter the Menu. You can configure some of the settings. The menu will get bigger soon :)
+* Battery management
+** You can configure 4 battery sizes and easily switch between them using stick controls. 
+** While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
+** If you did not finish your last battery (no battery warning displayed)
+* Menu
+** Yaw all the way to the left (while disarmed) for 3 seconds will enter the Menu. You can configure some of the settings.
+* PIDs and Rates
+** You can see your PIDs and rates in the menu. BUT YOU CANNOT CHANGE THEM. Maybe in a future version of the KISS FC, but as of today (RC29-2) this does not work. 
 
 ## When should you not use this version?
 

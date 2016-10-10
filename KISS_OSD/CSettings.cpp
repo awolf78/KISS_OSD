@@ -14,6 +14,7 @@ CSettings::CSettings()
   m_batWarningMAH = 1000;
   m_DVchannel = 0; //AUX1 default
   m_tempUnit = 0; //°C default
+  m_lastMAH = 0;
 }
 
 int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
@@ -54,6 +55,8 @@ void CSettings::ReadSettings()
     pos++;
     m_tempUnit = EEPROM.read(pos);
     pos++;
+    
+    m_lastMAH = ReadInt16_t(100, 101);
   }
 }
 
@@ -82,11 +85,17 @@ void CSettings::WriteSettings()
   }
   EEPROM.write(pos, (byte)m_batWarningPercent); 
   pos++;
-  EEPROM.write(pos, (byte)m_tempUnit); 
+  EEPROM.write(pos, (byte)m_tempUnit);
+  pos++;
 }
 
 void CSettings::FixBatWarning()
 {
   uint32_t temp = ((uint32_t)m_batMAH[m_activeBattery] * (uint32_t)m_batWarningPercent) / (uint32_t)100;
   m_batWarningMAH = m_batMAH[m_activeBattery] - (int16_t)temp;
+}
+
+void CSettings::WriteLastMAH()
+{
+  WriteInt16_t(100, 101, m_lastMAH);
 }

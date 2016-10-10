@@ -12,6 +12,7 @@ class CSettings
   void ReadSettings();
   void WriteSettings();
   void FixBatWarning();
+  void WriteLastMAH();
   
   uint8_t m_batWarning; // 0 = off, 1 = on
   int16_t m_batMAH[4]; // 300-32000 mAh
@@ -20,6 +21,7 @@ class CSettings
   uint8_t m_batWarningPercent; // battery capacity percentage -> if below, warning will get displayed
   uint8_t m_DVchannel; // AUX1-AUX4
   uint8_t m_tempUnit; //°C or °F
+  int16_t m_lastMAH; // mAh value from previous run 
   
   private:
   int16_t ReadInt16_t(byte lsbPos, byte msbPos);
