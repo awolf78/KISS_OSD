@@ -1352,6 +1352,7 @@ void loop(){
           if(fcSettingChanged)
           {
             SendFCSettings();
+            SendFCSettings(); // sending twice to be safe
           }
         }        
       }

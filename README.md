@@ -23,6 +23,7 @@ The version on the flyduino page is very basic. Some people like that. This one 
 * You can make the OSD more or less busy using a digital volume (DV) dial on your radio
 * Battery management
 	* You can configure 4 battery sizes and easily switch between them using stick controls. 
+	* You can activate a battery alarm (on by default). At 23% battery capacity (default setting) it will flash a warning "BATTERY LOW" in the lower part of the screen. You can turn this feature off or change the capacity percentage in the Menu.
 	* While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
 	* If you did not finish your last battery (no battery warning displayed)
 * Menu
