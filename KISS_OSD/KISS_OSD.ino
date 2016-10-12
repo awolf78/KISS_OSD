@@ -165,6 +165,8 @@ void cleanScreen()
   }
 }
 
+static uint8_t lastTempUnit;
+
 void setup()
 {
   uint8_t i = 0;
@@ -194,6 +196,7 @@ void setup()
   while (!OSD.notInVSync());
   cleanScreen();
   settings.ReadSettings();
+  lastTempUnit = settings.m_tempUnit;
   DISPLAY_NICKNAME_DV = setupPPM(DISPLAY_NICKNAME_DV);
   DISPLAY_TIMER_DV = setupPPM(DISPLAY_TIMER_DV);
   DISPLAY_RC_THROTTLE_DV = setupPPM(DISPLAY_RC_THROTTLE_DV);
@@ -205,7 +208,7 @@ void setup()
   DISPLAY_STATS_DV = setupPPM(DISPLAY_STATS_DV);
   DISPLAY_ESC_TEMPERATURE_DV = setupPPM(DISPLAY_ESC_TEMPERATURE_DV);
   NewSerial.begin(115200);
-  delay(5000); // Wait until FC is ready - otherwise we get garbage data
+  //delay(5000); // Wait until FC is ready - otherwise we get garbage data; this didn't work. Now trying to throw away data.
 }
 
 static int16_t  throttle = 0;
@@ -287,12 +290,18 @@ static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
 static uint8_t recBytes = 0;
 static uint32_t LastLoopTime = 0;
+static uint32_t StartupTime = 0;
 
 boolean ReadTelemetry()
 {
   uint16_t i = 0;
   minBytes = 100;
   recBytes = 0;
+  
+  if(StartupTime == 0)
+  {
+    StartupTime = millis();
+  }
    
   while(recBytes < minBytes && micros()-LastLoopTime < 20000)
   {
@@ -300,7 +309,12 @@ boolean ReadTelemetry()
     while(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
     if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
     if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
-    if(recBytes == minBytes){
+    if(recBytes == minBytes)
+    {
+       if(millis()-StartupTime < 3000)
+       {
+         return false; //throwing away garbage data sent by FC during startup phase
+       } 
        uint32_t checksum = 0;
        for(i=2;i<minBytes;i++){
           checksum += serialBuf[i];
@@ -421,8 +435,25 @@ boolean ReadTelemetry()
            for(i=0; i<4; i++)
            {
              ESCTemps[i] = 9 * ESCTemps[i] / 5 + 32;
+             if(lastTempUnit == 0)
+             {
+               maxTemps[i] = 9 * maxTemps[i] / 5 + 32;
+             }
+           }
+           if(lastTempUnit == 0)
+           {
+             MaxTemp = 9 * MaxTemp / 5 + 32;
            }
          }
+         if(lastTempUnit == 1 && settings.m_tempUnit == 0)
+         {
+           for(i=0; i<4; i++)
+           {
+             maxTemps[i] = (maxTemps[i] - 32) * 5 / 9;
+           }
+           MaxTemp = (MaxTemp - 32) * 5 / 9;
+         }
+         lastTempUnit = settings.m_tempUnit;
          if(armedOnce) 
          {
            MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
