@@ -308,14 +308,7 @@ boolean ReadTelemetry()
     #define STARTCOUNT 2
     while(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
     if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
-    if(recBytes == 2)
-    {
-      minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
-      if(minBytes < 150 || minBytes > 180)
-      {
-        return false;
-      }
-    }
+    if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
     if(recBytes == minBytes)
     {
        if(millis()-StartupTime < 5000)
@@ -502,6 +495,7 @@ static uint8_t minBytesSettings = 0;
 static boolean fcSettingsReceived = false;
 static uint8_t serialBuf2[256];
 static boolean armOnYaw = true;
+static boolean loggerActive = false;
 
 void ReadFCSettings(boolean skipValues = false)
 {
@@ -583,6 +577,14 @@ void ReadFCSettings(boolean skipValues = false)
            i_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           if(minBytesSettings > (111+STARTCOUNT))
+           {
+             index = 111;
+             if(serialBuf2[index+STARTCOUNT] > 0)
+             {
+               loggerActive = true;
+             }
+           }
          }
        }
     }
@@ -1326,6 +1328,8 @@ void loop(){
     if (blink_i > 100){
       blink_i = 1;
     }
+    
+    if(loggerActive) return;
     
     if(!fcSettingsReceived)
     {
