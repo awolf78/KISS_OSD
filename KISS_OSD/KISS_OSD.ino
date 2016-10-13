@@ -318,7 +318,7 @@ boolean ReadTelemetry()
     }
     if(recBytes == minBytes)
     {
-       if(millis()-StartupTime < 3000)
+       if(millis()-StartupTime < 5000)
        {
          return false; //throwing away garbage data sent by FC during startup phase
        } 
@@ -501,6 +501,7 @@ static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, r
 static uint8_t minBytesSettings = 0;
 static boolean fcSettingsReceived = false;
 static uint8_t serialBuf2[256];
+static boolean armOnYaw = true;
 
 void ReadFCSettings(boolean skipValues = false)
 {
@@ -566,6 +567,15 @@ void ReadFCSettings(boolean skipValues = false)
            rccurve_pitch = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
            rccurve_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+           
+           index = 73;
+           if(serialBuf2[index+STARTCOUNT] == 1 || serialBuf2[index+STARTCOUNT] == 12 || serialBuf2[index+STARTCOUNT] == 13
+           || serialBuf2[index+1+STARTCOUNT] == 1 || serialBuf2[index+1+STARTCOUNT] == 12 || serialBuf2[index+1+STARTCOUNT] == 13
+           || serialBuf2[index+2+STARTCOUNT] == 1 || serialBuf2[index+2+STARTCOUNT] == 12 || serialBuf2[index+2+STARTCOUNT] == 13
+           || serialBuf2[index+3+STARTCOUNT] == 1 || serialBuf2[index+3+STARTCOUNT] == 12 || serialBuf2[index+3+STARTCOUNT] == 13)
+           {
+             armOnYaw = false;
+           }
            
            index = 93;
            p_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
@@ -1136,6 +1146,8 @@ void* PIDMenu()
 
 
 
+static boolean batterySelect = false;
+
 
 void* MainMenu()
 {
@@ -1158,6 +1170,9 @@ void* MainMenu()
         }
       break;
       case 2:
+        batterySelect = true;
+      break;
+      case 3:
         if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarning == 1)
         {
           settings.m_batWarning = 0;
@@ -1169,7 +1184,7 @@ void* MainMenu()
           settingChanged = true;
         }
       break;
-      case 3:
+      case 4:
         if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarningPercent > 0)
         {
           settings.m_batWarningPercent--;
@@ -1183,7 +1198,7 @@ void* MainMenu()
           settingChanged = true;
         }
       break;
-      case 4:
+      case 5:
         if((code &  inputChecker.ROLL_LEFT) && settings.m_DVchannel > 0)
         {
           settings.m_DVchannel--;
@@ -1195,7 +1210,7 @@ void* MainMenu()
           settingChanged = true;
         }
       break;
-      case 5:
+      case 6:
         if((code &  inputChecker.ROLL_LEFT) && settings.m_tempUnit == 1)
         {
           settings.m_tempUnit = 0;
@@ -1207,10 +1222,10 @@ void* MainMenu()
           settingChanged = true;
         }
       break;
-      case 6:
+      case 7:
         menuActive = false;
       break;
-      case 7:
+      case 8:
         menuActive = false;
         settingChanged = false;
         fcSettingChanged = false;
@@ -1224,7 +1239,7 @@ void* MainMenu()
     activeMenuItem--;
   }
   
-  static const uint8_t MAIN_MENU_ITEMS = 8;
+  static const uint8_t MAIN_MENU_ITEMS = 9;
   
   if((code &  inputChecker.PITCH_DOWN) && activeMenuItem < (MAIN_MENU_ITEMS-1))
   {
@@ -1233,6 +1248,7 @@ void* MainMenu()
   
   FLASH_STRING(PID_STR,             "pid");
   FLASH_STRING(RATES_STR,           "rates");
+  FLASH_STRING(SELECT_BATTERY_STR,  "select battery ");
   FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
   FLASH_STRING(BATTERY_PERCENT_STR, "batt. % alarm: ");
   FLASH_STRING(DV_CHANNEL_STR,      "dv channel   : ");
@@ -1257,6 +1273,10 @@ void* MainMenu()
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
   OSD.print( fixFlashStr(&RATES_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activeMenuItem);
+  OSD.print( fixFlashStr(&SELECT_BATTERY_STR) );
   
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
@@ -1307,10 +1327,11 @@ void loop(){
       blink_i = 1;
     }
     
-    if(menuActive && !fcSettingsReceived)
+    if(!fcSettingsReceived)
     {
       NewSerial.write(0x30); // request settings
       ReadFCSettings(fcSettingChanged);
+      return;
     }
     else
     {
@@ -1373,34 +1394,7 @@ void loop(){
         }
       }
       
-      if(armed == 0 && ((code &  inputChecker.YAW_LONG_LEFT) || menuActive))
-      {
-        if(!menuActive)
-        {
-          menuActive = true;
-          menuWasActive = true;
-          cleanScreen();
-          activePage = (void*)MainMenu;
-        }
-        fptr temp = (fptr) activePage;
-        activePage = (void*)temp();
-        return;
-      }
-      else
-      {
-        if(menuWasActive)
-        {
-          menuWasActive = false;
-          activeMenuItem = 0;
-          cleanScreen();
-          if(fcSettingChanged)
-          {
-            SendFCSettings();
-            SendFCSettings(); // sending twice to be safe
-          }
-        }        
-      }
-      if(yaw > 1750 && armed == 0)
+      if(batterySelect || (!armOnYaw && yaw > 1750 && armed == 0))
       {
         if(!showBat)
         {
@@ -1448,6 +1442,16 @@ void loop(){
         OSD.print( printBuf );
         OSD.print( fixStr("mah") );
         OSD.print( fixFlashStr(&TWO_BLANKS) );
+        if(batterySelect)
+        {
+          FLASH_STRING(YAW_LEFT_STR, "yaw left to go back");
+          OSD.setCursor(COLS/2 - YAW_LEFT_STR.length()/2,ROWS/2 + 2);
+          OSD.print( fixFlashStr(&YAW_LEFT_STR) );
+        }
+        if(batterySelect && yaw < 250)
+        {
+          batterySelect = false;
+        }
         return;
       }
       else
@@ -1458,6 +1462,35 @@ void loop(){
           showBat = false;
         }
       }
+      
+      if(armed == 0 && ((code &  inputChecker.YAW_LONG_LEFT) || menuActive))
+      {
+        if(!menuActive)
+        {
+          menuActive = true;
+          menuWasActive = true;
+          cleanScreen();
+          activePage = (void*)MainMenu;
+        }
+        fptr temp = (fptr) activePage;
+        activePage = (void*)temp();
+        return;
+      }
+      else
+      {
+        if(menuWasActive)
+        {
+          menuWasActive = false;
+          activeMenuItem = 0;
+          cleanScreen();
+          if(fcSettingChanged)
+          {
+            SendFCSettings();
+            SendFCSettings(); // sending twice to be safe
+          }
+        }        
+      }
+      
       if(settingChanged)
       {
         settings.WriteSettings();
