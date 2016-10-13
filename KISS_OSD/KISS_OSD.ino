@@ -313,7 +313,7 @@ boolean ReadTelemetry()
       minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
       if(minBytes < 150 || minBytes > 180)
       {
-        return;
+        return false;
       }
     }
     if(recBytes == minBytes)
