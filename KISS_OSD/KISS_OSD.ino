@@ -308,7 +308,14 @@ boolean ReadTelemetry()
     #define STARTCOUNT 2
     while(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
     if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
-    if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
+    if(recBytes == 2)
+    {
+      minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
+      if(minBytes < 150 || minBytes > 180)
+      {
+        return;
+      }
+    }
     if(recBytes == minBytes)
     {
        if(millis()-StartupTime < 3000)
