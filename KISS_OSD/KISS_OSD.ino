@@ -485,6 +485,10 @@ boolean ReadTelemetry()
       }
     }
   }
+  if(recBytes < minBytes)
+  {
+    return false;
+  }
   return true;
 }
 
@@ -519,6 +523,7 @@ void ReadFCSettings(boolean skipValues = false)
        
        if(checksum == serialBuf2[recBytes-1])
        {
+         //NewSerial.flushRx();
          minBytesSettings = minBytes;
          fcSettingsReceived = true;
          if(!skipValues)
@@ -1334,12 +1339,15 @@ void loop(){
     if(!fcSettingsReceived)
     {
       NewSerial.write(0x30); // request settings
+      //NewSerial.flushTx();
       ReadFCSettings(fcSettingChanged);
       return;
     }
     else
     {
+      //NewSerial.flushRx();
       NewSerial.write(0x20); // request telemetry
+      //NewSerial.flushTx();
       if(!ReadTelemetry()) return;
     }    
   
