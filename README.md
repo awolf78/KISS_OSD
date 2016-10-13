@@ -24,6 +24,7 @@ The version on the flyduino page is very basic. Some people like that. This one 
 	* You can configure 4 battery sizes and easily switch between them using stick controls. 
 	* You can activate a battery alarm (on by default). At 23% battery capacity (default setting) it will flash a warning "BATTERY LOW" in the lower part of the screen. You can turn this feature off or change the capacity percentage in the Menu.
 	* While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
+		* ATTENTION: For everyone arming their FC through yaw, this is disabled. You have to go through the menu to change your battery.
 	* If you did not finish your last battery (no battery warning displayed)
 * Menu
 	* Yaw all the way to the left (while disarmed) for 3 seconds will enter the Menu. You can configure some of the settings.
