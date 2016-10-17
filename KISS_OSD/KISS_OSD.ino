@@ -234,6 +234,9 @@ static int16_t motorCurrent[4] = {0,0,0,0};
 static int16_t maxCurrent[4] = {0,0,0,0};
 static int16_t ESCTemps[4] = {0,0,0,0};
 static int16_t maxTemps[4] = {0,0,0,0};
+static int16_t ESCVoltage[4] = {0,0,0,0};
+static int16_t minVoltage[4] = {10000,10000,10000,10000};
+static int16_t ESCmAh[4] = {0,0,0,0};
 static int16_t  AuxChanVals[4] = {0,0,0,0};
 static unsigned long start_time = 0;
 static unsigned long time = 0;
@@ -264,12 +267,21 @@ int16_t findMax4(int16_t maxV, int16_t *values, int16_t length)
   return maxV;
 }
 
-uint16_t findMax(uint16_t maxV, uint16_t newVal) 
+
+int16_t findMax(int16_t maxV, int16_t newVal) 
 {
   if(newVal > maxV) {
     return newVal;
   }
   return maxV;
+}
+
+int16_t findMin(int16_t minV, int16_t newVal) 
+{
+  if(newVal < minV) {
+    return newVal;
+  }
+  return minV;
 }
 
 void checkArrow(uint8_t currentRow, uint8_t menuItem)
@@ -306,9 +318,17 @@ boolean ReadTelemetry()
   while(recBytes < minBytes && micros()-LastLoopTime < 20000)
   {
     #define STARTCOUNT 2
-    while(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    if(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
     if(recBytes == 1 && serialBuf[0] != 5)recBytes = 0; // check for start byte, reset if its wrong
-    if(recBytes == 2) minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
+    if(recBytes == 2) 
+    {
+      minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
+      /*if (minBytes<150 || minBytes>180)  
+      {
+         recBytes = 0;
+         minBytes = 100;
+      }*/
+    }
     if(recBytes == minBytes)
     {
        if(millis()-StartupTime < 5000)
@@ -331,6 +351,8 @@ boolean ReadTelemetry()
          LipoVoltage =   ((serialBuf[17+STARTCOUNT]<<8) | serialBuf[18+STARTCOUNT]);
 
          int8_t current_armed = serialBuf[16+STARTCOUNT];
+         if(current_armed < 0) return false;
+         
          // switch disarmed => armed
          if (armed == 0 && current_armed > 0) 
          {
@@ -370,23 +392,23 @@ boolean ReadTelemetry()
          uint32_t tmpVoltage = 0;
          uint32_t voltDev = 0;
          if(((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]) > 5){ // the ESC's read the voltage better then the FC
-           tmpVoltage += ((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]);
+           ESCVoltage[0] = ((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]);
+           tmpVoltage += ESCVoltage[0];
            voltDev++;
          }
          if(((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]) > 5){ 
-           tmpVoltage += ((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]);
+           ESCVoltage[1] = ((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]);
+           tmpVoltage += ESCVoltage[1];
            voltDev++;
          }
          if(((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]) > 5){
-           tmpVoltage += ((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]);
+           ESCVoltage[2] = ((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]);
+           tmpVoltage += ESCVoltage[2];
            voltDev++;
          }
          if(((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]) > 5){ 
-           tmpVoltage += ((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]);
-           voltDev++;
-         }
-         if(((serialBuf[125+STARTCOUNT]<<8) | serialBuf[126+STARTCOUNT]) > 5){
-           tmpVoltage += ((serialBuf[125+STARTCOUNT]<<8) | serialBuf[126+STARTCOUNT]);
+           ESCVoltage[3] = ((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]);
+           tmpVoltage += ESCVoltage[3];
            voltDev++;
          }
          
@@ -420,7 +442,12 @@ boolean ReadTelemetry()
          ESCTemps[0] = ((serialBuf[83+STARTCOUNT]<<8) | serialBuf[84+STARTCOUNT]);
          ESCTemps[1] = ((serialBuf[93+STARTCOUNT]<<8) | serialBuf[94+STARTCOUNT]);
          ESCTemps[2] = ((serialBuf[103+STARTCOUNT]<<8) | serialBuf[104+STARTCOUNT]);
-         ESCTemps[3] = ((serialBuf[113+STARTCOUNT]<<8) | serialBuf[114+STARTCOUNT]);           
+         ESCTemps[3] = ((serialBuf[113+STARTCOUNT]<<8) | serialBuf[114+STARTCOUNT]);
+
+         ESCmAh[0] = ((serialBuf[89+STARTCOUNT]<<8) | serialBuf[90+STARTCOUNT]); 
+         ESCmAh[1] = ((serialBuf[99+STARTCOUNT]<<8) | serialBuf[100+STARTCOUNT]);
+         ESCmAh[2] = ((serialBuf[109+STARTCOUNT]<<8) | serialBuf[110+STARTCOUNT]);
+         ESCmAh[3] = ((serialBuf[119+STARTCOUNT]<<8) | serialBuf[120+STARTCOUNT]);        
 
          AuxChanVals[0] = ((serialBuf[8+STARTCOUNT]<<8) | serialBuf[9+STARTCOUNT]);
          AuxChanVals[1] = ((serialBuf[10+STARTCOUNT]<<8) | serialBuf[11+STARTCOUNT]);
@@ -430,6 +457,30 @@ boolean ReadTelemetry()
          current = (uint16_t)(motorCurrent[0]+motorCurrent[1]+motorCurrent[2]+motorCurrent[3])/10;
          
          uint8_t i;
+         
+         // Data sanity check. Return false if we get invalid data
+         for(i=0; i<4; i++)
+         {
+           if(ESCTemps[i] < -50 || ESCTemps[i] > 100 ||
+              motorCurrent[i] < 0 || motorCurrent[i] > 10000 ||
+              motorKERPM[i] < 0 || motorKERPM[i] > 500 ||
+              ESCVoltage[i] < 0 || ESCVoltage[i] > 10000 ||
+              ESCmAh[i] < 0)
+           {
+             return false;
+           }
+         }
+         if(LipoVoltage < 0 || LipoVoltage > 10000 ||
+            throttle < 0 || throttle > 100 ||
+            roll < 0 || roll > 2000 ||
+            pitch < 0 || pitch > 2000 ||
+            yaw < 0 || yaw > 2000 ||
+            LipoMAH < 0)
+         {
+           return false;
+         }
+            
+         
          if(settings.m_tempUnit == 1)
          {
            for(i=0; i<4; i++)
@@ -476,6 +527,7 @@ boolean ReadTelemetry()
              maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
              maxCurrent[i] = findMax(maxCurrent[i], motorCurrent[i]);
              maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
+             minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
            }
          }
       }
@@ -499,7 +551,6 @@ static uint8_t minBytesSettings = 0;
 static boolean fcSettingsReceived = false;
 static uint8_t serialBuf2[256];
 static boolean armOnYaw = true;
-static boolean loggerActive = false;
 
 void ReadFCSettings(boolean skipValues = false)
 {
@@ -582,14 +633,6 @@ void ReadFCSettings(boolean skipValues = false)
            i_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
-           if(minBytesSettings > (111+STARTCOUNT))
-           {
-             index = 111;
-             if(serialBuf2[index+STARTCOUNT] > 0)
-             {
-               loggerActive = true;
-             }
-           }
          }
        }
     }
@@ -1334,20 +1377,15 @@ void loop(){
       blink_i = 1;
     }
     
-    if(loggerActive) return;
-    
     if(!fcSettingsReceived)
     {
       NewSerial.write(0x30); // request settings
-      //NewSerial.flushTx();
       ReadFCSettings(fcSettingChanged);
       return;
     }
     else
     {
-      //NewSerial.flushRx();
       NewSerial.write(0x20); // request telemetry
-      //NewSerial.flushTx();
       if(!ReadTelemetry()) return;
     }    
   
@@ -1597,6 +1635,8 @@ void loop(){
           FLASH_STRING_ARRAY(ESC_RPM_STR,  PSTR("esc1 max rpm : "), PSTR("esc2 max rpm : "), PSTR("esc3 max rpm : "), PSTR("esc4 max rpm : "));
           FLASH_STRING_ARRAY(ESC_A_STR,    PSTR("esc1 max a   : "), PSTR("esc2 max a   : "), PSTR("esc3 max a   : "), PSTR("esc4 max a   : "));
           FLASH_STRING_ARRAY(ESC_TEMP_STR, PSTR("esc1 max temp: "), PSTR("esc2 max temp: "), PSTR("esc3 max temp: "), PSTR("esc4 max temp: "));
+          FLASH_STRING_ARRAY(ESC_MINV_STR, PSTR("esc1 min v   : "), PSTR("esc2 min v   : "), PSTR("esc3 min v   : "), PSTR("esc4 min v   : "));
+          FLASH_STRING_ARRAY(ESC_MAH_STR,  PSTR("esc1 mah     : "), PSTR("esc2 mah     : "), PSTR("esc3 mah     : "), PSTR("esc4 mah     : "));
           
           uint8_t startCol = COLS/2 - (ESC_RPM_STR[0].length()+6)/2;
           OSD.setCursor( startCol, ++middle_infos_y );
@@ -1616,6 +1656,18 @@ void loop(){
           print_int16(maxTemps[statPage-1], printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( tempSymbol );
+          
+          OSD.setCursor( startCol, ++middle_infos_y );
+          OSD.print( fixFlashStr(&ESC_MINV_STR[statPage-1]) );
+          print_int16(minVoltage[statPage-1], printBuf,2,1);
+          OSD.print( printBuf );
+          OSD.print( fixChar('v') );
+          
+          OSD.setCursor( startCol, ++middle_infos_y );
+          OSD.print( fixFlashStr(&ESC_MAH_STR[statPage-1]) );
+          print_int16(ESCmAh[statPage-1], printBuf,0,1);
+          OSD.print( printBuf );
+          OSD.print( fixStr("mah") );
         }
      }
      else 
