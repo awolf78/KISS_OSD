@@ -323,11 +323,11 @@ boolean ReadTelemetry()
     if(recBytes == 2) 
     {
       minBytes = serialBuf[1]+STARTCOUNT+1; // got the transmission length
-      /*if (minBytes<150 || minBytes>180)  
+      if (minBytes<150 || minBytes>180)  
       {
          recBytes = 0;
          minBytes = 100;
-      }*/
+      }
     }
     if(recBytes == minBytes)
     {
@@ -465,8 +465,7 @@ boolean ReadTelemetry()
               motorCurrent[i] < 0 || motorCurrent[i] > 10000 ||
               motorKERPM[i] < 0 || motorKERPM[i] > 500 ||
               ESCVoltage[i] < 0 || ESCVoltage[i] > 10000 ||
-              ESCmAh[i] < 0 ||
-              AuxChanVals[i] < 0)
+              ESCmAh[i] < 0)
            {
              return false;
            }
@@ -538,7 +537,7 @@ boolean ReadTelemetry()
       }
     }
   }
-  if(recBytes < minBytes)
+  if(recBytes != minBytes)
   {
     return false;
   }
