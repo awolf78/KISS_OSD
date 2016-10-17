@@ -218,16 +218,16 @@ static int16_t  yaw = 0;
 static uint16_t current = 0;
 static int8_t armed = 0;
 static int8_t idleTime = 0;
-static uint16_t LipoVoltage = 0;
-static uint16_t LipoMAH = 0;
+static int16_t LipoVoltage = 0;
+static int16_t LipoMAH = 0;
 static int16_t  previousMAH = 0;
 static int16_t totalMAH = 0;
-static uint16_t MaxAmps = 0;
-static uint16_t MaxC    = 0;
-static uint16_t MaxRPMs = 0;
-static uint16_t MaxWatt = 0;
-static uint16_t MaxTemp = 0;
-static uint16_t MinBat = 0;
+static int16_t MaxAmps = 0;
+static int16_t MaxC    = 0;
+static int16_t MaxRPMs = 0;
+static int16_t MaxWatt = 0;
+static int16_t MaxTemp = 0;
+static int16_t MinBat = 0;
 static int16_t motorKERPM[4] = {0,0,0,0};
 static int16_t maxKERPM[4] = {0,0,0,0};
 static int16_t motorCurrent[4] = {0,0,0,0};
@@ -465,7 +465,8 @@ boolean ReadTelemetry()
               motorCurrent[i] < 0 || motorCurrent[i] > 10000 ||
               motorKERPM[i] < 0 || motorKERPM[i] > 500 ||
               ESCVoltage[i] < 0 || ESCVoltage[i] > 10000 ||
-              ESCmAh[i] < 0)
+              ESCmAh[i] < 0 ||
+              AuxChanVals[i] < 0)
            {
              return false;
            }
