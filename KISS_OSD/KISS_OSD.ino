@@ -111,7 +111,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 #define LOCATION_BAT_WARNING_MAH_MSB	0x04
 //#define DEBUG
 
-const char KISS_OSD_VER[] = "kiss osd v2.0";
+const char KISS_OSD_VER[] = "kiss osd v2.1";
 
 #include <SPI.h>
 #include <MAX7456.h>
@@ -122,7 +122,7 @@ const char KISS_OSD_VER[] = "kiss osd v2.0";
 #include "CStickInput.h"
 #include "Flash.h"
 #include "fixFont.h"
-
+#include "CMeanFilter.h"
 
 const byte osdChipSelect             =            6;
 const byte masterOutSlaveIn          =            MOSI;
@@ -303,6 +303,10 @@ static uint8_t minBytes = 0;
 static uint8_t recBytes = 0;
 static uint32_t LastLoopTime = 0;
 static uint32_t StartupTime = 0;
+const uint16_t filterCount = 5;
+CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
+CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount) }; 
+CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount) }; 
 
 boolean ReadTelemetry()
 {
@@ -530,6 +534,13 @@ boolean ReadTelemetry()
              minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
            }
          }
+         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
+         current = ampTotalFilter.ProcessValue(current);
+         for(i=0; i<4; i++)
+         {
+           motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
+           motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
+         }
       }
       else
       {
@@ -551,6 +562,7 @@ static uint8_t minBytesSettings = 0;
 static boolean fcSettingsReceived = false;
 static uint8_t serialBuf2[256];
 static boolean armOnYaw = true;
+static uint8_t AUX2 = 0;
 
 void ReadFCSettings(boolean skipValues = false)
 {
@@ -619,12 +631,22 @@ void ReadFCSettings(boolean skipValues = false)
            rccurve_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            
            index = 73;
-           if(serialBuf2[index+STARTCOUNT] == 1 || serialBuf2[index+STARTCOUNT] == 12 || serialBuf2[index+STARTCOUNT] == 13
-           || serialBuf2[index+1+STARTCOUNT] == 1 || serialBuf2[index+1+STARTCOUNT] == 12 || serialBuf2[index+1+STARTCOUNT] == 13
-           || serialBuf2[index+2+STARTCOUNT] == 1 || serialBuf2[index+2+STARTCOUNT] == 12 || serialBuf2[index+2+STARTCOUNT] == 13
-           || serialBuf2[index+3+STARTCOUNT] == 1 || serialBuf2[index+3+STARTCOUNT] == 12 || serialBuf2[index+3+STARTCOUNT] == 13)
+           if(serialBuf2[92+STARTCOUNT] < 104)
            {
-             armOnYaw = false;
+             if(serialBuf2[index+STARTCOUNT] == 1 || serialBuf2[index+STARTCOUNT] == 12 || serialBuf2[index+STARTCOUNT] == 13
+             || serialBuf2[index+1+STARTCOUNT] == 1 || serialBuf2[index+1+STARTCOUNT] == 12 || serialBuf2[index+1+STARTCOUNT] == 13
+             || serialBuf2[index+2+STARTCOUNT] == 1 || serialBuf2[index+2+STARTCOUNT] == 12 || serialBuf2[index+2+STARTCOUNT] == 13
+             || serialBuf2[index+3+STARTCOUNT] == 1 || serialBuf2[index+3+STARTCOUNT] == 12 || serialBuf2[index+3+STARTCOUNT] == 13)
+             {
+               armOnYaw = false;
+             }
+           }
+           else
+           {
+             if(serialBuf2[index+STARTCOUNT] > 0)
+             {
+               armOnYaw = false;
+             }
            }
            
            index = 93;
@@ -1393,12 +1415,21 @@ void loop(){
 
       #ifdef DEBUG
       static char Aux1[15];
-      print_int16((int16_t)freeRam(), Aux1,0,0);
-      OSD.setCursor(8,-1);
-      OSD.print(Aux1);
-      print_int16(roll, Aux1,0,0);
+      for(i=0; i < 8; i++)
+      {
+        if(AUX2 & (1 << i))
+        {
+          Aux1[i] = 0x07;
+        }
+        else
+        {
+          Aux1[i] = 0x06;
+        }
+      }
       OSD.setCursor(8,-2);
+      Aux1[8] = 0x00;
       OSD.print(Aux1);
+      return;
       #endif 
       
       if(triggerCleanScreen || lastAuxVal != AuxChanVals[settings.m_DVchannel])
