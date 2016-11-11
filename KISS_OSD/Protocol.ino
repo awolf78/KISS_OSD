@@ -1,5 +1,7 @@
 static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
+static uint8_t minBytesSettings = 0;
+static uint8_t protoVersion = 0;
 static uint8_t recBytes = 0;
 static uint32_t StartupTime = 0;
 const uint16_t filterCount = 5;
@@ -254,11 +256,7 @@ boolean ReadTelemetry()
   return true;
 }
 
-static uint8_t minBytesSettings = 0;
 static uint8_t serialBuf2[256];
-#ifdef DEBUG
-static uint8_t AUX2 = 0;
-#endif
 
 void ReadFCSettings(boolean skipValues = false)
 {
@@ -327,6 +325,7 @@ void ReadFCSettings(boolean skipValues = false)
            rccurve_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            
            index = 73;
+           protoVersion = serialBuf2[92+STARTCOUNT];
            if(serialBuf2[92+STARTCOUNT] < 104)
            {
              if(serialBuf2[index+STARTCOUNT] == 1 || serialBuf2[index+STARTCOUNT] == 12 || serialBuf2[index+STARTCOUNT] == 13
@@ -351,11 +350,14 @@ void ReadFCSettings(boolean skipValues = false)
            i_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+            
          }
        }
     }
   }
 }
+
+static boolean shiftedSettings = false;
 
 boolean SendFCSettings()
 {
@@ -363,6 +365,7 @@ boolean SendFCSettings()
   {
     #define STARTCOUNT 2
     uint8_t index = 0;
+    protoVersion = serialBuf2[92+STARTCOUNT];
     
     serialBuf2[STARTCOUNT+index++] = (byte)((p_roll & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(p_roll & 0x00FF);
@@ -403,7 +406,27 @@ boolean SendFCSettings()
     serialBuf2[STARTCOUNT+index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_yaw & 0x00FF);
     
-    index = 93;
+    //Need to shift data - but only once :)
+    uint16_t i;
+    if(!shiftedSettings)
+    {
+      for(i=93; i < 101; i++)
+      {
+        serialBuf2[STARTCOUNT+i-13] = serialBuf2[STARTCOUNT+i]; // skipping serial number
+      }
+      for(i=0; i<4; i++)
+      {
+        serialBuf2[STARTCOUNT+88+i] = 0; //controller activation
+      }
+      serialBuf2[STARTCOUNT+92] = serialBuf2[STARTCOUNT+101]; // data.setUint8(92, obj.BoardRotation, 0); obj.BoardRotation = data.getUint8(101);
+      for(i=103; i < 256; i++)
+      {
+        serialBuf2[STARTCOUNT+i-10] = serialBuf2[STARTCOUNT+i]; // skipped obj.isActive = data.getUint8(102);
+      }
+      shiftedSettings = true;
+    }
+    
+    index = 80;
     serialBuf2[STARTCOUNT+index++] = (byte)((p_tpa & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(p_tpa & 0x00FF);
     serialBuf2[STARTCOUNT+index++] = (byte)((i_tpa & 0xFF00) >> 8);
@@ -411,8 +434,16 @@ boolean SendFCSettings()
     serialBuf2[STARTCOUNT+index++] = (byte)((d_tpa & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(d_tpa & 0x00FF);
     
+    #ifdef DEBUG
+    index = 117;
+    CBO1 = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+    index += 2;
+    CBO2 = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+    index += 2;
+    CBO3 = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+    #endif
+    
     uint32_t checksum = 0;
-    uint16_t i;
     for(i=2;i<minBytesSettings;i++)
     {
      checksum += serialBuf2[i];

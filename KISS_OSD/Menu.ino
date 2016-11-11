@@ -405,9 +405,11 @@ void* MainMenu()
       break;
       case 7:
         menuActive = false;
+        menuWasActive = true;
       break;
       case 8:
         menuActive = false;
+        menuWasActive = true;
         settingChanged = false;
         fcSettingChanged = false;
         settings.ReadSettings();

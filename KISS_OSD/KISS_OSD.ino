@@ -143,7 +143,7 @@ static const uint8_t ROWS = MAX7456_ROWS_N0;
 static const uint8_t COLS = MAX7456_COLS_N1;
 #endif
 
-static char clean[COLS];
+static const int16_t DV_PPM_INCREMENT = 100;
 
 int16_t setupPPM(int16_t pos) 
 {
@@ -151,20 +151,13 @@ int16_t setupPPM(int16_t pos)
   {
     return 10000;
   }
-  return -1000 + (pos * 100);
+  return -1000 + (pos * DV_PPM_INCREMENT);
 }
 
 void cleanScreen() 
 {
   OSD.clear();
   while(!OSD.clearIsBusy());
-  /*uint8_t i;
- 
-  for(i=0;i<ROWS;i++)
-  {
-      OSD.setCursor( 0, i );
-      OSD.print( clean );
-  }*/
 }
 
 static uint8_t lastTempUnit;
@@ -194,7 +187,6 @@ void setup()
   OSD.display(); 
   
   //clean used area
-  for(i=0;i<COLS;i++) clean[i] = fixChar(' ');
   while (!OSD.notInVSync());
   cleanScreen();
   settings.ReadSettings();
@@ -247,7 +239,6 @@ static unsigned long DV_change_time = 0;
 static boolean bat_clear = true;
 static int16_t last_Aux_Val = -10000;
 static boolean armedOnce = false;
-static boolean triggerCleanScreen = false;
 static boolean showBat = false;
 static boolean settingChanged = false;
 static uint8_t statPage = 0;
@@ -305,7 +296,14 @@ static boolean menuWasActive = false;
 static boolean fcSettingChanged = false;
 static void* activePage = NULL;
 static boolean batterySelect = false;
+static boolean triggerCleanScreen = false;
 static uint8_t activeMenuItem = 0;
+
+#ifdef DEBUG
+static int16_t CBO1 = 0;
+static int16_t CBO2 = 0;
+static int16_t CBO3 = 0;
+#endif
 
 void loop(){
   uint16_t i = 0;
@@ -327,32 +325,37 @@ void loop(){
     }
     else
     {
-      NewSerial.write(0x20); // request telemetry
-      if(!ReadTelemetry()) return;
+      if(!fcSettingChanged || menuActive)
+      {
+        NewSerial.write(0x20); // request telemetry
+      }
+      if(!ReadTelemetry()) 
+      {
+        if(fcSettingChanged && !menuActive)
+        {
+          SendFCSettings();
+          fcSettingChanged = false;
+        }
+        return;
+      }
     }    
   
     while (!OSD.notInVSync());
 
       #ifdef DEBUG
       static char Aux1[15];
-      for(i=0; i < 8; i++)
-      {
-        if(AUX2 & (1 << i))
-        {
-          Aux1[i] = 0x07;
-        }
-        else
-        {
-          Aux1[i] = 0x06;
-        }
-      }
-      OSD.setCursor(8,-2);
-      Aux1[8] = 0x00;
+      print_int16(CBO3, Aux1, 0,1);
+      OSD.setCursor(8,-3);
       OSD.print(Aux1);
-      return;
+      print_int16(CBO2, Aux1, 0,1);
+      OSD.setCursor(8,-4);
+      OSD.print(Aux1);
+      print_int16(CBO1, Aux1, 0,1);
+      OSD.setCursor(8,-5);
+      OSD.print(Aux1);
       #endif 
       
-      if(triggerCleanScreen || lastAuxVal != AuxChanVals[settings.m_DVchannel])
+      if(triggerCleanScreen || abs((lastAuxVal+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) > DV_PPM_INCREMENT)
       {
         lastAuxVal = AuxChanVals[settings.m_DVchannel];
         triggerCleanScreen = false;
@@ -469,7 +472,6 @@ void loop(){
         if(!menuActive)
         {
           menuActive = true;
-          menuWasActive = true;
           cleanScreen();
           activePage = (void*)MainMenu;
         }
@@ -484,10 +486,6 @@ void loop(){
           menuWasActive = false;
           activeMenuItem = 0;
           cleanScreen();
-          if(fcSettingChanged)
-          {
-            SendFCSettings();
-          }
         }        
       }
       
