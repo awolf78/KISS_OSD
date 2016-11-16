@@ -261,7 +261,7 @@ void* TPAMenu()
 
 void* PIDMenu()
 {
-  if(code &  inputChecker.ROLL_RIGHT)
+  if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
   {
     switch(activePIDMenuItem)
     {
@@ -282,6 +282,18 @@ void* PIDMenu()
         return (void*)TPAMenu;
       break;
       case 4:
+        if((code &  inputChecker.ROLL_LEFT) && lpf_frq > 0)
+        {
+          lpf_frq--;
+          fcSettingChanged = true;
+        }
+        if((code &  inputChecker.ROLL_RIGHT) && lpf_frq < 6)
+        {
+          lpf_frq++;
+          fcSettingChanged = true;
+        }
+      break;
+      case 5:
         cleanScreen();
         activePIDMenuItem = 0;
         return (void*)MainMenu;
@@ -289,17 +301,27 @@ void* PIDMenu()
     }
   }
 
-  static const uint8_t PID_MENU_ITEMS = 5;
+  static const uint8_t PID_MENU_ITEMS = 6;
   activePIDMenuItem = checkMenuItem(activePIDMenuItem, PID_MENU_ITEMS);
   
   FLASH_STRING(ROLL_STR,  "roll  ");
   FLASH_STRING(PITCH_STR, "pitch ");
   FLASH_STRING(YAW_STR,   "yaw   ");
   FLASH_STRING(TPA_STR,   "tpa   ");
+  FLASH_STRING(LPF_STR,   "lpf  : ");
   FLASH_STRING(BACK2_STR, "back  ");
   
+  FLASH_STRING(LPF1_STR, "off ");
+  FLASH_STRING(LPF2_STR, "high    ");
+  FLASH_STRING(LPF3_STR, "med high");
+  FLASH_STRING(LPF4_STR, "medium  ");
+  FLASH_STRING(LPF5_STR, "med low ");
+  FLASH_STRING(LPF6_STR, "low     ");
+  FLASH_STRING(LPF7_STR, "very low");
+  static _FLASH_STRING LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR };
+  
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - ROLL_STR.length()/2;
+  uint8_t startCol = COLS/2 - (LPF_STR.length()+LPF7_STR.length())/2;
   const char title[] = "pid menu";
   OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
@@ -319,6 +341,11 @@ void* PIDMenu()
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activePIDMenuItem);
   OSD.print( fixFlashStr(&TPA_STR) );
+  
+  OSD.setCursor( startCol, ++startRow );
+  checkArrow(startRow, activePIDMenuItem);
+  OSD.print( fixFlashStr(&LPF_STR) );
+  OSD.print( fixFlashStr(&LPF_FRQ_STR[lpf_frq]) );
  
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activePIDMenuItem);
@@ -420,7 +447,7 @@ void* MainMenu()
   static const uint8_t MAIN_MENU_ITEMS = 9;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
-  FLASH_STRING(PID_STR,             "pid");
+  FLASH_STRING(PID_STR,             "tune");
   FLASH_STRING(RATES_STR,           "rates");
   FLASH_STRING(SELECT_BATTERY_STR,  "select battery ");
   FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
@@ -429,8 +456,7 @@ void* MainMenu()
   FLASH_STRING(TEMP_UNIT_STR,       "temp. unit   : ");
   FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
   FLASH_STRING(CANCEL_STR,          "cancel");
-  FLASH_STRING_ARRAY(ON_OFF_STR,  PSTR("off"), PSTR("on "));
-  FLASH_STRING_ARRAY(AUX_CHANNEL_STR,  PSTR("aux1"), PSTR("aux2"), PSTR("aux3"), PSTR("aux4"));
+  static char ON_OFF_STR[][4] = { "off", "on " };
   
   uint8_t startRow = 0;
   uint8_t startCol = COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
@@ -455,7 +481,7 @@ void* MainMenu()
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
   OSD.print( fixFlashStr(&BATTERY_WARNING_STR) );
-  OSD.print( fixFlashStr(&ON_OFF_STR[settings.m_batWarning]) );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
  
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
@@ -468,7 +494,8 @@ void* MainMenu()
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);
   OSD.print( fixFlashStr(&DV_CHANNEL_STR) );
-  OSD.print( fixFlashStr(&AUX_CHANNEL_STR[settings.m_DVchannel]) );
+  OSD.print( fixStr("aux") );
+  OSD.print( (char)(settings.m_DVchannel+1+0x06) );
  
   OSD.setCursor( startCol, ++startRow );
   checkArrow(startRow, activeMenuItem);

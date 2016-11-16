@@ -202,7 +202,7 @@ void setup()
   DISPLAY_STATS_DV = setupPPM(DISPLAY_STATS_DV);
   DISPLAY_ESC_TEMPERATURE_DV = setupPPM(DISPLAY_ESC_TEMPERATURE_DV);
   NewSerial.begin(115200);
-  //delay(5000); // Wait until FC is ready - otherwise we get garbage data; this didn't work. Now trying to throw away data.
+  //delay(5000); // Wait until FC is ready - otherwise we no settings???; Didn't work :(
 }
 
 static int16_t  throttle = 0;
@@ -280,6 +280,7 @@ int16_t findMin(int16_t minV, int16_t newVal)
 static int16_t p_roll = 0;
 static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
 static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
+static int16_t lpf_frq;
 static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
@@ -382,20 +383,22 @@ void loop(){
         FLASH_STRING(ROLL_RIGHT_STR, "roll right to confirm");
         OSD.setCursor(COLS/2 - ROLL_RIGHT_STR.length()/2,ROWS/2);
         OSD.print( fixFlashStr(&ROLL_RIGHT_STR) );
-        FLASH_STRING(ARM_CANCEL_STR, "arm to cancel");
+        FLASH_STRING(ARM_CANCEL_STR, "roll left to cancel");
         OSD.setCursor(COLS/2 - ARM_CANCEL_STR.length()/2,ROWS/2 + 1);
         OSD.print( fixFlashStr(&ARM_CANCEL_STR) );
                 
-        if(roll > 1950)
+        if(code & inputChecker.ROLL_RIGHT)
         {
           previousMAH = settings.m_lastMAH;
           settings.m_lastMAH = 0;
           cleanScreen();
         }
-        else
+        if(code & inputChecker.ROLL_LEFT)
         {
-          return;
-        }
+          settings.m_lastMAH = 0;
+          cleanScreen();
+        }  
+        return;
       }
       
       if(batterySelect || (!menuActive && !armOnYaw && yaw > 1750 && armed == 0))
@@ -580,39 +583,50 @@ void loop(){
         }
         else
         {
-          FLASH_STRING_ARRAY(ESC_RPM_STR,  PSTR("esc1 max rpm : "), PSTR("esc2 max rpm : "), PSTR("esc3 max rpm : "), PSTR("esc4 max rpm : "));
-          FLASH_STRING_ARRAY(ESC_A_STR,    PSTR("esc1 max a   : "), PSTR("esc2 max a   : "), PSTR("esc3 max a   : "), PSTR("esc4 max a   : "));
-          FLASH_STRING_ARRAY(ESC_TEMP_STR, PSTR("esc1 max temp: "), PSTR("esc2 max temp: "), PSTR("esc3 max temp: "), PSTR("esc4 max temp: "));
-          FLASH_STRING_ARRAY(ESC_MINV_STR, PSTR("esc1 min v   : "), PSTR("esc2 min v   : "), PSTR("esc3 min v   : "), PSTR("esc4 min v   : "));
-          FLASH_STRING_ARRAY(ESC_MAH_STR,  PSTR("esc1 mah     : "), PSTR("esc2 mah     : "), PSTR("esc3 mah     : "), PSTR("esc4 mah     : "));
+          FLASH_STRING(ESC_STAT_STR,"esc");
+          FLASH_STRING(ESC_RPM_STR, " max rpm : ");
+          FLASH_STRING(ESC_A_STR,   " max a   : ");
+          FLASH_STRING(ESC_TEMP_STR," max temp: ");
+          FLASH_STRING(ESC_MINV_STR," min v   : ");
+          FLASH_STRING(ESC_MAH_STR, " mah     : ");
           
-          uint8_t startCol = COLS/2 - (ESC_RPM_STR[0].length()+6)/2;
+          uint8_t startCol = COLS/2 - (ESC_RPM_STR.length()+ESC_STAT_STR.length()+7)/2;
           OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_RPM_STR[statPage-1]) );
+          OSD.print( fixFlashStr(&ESC_STAT_STR) );
+          OSD.print( (char)(statPage-1+0x06) ); 
+          OSD.print( fixFlashStr(&ESC_RPM_STR) );
           print_int16(maxKERPM[statPage-1], printBuf,1,1);
           OSD.print( printBuf );
           OSD.print( fixStr("kr") );
           
           OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_A_STR[statPage-1]) );
+          OSD.print( fixFlashStr(&ESC_STAT_STR) );
+          OSD.print( (char)(statPage-1+0x06) );  
+          OSD.print( fixFlashStr(&ESC_A_STR) );
           print_int16(maxCurrent[statPage-1], printBuf,2,1);
           OSD.print( printBuf );
           OSD.print( fixChar('a') );
           
           OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_TEMP_STR[statPage-1]) );
+          OSD.print( fixFlashStr(&ESC_STAT_STR) );
+          OSD.print( (char)(statPage-1+0x06) );  
+          OSD.print( fixFlashStr(&ESC_TEMP_STR) );
           print_int16(maxTemps[statPage-1], printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( tempSymbol );
           
           OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_MINV_STR[statPage-1]) );
+          OSD.print( fixFlashStr(&ESC_STAT_STR) );
+          OSD.print( (char)(statPage-1+0x06) );  
+          OSD.print( fixFlashStr(&ESC_MINV_STR) );
           print_int16(minVoltage[statPage-1], printBuf,2,1);
           OSD.print( printBuf );
           OSD.print( fixChar('v') );
           
           OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_MAH_STR[statPage-1]) );
+          OSD.print( fixFlashStr(&ESC_STAT_STR) );
+          OSD.print( (char)(statPage-1+0x06) );  
+          OSD.print( fixFlashStr(&ESC_MAH_STR) );
           print_int16(ESCmAh[statPage-1], printBuf,0,1);
           OSD.print( printBuf );
           OSD.print( fixStr("mah") );

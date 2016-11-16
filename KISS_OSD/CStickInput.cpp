@@ -66,7 +66,7 @@ uint8_t CStickInput::CheckInput(int16_t input, unsigned long *startTime, uint16_
       if((millis() - *startTime) > *timedelay)
       {
         (*count)++;
-        if(*timedelay > MAXSPEED && (*count) > 1)
+        if(*timedelay > MAXSPEED && (*count) > 0)
         {
           *timedelay -= SPEEDUP;
           (*count) = 0;

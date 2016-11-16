@@ -326,7 +326,7 @@ void ReadFCSettings(boolean skipValues = false)
            
            index = 73;
            protoVersion = serialBuf2[92+STARTCOUNT];
-           if(serialBuf2[92+STARTCOUNT] < 104)
+           if(protoVersion < 104)
            {
              if(serialBuf2[index+STARTCOUNT] == 1 || serialBuf2[index+STARTCOUNT] == 12 || serialBuf2[index+STARTCOUNT] == 13
              || serialBuf2[index+1+STARTCOUNT] == 1 || serialBuf2[index+1+STARTCOUNT] == 12 || serialBuf2[index+1+STARTCOUNT] == 13
@@ -344,6 +344,9 @@ void ReadFCSettings(boolean skipValues = false)
              }
            }
            
+           index = 79;
+           lpf_frq = serialBuf2[index+STARTCOUNT];
+           
            index = 93;
            p_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
@@ -358,14 +361,14 @@ void ReadFCSettings(boolean skipValues = false)
 }
 
 static boolean shiftedSettings = false;
+static const uint8_t maxVersionAllowed = 104;
 
 boolean SendFCSettings()
 {
-  if(fcSettingsReceived)
+  if(fcSettingsReceived && protoVersion <= maxVersionAllowed)
   {
     #define STARTCOUNT 2
     uint8_t index = 0;
-    protoVersion = serialBuf2[92+STARTCOUNT];
     
     serialBuf2[STARTCOUNT+index++] = (byte)((p_roll & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(p_roll & 0x00FF);
@@ -405,6 +408,9 @@ boolean SendFCSettings()
     serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_pitch & 0x00FF);
     serialBuf2[STARTCOUNT+index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_yaw & 0x00FF);
+    
+    index = 79;
+    serialBuf2[STARTCOUNT+index] = lpf_frq;
     
     //Need to shift data - but only once :)
     uint16_t i;

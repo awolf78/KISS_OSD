@@ -47,7 +47,14 @@ uint8_t print_int16(int16_t p_int, char *str, uint8_t dec, uint8_t AlignLeft)
   uint8_t CharPos = 0;
   for(i = 0; i < 6;i++){
     if(result[i] != blank || (AlignLeft == 0 || (i > 5-dec))) str[CharPos++] = result[i];
-    if(dec != 0 && i == 5-dec) str[CharPos++] = point;
+    if(dec != 0 && i == 5-dec) 
+    {
+      if(CharPos == 0)
+      {
+        str[CharPos++] =  zero;
+      }
+      str[CharPos++] = point;
+    }
     if(dec != 0 && i > 5-dec && str[CharPos-1] == blank) str[CharPos-1] = zero;
   }
   if(AlignLeft == 1 || CharPos > 1)
