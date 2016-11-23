@@ -1,5 +1,5 @@
 static uint8_t active3MenuItem = 0;
-static uint8_t activePIDMenuItem = 0;
+static uint8_t activeTuneMenuItem = 0;
 static uint8_t activePIDRollMenuItem = 0;
 static uint8_t activePIDYawMenuItem = 0;
 static uint8_t activePIDPitchMenuItem = 0;
@@ -10,6 +10,7 @@ static uint8_t activeRatesPitchMenuItem = 0;
 static uint8_t activeRatesYawMenuItem = 0;
 static uint8_t activeBatteryMenuItem = 0;
 static uint8_t activeDisplayMenuItem = 0;
+static uint8_t activeNotchMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
@@ -87,7 +88,9 @@ uint8_t checkSetting(uint8_t setting, uint8_t lowLim, uint8_t upLim, boolean &ch
   return setting;
 }
 
-void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &item2, int16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, _FLASH_STRING *itemDescription1 = 0, _FLASH_STRING *itemDescription2 = 0, _FLASH_STRING *itemDescription3 = 0)
+static char emptySuffix[][3] = { "", "", "" };
+
+void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &item2, int16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, _FLASH_STRING *itemDescription1 = 0, _FLASH_STRING *itemDescription2 = 0, _FLASH_STRING *itemDescription3 = 0, char (*suffix)[3] = NULL, uint8_t dec = 3)
 {
   if(active3MenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
   {
@@ -123,6 +126,11 @@ void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &i
     }
   }
   
+  if(suffix == NULL)
+  {
+    suffix = emptySuffix;
+  }
+  
   static const uint8_t MENU_ITEMS = 5;
   
   active3MenuItem = checkMenuItem(active3MenuItem, MENU_ITEMS);
@@ -132,9 +140,9 @@ void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &i
   OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
   
-  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, 3, 1, active3MenuItem);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, 3, 1, active3MenuItem);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, 3, 1, active3MenuItem);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, 1, active3MenuItem, suffix[0]);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, 1, active3MenuItem, suffix[1]);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, 1, active3MenuItem, suffix[2]);
   OSD.printFS( startCol, ++startRow, &BACK_STR, active3MenuItem);
   OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, active3MenuItem);
   
@@ -207,7 +215,7 @@ void* RatesMenu()
   return (void*)RatesMenu;
 }
 
-extern void* PIDMenu();
+extern void* TuneMenu();
 
 FLASH_STRING(PID_DESC_STR1, "p : "); 
 FLASH_STRING(PID_DESC_STR2, "i : "); 
@@ -215,17 +223,17 @@ FLASH_STRING(PID_DESC_STR3, "d : ");
 
 void* PIDRollMenu()
 {
-  return ThreeItemPlusBackMenu(activePIDRollMenuItem,  p_roll, i_roll, d_roll, P_STEP, I_STEP, D_STEP, "roll", (void*)PIDMenu, (void*) PIDRollMenu, &PID_DESC_STR1, &PID_DESC_STR2, &PID_DESC_STR3);
+  return ThreeItemPlusBackMenu(activePIDRollMenuItem,  p_roll, i_roll, d_roll, P_STEP, I_STEP, D_STEP, "roll", (void*)TuneMenu, (void*) PIDRollMenu, &PID_DESC_STR1, &PID_DESC_STR2, &PID_DESC_STR3);
 }
 
 void* PIDPitchMenu()
 {
-  return ThreeItemPlusBackMenu(activePIDPitchMenuItem,  p_pitch, i_pitch, d_pitch, P_STEP, I_STEP, D_STEP, "pitch", (void*)PIDMenu, (void*) PIDPitchMenu, &PID_DESC_STR1, &PID_DESC_STR2, &PID_DESC_STR3);
+  return ThreeItemPlusBackMenu(activePIDPitchMenuItem,  p_pitch, i_pitch, d_pitch, P_STEP, I_STEP, D_STEP, "pitch", (void*)TuneMenu, (void*) PIDPitchMenu, &PID_DESC_STR1, &PID_DESC_STR2, &PID_DESC_STR3);
 }
 
 void* PIDYawMenu()
 {
-  return ThreeItemPlusBackMenu(activePIDYawMenuItem,  p_yaw, i_yaw, d_yaw, P_STEP, I_STEP, D_STEP, "yaw", (void*)PIDMenu, (void*) PIDYawMenu, &PID_DESC_STR1, &PID_DESC_STR2, &PID_DESC_STR3);
+  return ThreeItemPlusBackMenu(activePIDYawMenuItem,  p_yaw, i_yaw, d_yaw, P_STEP, I_STEP, D_STEP, "yaw", (void*)TuneMenu, (void*) PIDYawMenu, &PID_DESC_STR1, &PID_DESC_STR2, &PID_DESC_STR3);
 }
 
 void* TPAMenu()
@@ -233,14 +241,23 @@ void* TPAMenu()
   FLASH_STRING(TPA_DESC_STR1, "tpa p : "); 
   FLASH_STRING(TPA_DESC_STR2, "tpa i : "); 
   FLASH_STRING(TPA_DESC_STR3, "tpa d : ");
-  return ThreeItemPlusBackMenu(activeTPAMenuItem,  p_tpa, i_tpa, d_tpa, TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)PIDMenu, (void*) TPAMenu, &TPA_DESC_STR1, &TPA_DESC_STR2, &TPA_DESC_STR3);
+  return ThreeItemPlusBackMenu(activeTPAMenuItem,  p_tpa, i_tpa, d_tpa, TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, &TPA_DESC_STR1, &TPA_DESC_STR2, &TPA_DESC_STR3);
 }
 
-void* PIDMenu()
+void* NotchFilterMenu()
+{
+  FLASH_STRING(NOTCH_DESC_STR1, "center freq  : "); 
+  FLASH_STRING(NOTCH_DESC_STR2, "cutoff freq  : "); 
+  FLASH_STRING(NOTCH_DESC_STR3, "yaw strength : ");
+  static char suffix[][3] = { "hz", "hz", "" };
+  return ThreeItemPlusBackMenu(activeNotchMenuItem,  notchFilterCenter, notchFilterCut, yawFilterCut, I_STEP, I_STEP, I_STEP, "notch filter", (void*)TuneMenu, (void*) NotchFilterMenu, &NOTCH_DESC_STR1, &NOTCH_DESC_STR2, &NOTCH_DESC_STR3, suffix, 0);
+}
+
+void* TuneMenu()
 {
   if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
   {
-    switch(activePIDMenuItem)
+    switch(activeTuneMenuItem)
     {
       case 0:
         cleanScreen();
@@ -262,21 +279,36 @@ void* PIDMenu()
         lpf_frq = checkSetting(lpf_frq, 0, 6, fcSettingChanged);
       break;
       case 5:
+        if(notchFilterEnabled < 2)
+        {
+          notchFilterEnabled = checkSetting(notchFilterEnabled, 0, 1, fcSettingChanged);
+        }
+      break;
+      case 6:
+        if(notchFilterEnabled == 1)
+        {
+          cleanScreen();
+          return (void*)NotchFilterMenu;
+        }
+      break;      
+      case 7:
         cleanScreen();
-        activePIDMenuItem = 0;
+        activeTuneMenuItem = 0;
         return (void*)MainMenu;
       break;
     }
   }
 
-  static const uint8_t PID_MENU_ITEMS = 6;
-  activePIDMenuItem = checkMenuItem(activePIDMenuItem, PID_MENU_ITEMS);
+  static const uint8_t TUNE_MENU_ITEMS = 8;
+  activeTuneMenuItem = checkMenuItem(activeTuneMenuItem, TUNE_MENU_ITEMS);
   
 //FLASH_STRING(ROLL_STR,  "roll  ");
 //FLASH_STRING(PITCH_STR, "pitch ");
 //FLASH_STRING(YAW_STR,   "yaw   ");
-  FLASH_STRING(TPA_STR,   "tpa   ");
-  FLASH_STRING(LPF_STR,   "lpf  : ");
+  FLASH_STRING(TPA_STR,   "tpa");
+  FLASH_STRING(LPF_STR,   "lpf          : ");
+  FLASH_STRING(NOTCH_STR, "notch filter : ");
+  FLASH_STRING(NOTCH2_STR,"notch settings");
 //FLASH_STRING(BACK_STR,  "back");
   
   FLASH_STRING(LPF1_STR, "off ");
@@ -289,19 +321,22 @@ void* PIDMenu()
   static _FLASH_STRING LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR };
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - (LPF_STR.length()+LPF7_STR.length())/2;
-  FLASH_STRING(PID_MENU_TITLE_STR, "pid menu");
-  OSD.printFS(COLS/2 - PID_MENU_TITLE_STR.length()/2, ++startRow, &PID_MENU_TITLE_STR);
+  uint8_t startCol = COLS/2 - (NOTCH2_STR.length()+LPF7_STR.length())/2;
+  FLASH_STRING(TUNE_MENU_TITLE_STR, "tune menu");
+  OSD.printFS(COLS/2 - TUNE_MENU_TITLE_STR.length()/2, ++startRow, &TUNE_MENU_TITLE_STR);
   
-  OSD.printFS( startCol, ++startRow, &ROLL_STR, activePIDMenuItem);
-  OSD.printFS( startCol, ++startRow, &PITCH_STR, activePIDMenuItem);
-  OSD.printFS( startCol, ++startRow, &YAW_STR, activePIDMenuItem);
-  OSD.printFS( startCol, ++startRow, &TPA_STR, activePIDMenuItem);
-  OSD.printFS( startCol, ++startRow, &LPF_STR, activePIDMenuItem);
+  OSD.printFS( startCol, ++startRow, &ROLL_STR, activeTuneMenuItem);
+  OSD.printFS( startCol, ++startRow, &PITCH_STR, activeTuneMenuItem);
+  OSD.printFS( startCol, ++startRow, &YAW_STR, activeTuneMenuItem);
+  OSD.printFS( startCol, ++startRow, &TPA_STR, activeTuneMenuItem);
+  OSD.printFS( startCol, ++startRow, &LPF_STR, activeTuneMenuItem);
   OSD.print( fixFlashStr(&LPF_FRQ_STR[lpf_frq]) );
-  OSD.printFS( startCol, ++startRow, &BACK_STR, activePIDMenuItem);
+  OSD.printFS( startCol, ++startRow, &NOTCH_STR, activeTuneMenuItem);
+  OSD.print( fixStr(ON_OFF_STR[notchFilterEnabled]) );
+  OSD.printFS( startCol, ++startRow, &NOTCH2_STR, activeTuneMenuItem);
+  OSD.printFS( startCol, ++startRow, &BACK_STR, activeTuneMenuItem);
   
-  return (void*)PIDMenu;
+  return (void*)TuneMenu;
 }
 
 
@@ -445,7 +480,7 @@ void* MainMenu()
         if(fcSettingsReceived)
         {
           cleanScreen();
-          return (void*)PIDMenu;
+          return (void*)TuneMenu;
         }
       break;
       case 1:

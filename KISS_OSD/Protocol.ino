@@ -250,6 +250,7 @@ boolean ReadTelemetry()
 static uint8_t serialBuf2[256];
 
 extern unsigned long _StartupTime;
+static boolean shiftedSettings = false;
 
 void ReadFCSettings(boolean skipValues = false)
 {
@@ -351,6 +352,15 @@ void ReadFCSettings(boolean skipValues = false)
              {
                armOnYaw = false;
              }
+             index = 138;
+             notchFilterEnabled = serialBuf2[index+STARTCOUNT];
+             index++;
+             notchFilterCenter = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             index += 2;
+             notchFilterCut = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             index += 2;
+             uint8_t yawFilterCut2 = serialBuf2[index+STARTCOUNT];
+             yawFilterCut = (int16_t)yawFilterCut2;
            }
            
            index = 79;
@@ -364,14 +374,14 @@ void ReadFCSettings(boolean skipValues = false)
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            #ifdef DEBUG
            versionProto = protoVersion;
-           #endif 
+           #endif
+           shiftedSettings = false; 
          }
        }
     }
   }
 }
 
-static boolean shiftedSettings = false;
 static const uint8_t maxVersionAllowed = 106;
 
 boolean SendFCSettings()
@@ -450,6 +460,17 @@ boolean SendFCSettings()
     serialBuf2[STARTCOUNT+index++] = (byte)(i_tpa & 0x00FF);
     serialBuf2[STARTCOUNT+index++] = (byte)((d_tpa & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(d_tpa & 0x00FF);
+    
+    if(protoVersion > 104)
+    {
+      index = 128;
+      serialBuf2[STARTCOUNT+index++] = (byte) notchFilterEnabled;
+      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCenter & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCenter & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCut & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCut & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte) yawFilterCut;
+    }
     
     uint32_t checksum = 0;
     uint32_t dataCount = 0;
