@@ -2,12 +2,10 @@
 #define Fixfonth
 #include "Flash.h"
 
-#define COMPRESSED_FONT
+//#define COMPRESSED_FONT
+#define NICE_FONT
 
-inline char fixNo(char no)
-{
-  return no - 0x2A;
-}
+char fixNo(char no);
 
 char* fixStr(const char* str);
 

@@ -107,33 +107,28 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 
 // internals
 //=============================
-#define LOCATION_BAT_WARNING_MAH_LSB	0x03
-#define LOCATION_BAT_WARNING_MAH_MSB	0x04
+
 //#define DEBUG
+//#define PROTODEBUG
 
 const char KISS_OSD_VER[] = "kiss osd v2.1";
 
 #include "Flash.h"
 #include <SPI.h>
 #include <MAX7456.h>
+#include "MyMAX7456.h"
 #include <EEPROM.h>
-#include "printInt16_t.h"
 #include "SerialPort.h"
 #include "CSettings.h"
 #include "CStickInput.h"
 #include "fixFont.h"
 #include "CMeanFilter.h"
 
-const byte osdChipSelect             =            6;
+const uint8_t osdChipSelect          =            6;
 const byte masterOutSlaveIn          =            MOSI;
 const byte masterInSlaveOut          =            MISO;
 const byte slaveClock                =            SCK;
 const byte osdReset                  =            2;
-
-MAX7456 OSD( osdChipSelect );
-SerialPort<0, 64, 0> NewSerial;
-CSettings settings;
-CStickInput inputChecker;
 
 #ifdef PAL
 static const uint8_t ROWS = MAX7456_ROWS_P1;
@@ -142,6 +137,11 @@ static const uint8_t COLS = MAX7456_COLS_P1;
 static const uint8_t ROWS = MAX7456_ROWS_N0;
 static const uint8_t COLS = MAX7456_COLS_N1;
 #endif
+
+CMyMax7456 OSD( osdChipSelect );
+SerialPort<0, 64, 0> NewSerial;
+CStickInput inputChecker;
+CSettings settings;
 
 static const int16_t DV_PPM_INCREMENT = 100;
 
@@ -162,12 +162,8 @@ void cleanScreen()
 
 static uint8_t lastTempUnit;
 
-void setup()
+void setupMAX7456()
 {
-  uint8_t i = 0;
-  SPI.begin();
-  SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
-  //OSD.begin();
   #if defined(PAL)
     OSD.begin(COLS,ROWS,0);
     OSD.setTextOffset(-1,-6);
@@ -183,8 +179,16 @@ void setup()
   #endif 
   #if defined(USE_MAX7456_MAXIM)
     OSD.setCharEncoding( MAX7456_MAXIM );  
-  #endif 
+  #endif
   OSD.display(); 
+}
+
+void setup()
+{
+  uint8_t i = 0;
+  SPI.begin();
+  SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
+  setupMAX7456();
   
   //clean used area
   while (!OSD.notInVSync());
@@ -202,7 +206,6 @@ void setup()
   DISPLAY_STATS_DV = setupPPM(DISPLAY_STATS_DV);
   DISPLAY_ESC_TEMPERATURE_DV = setupPPM(DISPLAY_ESC_TEMPERATURE_DV);
   NewSerial.begin(115200);
-  //delay(5000); // Wait until FC is ready - otherwise we no settings???; Didn't work :(
 }
 
 static int16_t  throttle = 0;
@@ -234,9 +237,9 @@ static int16_t ESCmAh[4] = {0,0,0,0};
 static int16_t  AuxChanVals[4] = {0,0,0,0};
 static unsigned long start_time = 0;
 static unsigned long time = 0;
+static unsigned long old_time = 0;
 static unsigned long total_time = 0;
 static unsigned long DV_change_time = 0;
-static boolean bat_clear = true;
 static int16_t last_Aux_Val = -10000;
 static boolean armedOnce = false;
 static boolean showBat = false;
@@ -277,6 +280,14 @@ int16_t findMin(int16_t minV, int16_t newVal)
   return minV;
 }
 
+void ReviveOSD()
+{
+  while(OSD.resetIsBusy()) delay(100);
+  OSD.reset();
+  while(OSD.resetIsBusy()) delay(100);
+  setupMAX7456();
+}
+
 static int16_t p_roll = 0;
 static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
 static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
@@ -285,12 +296,12 @@ static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
 static int16_t lastAuxVal = 0;
+static boolean dShotEnabled = false;
+static boolean logoDone = false;
 extern void ReadFCSettings(boolean skipValues);
 
 typedef void* (*fptr)();
-static char printBuf[15];
-static char tempSymbol = 0x30;
-FLASH_STRING(TWO_BLANKS, "  ");
+static char tempSymbol[] = {0xB0, 0x00};
 static uint8_t code = 0;
 static boolean menuActive = false;
 static boolean menuWasActive = false;
@@ -298,17 +309,35 @@ static boolean fcSettingChanged = false;
 static void* activePage = NULL;
 static boolean batterySelect = false;
 static boolean triggerCleanScreen = false;
+static boolean bat_clear = false;
 static uint8_t activeMenuItem = 0;
+static uint8_t stopWatch = 0x94;
+static char batterySymbol[] = { 0xE7, 0xEC, 0xEC, 0xED, 0x00 };
+static uint8_t krSymbol[4] = { 0x9C, 0x9C, 0x9C, 0x9C };
+static unsigned long krTime[4] = { 0, 0, 0, 0 };
+
+static int16_t bufminus1 = 0;
+static int16_t checkCalced = 0;
 
 #ifdef DEBUG
-static int16_t CBO1 = 0;
-static int16_t CBO2 = 0;
-static int16_t CBO3 = 0;
+static int16_t versionProto = 0;
 #endif
+
+static unsigned long _StartupTime = 0;
 
 void loop(){
   uint16_t i = 0;
   static uint8_t blink_i = 1;
+  
+  if(!OSD.status()) //trying to revive MAX7456 if it got a voltage hickup
+  {
+    ReviveOSD();
+  }
+  
+  if(_StartupTime == 0)
+  {
+    _StartupTime = millis();
+  }
   
   if(micros()-LastLoopTime > 10000)
   {
@@ -322,6 +351,13 @@ void loop(){
     {
       NewSerial.write(0x30); // request settings
       ReadFCSettings(fcSettingChanged);
+      #ifdef PROTODEBUG
+      if(checkCalced != bufminus1)
+      {
+        OSD.printInt16(8, -4, checkCalced, 0, 1);
+        OSD.printInt16(8, -3, bufminus1, 0, 1);
+      }
+      #endif
       return;
     }
     else
@@ -337,6 +373,11 @@ void loop(){
           SendFCSettings();
           fcSettingChanged = false;
         }
+        #ifdef DEBUG
+        /*static char Aux1[15];
+        OSD.setCursor(8,-3);
+        OSD.print(fixStr("tele"));*/
+        #endif 
         return;
       }
     }    
@@ -344,16 +385,7 @@ void loop(){
     while (!OSD.notInVSync());
 
       #ifdef DEBUG
-      static char Aux1[15];
-      print_int16(CBO3, Aux1, 0,1);
-      OSD.setCursor(8,-3);
-      OSD.print(Aux1);
-      print_int16(CBO2, Aux1, 0,1);
-      OSD.setCursor(8,-4);
-      OSD.print(Aux1);
-      print_int16(CBO1, Aux1, 0,1);
-      OSD.setCursor(8,-5);
-      OSD.print(Aux1);
+      OSD.printInt16(8,-3,versionProto,0,1);
       #endif 
       
       if(triggerCleanScreen || abs((lastAuxVal+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) > DV_PPM_INCREMENT)
@@ -365,27 +397,29 @@ void loop(){
       
       if(settings.m_tempUnit == 1)
       {
-        tempSymbol = 0x31;
+        tempSymbol[0] = fixChar(0xB1);
       }
       else
       {
-        tempSymbol = 0x30;
+        tempSymbol[0] = fixChar(0xB0);
       }
       
       code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
       
+      if(armed == 0 && code & inputChecker.YAW_LONG_LEFT && code & inputChecker.ROLL_LEFT && code & inputChecker.PITCH_DOWN)
+      {
+        ReviveOSD();
+      }
+      
       if(armed == 0 && settings.m_lastMAH > 0)
       {
         FLASH_STRING(LAST_BATTERY_STR, "continue last battery?");
-        OSD.setCursor(COLS/2 - (LAST_BATTERY_STR.length())/2,ROWS/2 - 1);
-        OSD.print( fixFlashStr(&LAST_BATTERY_STR) );
+        OSD.printFS(COLS/2 - (LAST_BATTERY_STR.length())/2, ROWS/2 - 1, &LAST_BATTERY_STR);
         
         FLASH_STRING(ROLL_RIGHT_STR, "roll right to confirm");
-        OSD.setCursor(COLS/2 - ROLL_RIGHT_STR.length()/2,ROWS/2);
-        OSD.print( fixFlashStr(&ROLL_RIGHT_STR) );
+        OSD.printFS(COLS/2 - ROLL_RIGHT_STR.length()/2, ROWS/2, &ROLL_RIGHT_STR);
         FLASH_STRING(ARM_CANCEL_STR, "roll left to cancel");
-        OSD.setCursor(COLS/2 - ARM_CANCEL_STR.length()/2,ROWS/2 + 1);
-        OSD.print( fixFlashStr(&ARM_CANCEL_STR) );
+        OSD.printFS(COLS/2 - ARM_CANCEL_STR.length()/2, ROWS/2 + 1, &ARM_CANCEL_STR);
                 
         if(code & inputChecker.ROLL_RIGHT)
         {
@@ -396,6 +430,7 @@ void loop(){
         if(code & inputChecker.ROLL_LEFT)
         {
           settings.m_lastMAH = 0;
+          settings.WriteLastMAH();
           cleanScreen();
         }  
         return;
@@ -433,27 +468,17 @@ void loop(){
           settingChanged = true;
         }
         FLASH_STRING(BATTERY_STR, "battery ");
-        OSD.setCursor(COLS/2 - (BATTERY_STR.length()+1)/2,ROWS/2 - 1);
-        OSD.print( fixFlashStr(&BATTERY_STR) );
-        print_int16(settings.m_activeBattery+1, printBuf,0,1);
-        OSD.print( printBuf );
-        print_int16(settings.m_batMAH[settings.m_activeBattery], printBuf,0,1);
-        OSD.setCursor(COLS/2 - (strlen(printBuf)+3)/2,ROWS/2);
-        OSD.print( printBuf );
-        OSD.print( fixStr("mah") );
-        OSD.print( fixFlashStr(&TWO_BLANKS) );
+        OSD.printInt16(COLS/2 - (BATTERY_STR.length()+1)/2, ROWS/2 - 1, &BATTERY_STR, settings.m_activeBattery+1, 0,1);        
+       
+        OSD.printInt16(COLS/2 - 3, ROWS/2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", true);
+
         FLASH_STRING(WARN_STR, "warn at ");
-        print_int16(settings.m_batWarningMAH, printBuf,0,1);
-        OSD.setCursor(COLS/2 - (WARN_STR.length() + strlen(printBuf) + 3)/2,ROWS/2 + 1);
-        OSD.print( fixFlashStr(&WARN_STR) );
-        OSD.print( printBuf );
-        OSD.print( fixStr("mah") );
-        OSD.print( fixFlashStr(&TWO_BLANKS) );
+        OSD.printInt16(COLS/2 - (WARN_STR.length() + 6)/2, ROWS/2 + 1, &WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", true);
+
         if(batterySelect)
         {
           FLASH_STRING(YAW_LEFT_STR, "yaw left to go back");
-          OSD.setCursor(COLS/2 - YAW_LEFT_STR.length()/2,ROWS/2 + 2);
-          OSD.print( fixFlashStr(&YAW_LEFT_STR) );
+          OSD.printFS(COLS/2 - YAW_LEFT_STR.length()/2,ROWS/2 + 2, &YAW_LEFT_STR);
         }
         if(batterySelect && yaw < 250)
         {
@@ -516,10 +541,7 @@ void loop(){
         }
         uint8_t middle_infos_y     = 2;    
         FLASH_STRING(STATS_STR, "stats ");
-        OSD.setCursor( COLS/2 - (STATS_STR.length()+4)/2, middle_infos_y );
-        OSD.print( fixFlashStr(&STATS_STR) );
-        print_int16(statPage+1, printBuf,0,1);
-        OSD.print(printBuf);
+        OSD.printInt16( COLS/2 - (STATS_STR.length()+4)/2, middle_infos_y, &STATS_STR, statPage+1, 0, 1);
         OSD.print( fixStr("/5") );
         middle_infos_y++;
         
@@ -533,53 +555,17 @@ void loop(){
           FLASH_STRING(MAX_WATT_STR, "max watt : ");
           FLASH_STRING(MAX_TEMP_STR, "max temp : ");
           FLASH_STRING(MIN_V_STR,    "min v    : ");
-          print_time(total_time, printBuf);
+
           uint8_t statCol = COLS/2 - (TIME_STR.length()+7)/2;
-          OSD.setCursor( statCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&TIME_STR) );
-          OSD.print( printBuf );
-  
-          OSD.setCursor( statCol, ++middle_infos_y ); 
-          OSD.print( fixFlashStr(&MAX_AMP_STR) );
-          print_int16(MaxAmps, printBuf,1,1);
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
-          
-          OSD.setCursor( statCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&MAX_C_STR) ); 
-          print_int16(MaxC, printBuf,0,1);
-          OSD.print( printBuf );
-          OSD.print( fixChar('c') );
-          
-          OSD.setCursor( statCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&MAH_STR) );
-          print_int16(LipoMAH+previousMAH, printBuf,0,1);
-          OSD.print( printBuf );
-          OSD.print( fixStr("mah") );        
-  
-          OSD.setCursor( statCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&MAX_RPM_STR) );
-          print_int16(MaxRPMs, printBuf,1,1);
-          OSD.print( printBuf );
-          OSD.print( fixStr("kr") );
-  
-          OSD.setCursor( statCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&MAX_WATT_STR) );
-          print_int16(MaxWatt, printBuf,1,1);
-          OSD.print( printBuf );
-          OSD.print( fixChar('w') );
-  
-          OSD.setCursor( statCol, ++middle_infos_y );          
-          OSD.print( fixFlashStr(&MAX_TEMP_STR) );
-          print_int16(MaxTemp, printBuf,0,1);
-          OSD.print( printBuf );
-          OSD.print( tempSymbol );
-  
-          OSD.setCursor( statCol, ++middle_infos_y );          
-          OSD.print( fixFlashStr(&MIN_V_STR) );
-          print_int16(MinBat, printBuf,2,1);
-          OSD.print( printBuf );
-          OSD.print( fixChar('v') );
+          OSD.printFS(statCol, ++middle_infos_y, &TIME_STR);
+          OSD.printTime( statCol+TIME_STR.length(), middle_infos_y, total_time );  
+          OSD.printInt16( statCol, ++middle_infos_y, &MAX_AMP_STR, MaxAmps, 1, 1, "a" );           
+          OSD.printInt16( statCol, ++middle_infos_y, &MAX_C_STR, MaxC, 0, 1, "c");
+          OSD.printInt16( statCol, ++middle_infos_y, &MAH_STR, LipoMAH+previousMAH, 0, 1, "mah" );
+          OSD.printInt16( statCol, ++middle_infos_y, &MAX_RPM_STR, MaxRPMs, 1, 1, "kr" );  
+          OSD.printInt16( statCol, ++middle_infos_y, &MAX_WATT_STR, MaxWatt, 1, 1, "w" );
+          OSD.printInt16( statCol, ++middle_infos_y, &MAX_TEMP_STR, MaxTemp, 0, 1, tempSymbol);
+          OSD.printInt16( statCol, ++middle_infos_y, &MIN_V_STR, MinBat, 2, 1, "v" );          
         }
         else
         {
@@ -591,45 +577,20 @@ void loop(){
           FLASH_STRING(ESC_MAH_STR, " mah     : ");
           
           uint8_t startCol = COLS/2 - (ESC_RPM_STR.length()+ESC_STAT_STR.length()+7)/2;
-          OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_STAT_STR) );
-          OSD.print( (char)(statPage-1+0x06) ); 
-          OSD.print( fixFlashStr(&ESC_RPM_STR) );
-          print_int16(maxKERPM[statPage-1], printBuf,1,1);
-          OSD.print( printBuf );
-          OSD.print( fixStr("kr") );
+          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_RPM_STR, maxKERPM[statPage-1], 1, 1, "kr");
           
-          OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_STAT_STR) );
-          OSD.print( (char)(statPage-1+0x06) );  
-          OSD.print( fixFlashStr(&ESC_A_STR) );
-          print_int16(maxCurrent[statPage-1], printBuf,2,1);
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
+          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_A_STR, maxCurrent[statPage-1], 2, 1, "a"); 
           
-          OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_STAT_STR) );
-          OSD.print( (char)(statPage-1+0x06) );  
-          OSD.print( fixFlashStr(&ESC_TEMP_STR) );
-          print_int16(maxTemps[statPage-1], printBuf,0,1);
-          OSD.print( printBuf );
-          OSD.print( tempSymbol );
+          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_TEMP_STR, maxTemps[statPage-1], 0, 1, tempSymbol);
           
-          OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_STAT_STR) );
-          OSD.print( (char)(statPage-1+0x06) );  
-          OSD.print( fixFlashStr(&ESC_MINV_STR) );
-          print_int16(minVoltage[statPage-1], printBuf,2,1);
-          OSD.print( printBuf );
-          OSD.print( fixChar('v') );
+          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_MINV_STR, minVoltage[statPage-1], 2, 1, "v");
           
-          OSD.setCursor( startCol, ++middle_infos_y );
-          OSD.print( fixFlashStr(&ESC_STAT_STR) );
-          OSD.print( (char)(statPage-1+0x06) );  
-          OSD.print( fixFlashStr(&ESC_MAH_STR) );
-          print_int16(ESCmAh[statPage-1], printBuf,0,1);
-          OSD.print( printBuf );
-          OSD.print( fixStr("mah") );
+          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_MAH_STR, ESCmAh[statPage-1], 0, 1, "mah"); 
         }
      }
      else 
@@ -640,72 +601,81 @@ void loop(){
         uint8_t CurrentMargin      = 0;
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_RC_THROTTLE_DV)
         {
-          print_int16(throttle, printBuf,0,1);
-          OSD.setCursor( 0, 0 );
-          OSD.print( printBuf );
-          OSD.print( fixChar('%') );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
+          OSD.printInt16( 0, 0, throttle, 0, 1, "%", true);
           ESCmarginTop = 1;
         }
           
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_NICKNAME_DV)
         {
-          OSD.setCursor( 10, -1 );
+          OSD.setCursor( COLS/2 - strlen(NICKNAME)/2 - 1, -1 );
           OSD.print( fixStr(NICKNAME) );
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_COMB_CURRENT_DV)
         {
-          uint8_t CurrentPos = print_int16(current, printBuf,1,0);
-          OSD.setCursor( -(CurrentPos+2), 0 );
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
+          OSD.printAligned(0, current, 1, 0, "a");
           ESCmarginTop = 1;
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_LIPO_VOLTAGE_DV)
         {
-          print_int16(LipoVoltage / 10, printBuf,1,1);
-          OSD.setCursor( 0, -1 );
-          OSD.print( printBuf );
-          OSD.print( fixChar('v') );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
+          OSD.printInt16( 0, -1, LipoVoltage / 10, 1, 1, "v", true);
           ESCmarginBot = 1;
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_MA_CONSUMPTION_DV)
         {
-          uint8_t lipoMAHPos = print_int16(LipoMAH+previousMAH, printBuf,0,1);
-          OSD.setCursor( -(4+lipoMAHPos), -1 );
-          OSD.print( printBuf );
-          OSD.print( fixStr("mah") );
+          if(settings.m_displaySymbols == 1)
+          {
+            uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
+            uint8_t batStatus = 0xEC;
+            while(batCount > 4)
+            {
+              batStatus--;
+              batCount--;
+            }
+            batterySymbol[2] = (char)batStatus;
+            batStatus = 0xEC;
+            while(batCount > 1)
+            {
+              batStatus--;
+              batCount--;
+            }
+            batterySymbol[1] = (char)batStatus;
+            OSD.setCursor(-7, -1);
+            OSD.print(batterySymbol);
+          }
+          else
+          {
+            OSD.printAligned(-1, LipoMAH+previousMAH, 0, 1, "mah");
+          }
           ESCmarginBot = 1;
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_KRPM_DV)
         {
-          static char KR[] = "kr";
-          uint8_t KRPMPos = print_int16(motorKERPM[0], printBuf,1,1);
-          OSD.setCursor( 0, ESCmarginTop );
-          OSD.print( printBuf );
-          OSD.print( fixStr(KR) );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
-          
-          KRPMPos = print_int16(motorKERPM[1], printBuf,1,0);
-          OSD.setCursor( -(KRPMPos+3), ESCmarginTop );
-          OSD.print( printBuf );
-          OSD.print( fixStr(KR) );
-          
-          KRPMPos = print_int16(motorKERPM[2], printBuf,1,0);
-          OSD.setCursor( -(KRPMPos+3), -(1+ESCmarginBot) );
-          OSD.print( printBuf );
-          OSD.print( fixStr(KR) );
-         
-          print_int16(motorKERPM[3], printBuf,1,1);
-          OSD.setCursor( 0, -(1+ESCmarginBot) );
-          OSD.print( printBuf );
-          OSD.print( fixStr(KR) );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
+          static char KR[][4] = { "kr", "kr", "kr", "kr" };
+          if(settings.m_displaySymbols == 1)
+          {
+            for(i=0; i<4; i++)
+            {
+              if(millis() - krTime[i] > (10000/motorKERPM[i]))
+              {
+                krTime[i] = millis();
+                krSymbol[i]++;
+                if(krSymbol[i] > 0xA3)
+                {
+                  krSymbol[i] = 0x9C;
+                }
+              }
+              KR[i][0] = (char)krSymbol[i];
+              KR[i][1] = ' ';
+            }
+          }
+          OSD.printInt16(0, ESCmarginTop, motorKERPM[0], 1, 1, KR[0], true);
+          OSD.printAligned(ESCmarginTop, motorKERPM[1], 1, 0, KR[1]);
+          OSD.printAligned(-(1+ESCmarginBot), motorKERPM[2], 1, 0, KR[2]);
+          OSD.printInt16( 0, -(1+ESCmarginBot), motorKERPM[3], 1, 1, KR[3], true);
           
           TMPmargin++;
           CurrentMargin++;
@@ -713,60 +683,40 @@ void loop(){
      
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_CURRENT_DV)
         {
-          print_int16(motorCurrent[0], printBuf,2,1);
-          OSD.setCursor( 0, CurrentMargin+ESCmarginTop );
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
-          
-          uint8_t CurrentPos = print_int16(motorCurrent[1], printBuf,2,0);
-          OSD.setCursor( -(CurrentPos+2), CurrentMargin+ESCmarginTop );
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
-          
-          CurrentPos = print_int16(motorCurrent[2], printBuf,2,0);
-          OSD.setCursor( -(CurrentPos+2), -(1+CurrentMargin+ESCmarginBot) );
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
-         
-          print_int16(motorCurrent[3], printBuf,2,1);
-          OSD.setCursor( 0, -(1+CurrentMargin+ESCmarginBot) );
-          OSD.print( printBuf );
-          OSD.print( fixChar('a') );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
+          OSD.printInt16( 0, CurrentMargin+ESCmarginTop, motorCurrent[0], 2, 1, "a", true);
+          OSD.printAligned(CurrentMargin+ESCmarginTop, motorCurrent[1], 2, 0, "a");
+          OSD.printAligned(-(1+CurrentMargin+ESCmarginBot), motorCurrent[2], 2, 0, "a" );
+          OSD.printInt16( 0, -(1+CurrentMargin+ESCmarginBot), motorCurrent[3], 2 ,1, "a", true );
           TMPmargin++;
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_TEMPERATURE_DV)
         {
-          print_int16(ESCTemps[0], printBuf,0,1);
-          OSD.setCursor( 0, TMPmargin+ESCmarginTop );
-          OSD.print( printBuf );
-          OSD.print( tempSymbol );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
-          
-          uint8_t TempPos = print_int16(ESCTemps[1], printBuf,0,0);
-          OSD.setCursor( -(TempPos+2), TMPmargin+ESCmarginTop );
-          OSD.print( printBuf );
-          OSD.print( tempSymbol );
-          
-          TempPos = print_int16(ESCTemps[2], printBuf,0,0);
-          OSD.setCursor( -(TempPos+2), -(1+TMPmargin+ESCmarginBot) );
-          OSD.print( printBuf );
-          OSD.print( tempSymbol );
-         
-          print_int16(ESCTemps[3], printBuf,0,1);
-          OSD.setCursor( 0, -(1+TMPmargin+ESCmarginBot) );
-          OSD.print( printBuf );
-          OSD.print( tempSymbol );
-          OSD.print( fixFlashStr(&TWO_BLANKS) );
-        }  
+          OSD.printInt16( 0, TMPmargin+ESCmarginTop, ESCTemps[0], 0, 1, tempSymbol, true);
+          OSD.printAligned(TMPmargin+ESCmarginTop, ESCTemps[1], 0, 0, tempSymbol );
+          OSD.printAligned(-(1+TMPmargin+ESCmarginBot), ESCTemps[2], 0, 0, tempSymbol );
+          OSD.printInt16( 0, -(1+TMPmargin+ESCmarginBot), ESCTemps[3], 0, 1, tempSymbol, true );
+        }
     
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_TIMER_DV) 
         {
-          OSD.setCursor( 12, -2 );
-          print_time(time, printBuf);
-          OSD.print( printBuf );
+          #ifdef NICE_FONT
+          if(settings.m_displaySymbols == 1)
+          {
+            if(time - old_time > 1000)
+            {
+              stopWatch++;
+              old_time = time;
+            }
+            if(stopWatch > 0x9B)
+            {
+              stopWatch = 0x94;
+            }
+            OSD.setCursor(COLS/2 - 4, -2);
+            OSD.print((char)stopWatch);
+          }
+          #endif
+          OSD.printTime(COLS/2 - 3, -2, time);
         }
         
         if(settings.m_batWarning > 0 && (LipoMAH+previousMAH) >= settings.m_batWarningMAH)
@@ -774,17 +724,24 @@ void loop(){
           totalMAH = 0;
           FLASH_STRING(BATTERY_LOW,   "battery low");
           FLASH_STRING(BATTERY_EMPTY, "           ");
-          OSD.setCursor(COLS/2 - BATTERY_LOW.length()/2,ROWS/2 +3);
           if (blink_i % 20 == 0) 
           {
             if(bat_clear) 
             {
-              OSD.print( fixFlashStr(&BATTERY_LOW) );
+              if(settings.m_displaySymbols == 1)
+              {
+                OSD.setCursor(COLS/2 - 3, ROWS/2 + 3);
+                OSD.print(batterySymbol);
+              }
+              else
+              {
+                OSD.printFS(COLS/2 - BATTERY_LOW.length()/2, ROWS/2 +3, &BATTERY_LOW);
+              }
               bat_clear = false;
             }
             else 
             {              
-              OSD.print( fixFlashStr(&BATTERY_EMPTY) );
+              OSD.printFS(COLS/2 - BATTERY_LOW.length()/2, ROWS/2 +3, &BATTERY_EMPTY);
               bat_clear = true;
             }
           }
@@ -804,6 +761,50 @@ void loop(){
         {
           DV_change_time = 0;
           cleanScreen();
+        }
+        if(!logoDone && armed == 0 && !menuActive && !armedOnce)
+        {
+          uint8_t logoCol = 11;
+          uint8_t logoRow = 5;
+          OSD.setCursor(logoCol, logoRow);
+          uint8_t logoPos = 0xB4;
+          for(i=0; i<7; i++)
+          {
+            OSD.print((char)logoPos++);
+          }
+          logoRow++;
+          logoCol--;
+          OSD.setCursor(logoCol, logoRow);
+          for(i=0; i<8; i++)
+          {
+            OSD.print((char)logoPos++);
+          }
+          logoRow++;
+          logoCol -= 2;
+          OSD.setCursor(logoCol, logoRow);
+          for(i=0; i<4; i++)
+          {
+            OSD.print((char)logoPos++);
+          }
+          if(dShotEnabled)
+          {
+            for(i=0; i<8; i++)
+            {
+              OSD.print((char)logoPos++);
+            }
+            logoRow++;
+            logoCol += 4;
+            OSD.setCursor(logoCol, logoRow);
+            for(i=0; i<8; i++)
+            {
+              OSD.print((char)logoPos++);
+            }
+          }
+          if(_StartupTime > 0 && millis() - _StartupTime > 25000)
+          {
+            logoDone = true;
+            cleanScreen();
+          }
         }
       }
   }    

@@ -3,22 +3,17 @@ static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t protoVersion = 0;
 static uint8_t recBytes = 0;
-static uint32_t StartupTime = 0;
 const uint16_t filterCount = 5;
+const uint16_t filterCount2 = 3;
 CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
-CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount) }; 
-CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount), CMeanFilter(filterCount) }; 
+CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
+CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
 
 boolean ReadTelemetry()
 {
   uint16_t i = 0;
   minBytes = 100;
   recBytes = 0;
-  
-  if(StartupTime == 0)
-  {
-    StartupTime = millis();
-  }
    
   while(recBytes < minBytes && micros()-LastLoopTime < 20000)
   {
@@ -36,10 +31,6 @@ boolean ReadTelemetry()
     }
     if(recBytes == minBytes)
     {
-       if(millis()-StartupTime < 5000)
-       {
-         return false; //throwing away garbage data sent by FC during startup phase
-       } 
        uint32_t checksum = 0;
        for(i=2;i<minBytes;i++){
           checksum += serialBuf[i];
@@ -258,6 +249,8 @@ boolean ReadTelemetry()
 
 static uint8_t serialBuf2[256];
 
+extern unsigned long _StartupTime;
+
 void ReadFCSettings(boolean skipValues = false)
 {
   uint8_t i = 0;
@@ -272,15 +265,26 @@ void ReadFCSettings(boolean skipValues = false)
     if(recBytes == 2) minBytes = serialBuf2[1]+STARTCOUNT+1; // got the transmission length
     if(recBytes == minBytes)
     {
+       if(millis()-_StartupTime < 5000)
+       {
+         return; //throwing away garbage data sent by FC during startup phase
+       }
+       
        uint32_t checksum = 0;
+       uint32_t dataCount = 0;
        for(i=2;i<minBytes;i++){
           checksum += serialBuf2[i];
+          dataCount++;
        }
-       checksum = (uint32_t)checksum/(minBytes-3);
+       checksum = (uint32_t)checksum/dataCount;
+       #ifdef PROTODEBUG
+       checkCalced = checksum;
+       bufminus1 = serialBuf2[recBytes-1];
+       #endif
        
-       if(checksum == serialBuf2[recBytes-1])
+       if(checksum == serialBuf2[recBytes-1])// || (checksum-1) == serialBuf2[recBytes-1])
+       //if(minBytes > 140)
        {
-         //NewSerial.flushRx();
          minBytesSettings = minBytes;
          fcSettingsReceived = true;
          if(!skipValues)
@@ -324,6 +328,11 @@ void ReadFCSettings(boolean skipValues = false)
            index += 2;
            rccurve_yaw = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            
+           if(serialBuf2[55+STARTCOUNT] > 2)
+           {
+             dShotEnabled = true;
+           }
+           
            index = 73;
            protoVersion = serialBuf2[92+STARTCOUNT];
            if(protoVersion < 104)
@@ -353,7 +362,9 @@ void ReadFCSettings(boolean skipValues = false)
            i_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
-            
+           #ifdef DEBUG
+           versionProto = protoVersion;
+           #endif 
          }
        }
     }
@@ -361,7 +372,7 @@ void ReadFCSettings(boolean skipValues = false)
 }
 
 static boolean shiftedSettings = false;
-static const uint8_t maxVersionAllowed = 104;
+static const uint8_t maxVersionAllowed = 106;
 
 boolean SendFCSettings()
 {
@@ -440,21 +451,14 @@ boolean SendFCSettings()
     serialBuf2[STARTCOUNT+index++] = (byte)((d_tpa & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(d_tpa & 0x00FF);
     
-    #ifdef DEBUG
-    index = 117;
-    CBO1 = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
-    index += 2;
-    CBO2 = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
-    index += 2;
-    CBO3 = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
-    #endif
-    
     uint32_t checksum = 0;
+    uint32_t dataCount = 0;
     for(i=2;i<minBytesSettings;i++)
     {
      checksum += serialBuf2[i];
+     dataCount++;
     }
-    checksum = (uint32_t)checksum/(minBytesSettings-3);
+    checksum = checksum/dataCount;
     serialBuf2[minBytesSettings-1] = checksum;
     
     NewSerial.write(0x10); //Set settings

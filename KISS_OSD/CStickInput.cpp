@@ -36,7 +36,11 @@ uint8_t CStickInput::ProcessStickInputs(int16_t roll, int16_t pitch, int16_t yaw
       yawDelay = ROLL_PITCH_DELAY;
     }
     uint16_t temp = 0;
-    code |= CheckInput(yaw, &startYawLongTime, &yawLongDelay, &temp, YAW_LONG_LEFT, YAW_LONG_RIGHT, true);    
+    code |= CheckInput(yaw, &startYawLongTime, &yawLongDelay, &temp, YAW_LONG_LEFT, YAW_LONG_RIGHT, true);
+    if(startYawLongTime == 0)
+    {
+      yawLongDelay = YAW_LONG_DELAY;
+    }    
   }
   return code;
 }

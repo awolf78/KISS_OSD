@@ -8,26 +8,23 @@ static uint8_t activeRatesMenuItem = 0;
 static uint8_t activeRatesRollMenuItem = 0;
 static uint8_t activeRatesPitchMenuItem = 0;
 static uint8_t activeRatesYawMenuItem = 0;
+static uint8_t activeBatteryMenuItem = 0;
+static uint8_t activeDisplayMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
 static const int16_t TPA_STEP = 50;
 static const int16_t RATE_STEP = 50;
 
+FLASH_STRING(SAVE_EXIT_STR, "save+exit");
+FLASH_STRING(BACK_STR,      "back");
+static char ON_OFF_STR[][4] = { "off", "on " };
+FLASH_STRING(ROLL_STR,  "roll  ");
+FLASH_STRING(PITCH_STR, "pitch ");
+FLASH_STRING(YAW_STR,   "yaw   ");
+
 extern void* MainMenu();
 extern void* RatesMenu();
-
-void checkArrow(uint8_t currentRow, uint8_t menuItem)
-{
-  if(currentRow-3 == menuItem)
-  {
-    OSD.print(fixChar('>'));
-  }
-  else
-  {
-    OSD.print(fixChar(' '));
-  }
-}
 
 int16_t checkCode(int16_t value, int16_t STEP)
 {
@@ -75,6 +72,21 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
   return menuItem; 
 }
 
+uint8_t checkSetting(uint8_t setting, uint8_t lowLim, uint8_t upLim, boolean &changed)
+{
+  if((code &  inputChecker.ROLL_LEFT) && setting > lowLim)
+  {
+    changed = true;
+    setting--;
+  }
+  if(code &  inputChecker.ROLL_RIGHT && setting < upLim)
+  {
+    changed = true;
+    setting++;
+  }
+  return setting;
+}
+
 void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &item2, int16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, _FLASH_STRING *itemDescription1 = 0, _FLASH_STRING *itemDescription2 = 0, _FLASH_STRING *itemDescription3 = 0)
 {
   if(active3MenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
@@ -105,8 +117,8 @@ void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &i
         if(code &  inputChecker.ROLL_RIGHT)
         {
           active3MenuItem = 0;
-          cleanScreen();
-          return (void*) MainMenu;
+          menuActive = false;
+          menuWasActive = true;
         }
     }
   }
@@ -115,39 +127,16 @@ void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &i
   
   active3MenuItem = checkMenuItem(active3MenuItem, MENU_ITEMS);
   
-  FLASH_STRING(BACK5_STR,    "back");
-  FLASH_STRING(MAIN_RETURN_STR, "main menu");
-  
   uint8_t startRow = 1;
   uint8_t startCol = COLS/2 - ((*itemDescription1).length()+6)/2;
   OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
   
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, active3MenuItem);
-  OSD.print( fixFlashStr(itemDescription1) );
-  print_int16(item1, printBuf,3,1);
-  OSD.print( printBuf );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, active3MenuItem);
-  OSD.print( fixFlashStr(itemDescription2) );
-  print_int16(item2, printBuf,3,1);
-  OSD.print( printBuf );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, active3MenuItem);
-  OSD.print( fixFlashStr(itemDescription3) );
-  print_int16(item3, printBuf,3,1);
-  OSD.print( printBuf );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, active3MenuItem);
-  OSD.print( fixFlashStr(&BACK5_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, active3MenuItem);
-  OSD.print( fixFlashStr(&MAIN_RETURN_STR) );
+  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, 3, 1, active3MenuItem);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, 3, 1, active3MenuItem);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, 3, 1, active3MenuItem);
+  OSD.printFS( startCol, ++startRow, &BACK_STR, active3MenuItem);
+  OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, active3MenuItem);
   
   return thisPage;
 }
@@ -200,33 +189,21 @@ void* RatesMenu()
   static const uint8_t RATES_MENU_ITEMS = 4;
   activeRatesMenuItem = checkMenuItem(activeRatesMenuItem, RATES_MENU_ITEMS);
   
-  FLASH_STRING(ROLL_STR,  "roll  ");
-  FLASH_STRING(PITCH_STR, "pitch ");
-  FLASH_STRING(YAW_STR,   "yaw   ");
-  FLASH_STRING(BACK2_STR, "back  ");
+//FLASH_STRING(ROLL_STR,  "roll  ");
+//FLASH_STRING(PITCH_STR, "pitch ");
+//FLASH_STRING(YAW_STR,   "yaw   ");
+//FLASH_STRING(BACK_STR,  "back");
   
   uint8_t startRow = 1;
   uint8_t startCol = COLS/2 - ROLL_STR.length()/2;
-  const char title[] = "rates menu";
-  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );   
-  OSD.print( fixStr(title) );
+  FLASH_STRING(RATES_TITLE_STR, "rates menu");
+  OSD.printFS(COLS/2 - RATES_TITLE_STR.length()/2, ++startRow, &RATES_TITLE_STR);
   
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeRatesMenuItem);
-  OSD.print( fixFlashStr(&ROLL_STR) );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeRatesMenuItem);
-  OSD.print( fixFlashStr(&PITCH_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeRatesMenuItem);
-  OSD.print( fixFlashStr(&YAW_STR) );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeRatesMenuItem);
-  OSD.print( fixFlashStr(&BACK2_STR) );
- 
+  OSD.printFS( startCol, ++startRow, &ROLL_STR, activeRatesMenuItem );
+  OSD.printFS( startCol, ++startRow, &PITCH_STR, activeRatesMenuItem );
+  OSD.printFS( startCol, ++startRow, &YAW_STR, activeRatesMenuItem );
+  OSD.printFS( startCol, ++startRow, &BACK_STR, activeRatesMenuItem );
+
   return (void*)RatesMenu;
 }
 
@@ -282,16 +259,7 @@ void* PIDMenu()
         return (void*)TPAMenu;
       break;
       case 4:
-        if((code &  inputChecker.ROLL_LEFT) && lpf_frq > 0)
-        {
-          lpf_frq--;
-          fcSettingChanged = true;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && lpf_frq < 6)
-        {
-          lpf_frq++;
-          fcSettingChanged = true;
-        }
+        lpf_frq = checkSetting(lpf_frq, 0, 6, fcSettingChanged);
       break;
       case 5:
         cleanScreen();
@@ -304,12 +272,12 @@ void* PIDMenu()
   static const uint8_t PID_MENU_ITEMS = 6;
   activePIDMenuItem = checkMenuItem(activePIDMenuItem, PID_MENU_ITEMS);
   
-  FLASH_STRING(ROLL_STR,  "roll  ");
-  FLASH_STRING(PITCH_STR, "pitch ");
-  FLASH_STRING(YAW_STR,   "yaw   ");
+//FLASH_STRING(ROLL_STR,  "roll  ");
+//FLASH_STRING(PITCH_STR, "pitch ");
+//FLASH_STRING(YAW_STR,   "yaw   ");
   FLASH_STRING(TPA_STR,   "tpa   ");
   FLASH_STRING(LPF_STR,   "lpf  : ");
-  FLASH_STRING(BACK2_STR, "back  ");
+//FLASH_STRING(BACK_STR,  "back");
   
   FLASH_STRING(LPF1_STR, "off ");
   FLASH_STRING(LPF2_STR, "high    ");
@@ -322,44 +290,154 @@ void* PIDMenu()
   
   uint8_t startRow = 1;
   uint8_t startCol = COLS/2 - (LPF_STR.length()+LPF7_STR.length())/2;
-  const char title[] = "pid menu";
-  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
-  OSD.print( fixStr(title) );
+  FLASH_STRING(PID_MENU_TITLE_STR, "pid menu");
+  OSD.printFS(COLS/2 - PID_MENU_TITLE_STR.length()/2, ++startRow, &PID_MENU_TITLE_STR);
   
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activePIDMenuItem);
-  OSD.print( fixFlashStr(&ROLL_STR) );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activePIDMenuItem);
-  OSD.print( fixFlashStr(&PITCH_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activePIDMenuItem);
-  OSD.print( fixFlashStr(&YAW_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activePIDMenuItem);
-  OSD.print( fixFlashStr(&TPA_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activePIDMenuItem);
-  OSD.print( fixFlashStr(&LPF_STR) );
+  OSD.printFS( startCol, ++startRow, &ROLL_STR, activePIDMenuItem);
+  OSD.printFS( startCol, ++startRow, &PITCH_STR, activePIDMenuItem);
+  OSD.printFS( startCol, ++startRow, &YAW_STR, activePIDMenuItem);
+  OSD.printFS( startCol, ++startRow, &TPA_STR, activePIDMenuItem);
+  OSD.printFS( startCol, ++startRow, &LPF_STR, activePIDMenuItem);
   OSD.print( fixFlashStr(&LPF_FRQ_STR[lpf_frq]) );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activePIDMenuItem);
-  OSD.print( fixFlashStr(&BACK2_STR) );
- 
+  OSD.printFS( startCol, ++startRow, &BACK_STR, activePIDMenuItem);
+  
   return (void*)PIDMenu;
 }
 
 
 
+void* BatteryMenu()
+{
+  boolean changed = false;
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeBatteryMenuItem)
+    {
+      case 0:
+        batterySelect = true;
+      break;
+      case 1:
+        settings.m_batWarning = checkSetting(settings.m_batWarning, 0, 1, settingChanged);
+      break;
+      case 2:
+        settings.m_batWarningPercent = checkSetting(settings.m_batWarningPercent, 0, 100, changed);
+        settingChanged |= changed;
+        if(changed)
+        {
+          settings.FixBatWarning();
+        }
+      break;
+      case 3:
+        menuActive = false;
+        menuWasActive = true;
+      break;
+      case 4:
+        cleanScreen();
+        activeBatteryMenuItem = 0;
+        return (void*)MainMenu;
+      break;
+    }
+  }
+  static const uint8_t BATTERY_MENU_ITEMS = 5;
+  activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
+  
+  FLASH_STRING(SELECT_BATTERY_STR,  "select battery ");
+  FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
+  FLASH_STRING(BATTERY_PERCENT_STR, "batt. % alarm: ");
+//FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
+//FLASH_STRING(BACK_STR,            "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
+  FLASH_STRING(BATTERY_TITLE_STR, "battery menu");
+  OSD.printFS(COLS/2 - BATTERY_TITLE_STR.length()/2, ++startRow, &BATTERY_TITLE_STR);
+  
+  OSD.printFS( startCol, ++startRow, &SELECT_BATTERY_STR, activeBatteryMenuItem );
+  OSD.printFS( startCol, ++startRow, &BATTERY_WARNING_STR, activeBatteryMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
+  
+  OSD.printIntArrow( startCol, ++startRow, &BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );  
+  
+  OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeBatteryMenuItem );
+  OSD.printFS( startCol, ++startRow, &BACK_STR, activeBatteryMenuItem );
+  
+  return (void*)BatteryMenu;
+}
+
+
+
+void* DisplayMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeDisplayMenuItem)
+    {
+      case 0:
+        settings.m_DVchannel = checkSetting(settings.m_DVchannel, 0, 3, settingChanged);
+      break;
+      case 1:
+        settings.m_tempUnit = checkSetting(settings.m_tempUnit, 0, 1, settingChanged);
+      break;
+      case 2:
+        settings.m_fontSize = checkSetting(settings.m_fontSize, 0, 1, settingChanged);
+      break;
+      case 3:
+        settings.m_displaySymbols = checkSetting(settings.m_displaySymbols, 0, 1, settingChanged);
+      break;
+      case 4:
+        menuActive = false;
+        menuWasActive = true;
+      break;
+      case 5:
+        activeDisplayMenuItem = 0;
+        cleanScreen();
+        return (void*)MainMenu;
+      break;
+    }
+  }
+  static const uint8_t DISPLAY_MENU_ITEMS = 6;
+  activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
+  
+  FLASH_STRING(DV_CHANNEL_STR,      "dv channel   : ");
+  FLASH_STRING(TEMP_UNIT_STR,       "temp. unit   : ");
+  FLASH_STRING(FONT_SIZE_STR,       "font size    : ");
+  FLASH_STRING(SYMBOLS_SIZE_STR,    "symbols      : ");
+//FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
+//FLASH_STRING(BACK_STR,            "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = COLS/2 - (DV_CHANNEL_STR.length()+6)/2;
+  FLASH_STRING(DISPLAY_TITLE_STR, "display menu");
+  OSD.printFS( COLS/2 - DISPLAY_TITLE_STR.length()/2, ++startRow, &DISPLAY_TITLE_STR );
+  
+  OSD.printFS( startCol, ++startRow, &DV_CHANNEL_STR, activeDisplayMenuItem );
+  OSD.print( fixStr("aux") );
+  OSD.printInt16( startCol + DV_CHANNEL_STR.length() + 4, startRow, settings.m_DVchannel+1, 0, 1 );
+  
+  OSD.printFS( startCol, ++startRow, &TEMP_UNIT_STR, activeDisplayMenuItem);
+  static const char tempSymbols[][2] = { {0xB0,0x00} , {0xB1, 0x00}};
+  OSD.print( fixStr(tempSymbols[settings.m_tempUnit]) );
+  
+  FLASH_STRING(NORMAL_FONT_STR, "normal");
+  FLASH_STRING(LARGE_FONT_STR,  "large ");
+  static _FLASH_STRING FONT_SIZES_STR[] = { NORMAL_FONT_STR, LARGE_FONT_STR };
+  OSD.printFS( startCol, ++startRow, &FONT_SIZE_STR, activeDisplayMenuItem );
+  OSD.print( fixFlashStr(&FONT_SIZES_STR[settings.m_fontSize]) );
+  
+  OSD.printFS( startCol, ++startRow, &SYMBOLS_SIZE_STR, activeDisplayMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  
+  OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeDisplayMenuItem );
+  OSD.printFS( startCol, ++startRow, &BACK_STR, activeDisplayMenuItem );
+  
+  return (void*)DisplayMenu;
+}
+
+
 
 void* MainMenu()
 {
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  if(code &  inputChecker.ROLL_RIGHT)
   {
     switch(activeMenuItem)
     {
@@ -378,63 +456,18 @@ void* MainMenu()
         }
       break;
       case 2:
-        batterySelect = true;
+        cleanScreen();
+        return (void*)DisplayMenu;
       break;
       case 3:
-        if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarning == 1)
-        {
-          settings.m_batWarning = 0;
-          settingChanged = true;
-        }
-        if(code &  inputChecker.ROLL_RIGHT && settings.m_batWarning == 0)
-        {
-          settings.m_batWarning = 1;
-          settingChanged = true;
-        }
+        cleanScreen();
+        return (void*)BatteryMenu;
       break;
       case 4:
-        if((code &  inputChecker.ROLL_LEFT) && settings.m_batWarningPercent > 0)
-        {
-          settings.m_batWarningPercent--;
-          settings.FixBatWarning();
-          settingChanged = true;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && settings.m_batWarningPercent < 100)
-        {
-          settings.m_batWarningPercent++;
-          settings.FixBatWarning();
-          settingChanged = true;
-        }
-      break;
-      case 5:
-        if((code &  inputChecker.ROLL_LEFT) && settings.m_DVchannel > 0)
-        {
-          settings.m_DVchannel--;
-          settingChanged = true;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && settings.m_DVchannel < 3)
-        {
-          settings.m_DVchannel++;
-          settingChanged = true;
-        }
-      break;
-      case 6:
-        if((code &  inputChecker.ROLL_LEFT) && settings.m_tempUnit == 1)
-        {
-          settings.m_tempUnit = 0;
-          settingChanged = true;
-        }
-        if((code &  inputChecker.ROLL_RIGHT) && settings.m_tempUnit == 0)
-        {
-          settings.m_tempUnit = 1;
-          settingChanged = true;
-        }
-      break;
-      case 7:
         menuActive = false;
         menuWasActive = true;
       break;
-      case 8:
+      case 5:
         menuActive = false;
         menuWasActive = true;
         settingChanged = false;
@@ -444,72 +477,29 @@ void* MainMenu()
       break;
     }
   }
-  static const uint8_t MAIN_MENU_ITEMS = 9;
+  static const uint8_t MAIN_MENU_ITEMS = 6;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
   FLASH_STRING(PID_STR,             "tune");
   FLASH_STRING(RATES_STR,           "rates");
-  FLASH_STRING(SELECT_BATTERY_STR,  "select battery ");
-  FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
-  FLASH_STRING(BATTERY_PERCENT_STR, "batt. % alarm: ");
-  FLASH_STRING(DV_CHANNEL_STR,      "dv channel   : ");
-  FLASH_STRING(TEMP_UNIT_STR,       "temp. unit   : ");
-  FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
+  FLASH_STRING(DISPLAY_PAGE_STR,    "display");
+  FLASH_STRING(BATTERY_PAGE_STR,    "battery");
+//FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
   FLASH_STRING(CANCEL_STR,          "cancel");
-  static char ON_OFF_STR[][4] = { "off", "on " };
   
   uint8_t startRow = 0;
-  uint8_t startCol = COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
+  uint8_t startCol = COLS/2 - SAVE_EXIT_STR.length()/2;
   OSD.setCursor( COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
   OSD.print( fixStr(KISS_OSD_VER) );
-  const char title[] = "main menu";
-  OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
-  OSD.print( fixStr(title) );
+  FLASH_STRING(MAIN_TITLE_STR, "main menu");
+  OSD.printFS( COLS/2 - MAIN_TITLE_STR.length()/2, ++startRow, &MAIN_TITLE_STR );
   
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&PID_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&RATES_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&SELECT_BATTERY_STR) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&BATTERY_WARNING_STR) );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&BATTERY_PERCENT_STR) );
-  print_int16(settings.m_batWarningPercent, printBuf,0,1);
-  OSD.print( printBuf );
-  OSD.print( fixChar('%') );
-  OSD.print( fixFlashStr(&TWO_BLANKS) );
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&DV_CHANNEL_STR) );
-  OSD.print( fixStr("aux") );
-  OSD.print( (char)(settings.m_DVchannel+1+0x06) );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&TEMP_UNIT_STR) );
-  static const char tempSymbols[][2] = { {0x30,0x00} , {0x31, 0x00}};
-  OSD.print( tempSymbols[settings.m_tempUnit] );
- 
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&SAVE_EXIT_STR) ); 
-  
-  OSD.setCursor( startCol, ++startRow );
-  checkArrow(startRow, activeMenuItem);
-  OSD.print( fixFlashStr(&CANCEL_STR) );
+  OSD.printFS( startCol, ++startRow, &PID_STR, activeMenuItem );
+  OSD.printFS( startCol, ++startRow, &RATES_STR, activeMenuItem );
+  OSD.printFS( startCol, ++startRow, &DISPLAY_PAGE_STR, activeMenuItem );
+  OSD.printFS( startCol, ++startRow, &BATTERY_PAGE_STR, activeMenuItem );
+  OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeMenuItem );
+  OSD.printFS( startCol, ++startRow, &CANCEL_STR, activeMenuItem );
   
   return (void*)MainMenu;
 }

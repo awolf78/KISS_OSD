@@ -1,10 +1,13 @@
 #include "fixFont.h"
 #include "Arduino.h"
+#include "CSettings.h"
+
+extern CSettings settings;
 
 char fixChar(char str)
 {
-  #ifdef COMPRESSED_FONT
   //str = tolower(str);
+  #ifdef COMPRESSED_FONT
   if(str > 0x60 && str < 0x7B)
   {
     str = str - 0x4B;
@@ -28,6 +31,21 @@ char fixChar(char str)
     return str;
   }
   str = 0x32;
+  #endif
+  #ifdef NICE_FONT
+  if(settings.m_fontSize > 0)
+  {
+    uint8_t str2 = (uint8_t) str;
+    if(str2 > 0x60 && str2 < 0x7B)
+    {
+      return (char)(str2 - 0x20);
+    }
+    if(str2 > 0xAF && str2 < 0xB2)
+    {
+      return (char)(str2 + 0x2);
+    }
+    return fixNo(str);
+  }
   #endif
   return str; 
 }
@@ -61,4 +79,22 @@ char* fixFlashStr(_FLASH_STRING* str)
     fixedString[i] = 0x00;
   }
   return fixedString;
+}
+
+char fixNo(char no)
+{
+  #ifdef COMPRESSED_FONT
+  return no - 0x2A;
+  #endif
+  #ifdef NICE_FONT
+  if(settings.m_fontSize > 0)
+  {
+    uint8_t no2 = (uint8_t) no;
+    if(no2 > 0x2F && no2 < 0x3A)
+    {
+      return (char)(no2 + 0x5A);
+    }
+  }
+  #endif
+  return no;
 }
