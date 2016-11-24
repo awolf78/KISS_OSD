@@ -140,9 +140,9 @@ void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &i
   OSD.setCursor( COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
   
-  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, 1, active3MenuItem, suffix[0]);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, 1, active3MenuItem, suffix[1]);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, 1, active3MenuItem, suffix[2]);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, 1, active3MenuItem, suffix[0], true);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, 1, active3MenuItem, suffix[1], true);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, 1, active3MenuItem, suffix[2], true);
   OSD.printFS( startCol, ++startRow, &BACK_STR, active3MenuItem);
   OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, active3MenuItem);
   

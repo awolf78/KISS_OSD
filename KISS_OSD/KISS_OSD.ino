@@ -632,14 +632,14 @@ void loop(){
           {
             uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
             uint8_t batStatus = 0xEC;
-            while(batCount > 4)
+            while(batCount > 3)
             {
               batStatus--;
               batCount--;
             }
             batterySymbol[2] = (char)batStatus;
             batStatus = 0xEC;
-            while(batCount > 1)
+            while(batCount > 0)
             {
               batStatus--;
               batCount--;
@@ -657,7 +657,7 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_KRPM_DV)
         {
-          static char KR[][4] = { "kr", "kr", "kr", "kr" };
+          static char KR[3][4];
           if(settings.m_displaySymbols == 1)
           {
             for(i=0; i<4; i++)
@@ -673,6 +673,15 @@ void loop(){
               }
               KR[i][0] = (char)krSymbol[i];
               KR[i][1] = ' ';
+            }
+          }
+          else
+          {
+            for(i=0; i<4; i++)
+            {
+              KR[i][0] = 'k';
+              KR[i][1] = 'r';
+              KR[i][2] = 0x00;
             }
           }
           OSD.printInt16(0, ESCmarginTop, motorKERPM[0], 1, 1, KR[0], true);
@@ -803,7 +812,7 @@ void loop(){
               OSD.print((char)logoPos++);
             }
           }
-          if(_StartupTime > 0 && millis() - _StartupTime > 25000)
+          if(_StartupTime > 0 && millis() - _StartupTime > 60000)
           {
             logoDone = true;
             cleanScreen();

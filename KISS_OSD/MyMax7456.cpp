@@ -123,7 +123,7 @@ uint8_t CMyMax7456::print_int16(int16_t p_int, char *str, uint8_t dec, uint8_t A
     if(result[i] != blank || (AlignLeft == 0 || (i > 5-dec))) str[CharPos++] = result[i];
     if(dec != 0 && i == 5-dec)
     {
-      if(CharPos == 0)
+      if(CharPos == 0 || str[CharPos-1] == blank)
       {
         str[CharPos++] = zero;
       }
