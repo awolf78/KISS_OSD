@@ -10,7 +10,7 @@ static uint8_t activeRatesPitchMenuItem = 0;
 static uint8_t activeRatesYawMenuItem = 0;
 static uint8_t activeBatteryMenuItem = 0;
 static uint8_t activeDisplayMenuItem = 0;
-static uint8_t activeNotchMenuItem = 0;
+//static uint8_t activeNotchMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
@@ -244,14 +244,14 @@ void* TPAMenu()
   return ThreeItemPlusBackMenu(activeTPAMenuItem,  p_tpa, i_tpa, d_tpa, TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, &TPA_DESC_STR1, &TPA_DESC_STR2, &TPA_DESC_STR3);
 }
 
-void* NotchFilterMenu()
+/*void* NotchFilterMenu()
 {
   FLASH_STRING(NOTCH_DESC_STR1, "center freq  : "); 
   FLASH_STRING(NOTCH_DESC_STR2, "cutoff freq  : "); 
   FLASH_STRING(NOTCH_DESC_STR3, "yaw strength : ");
   static char suffix[][3] = { "hz", "hz", "" };
   return ThreeItemPlusBackMenu(activeNotchMenuItem,  notchFilterCenter, notchFilterCut, yawFilterCut, I_STEP, I_STEP, I_STEP, "notch filter", (void*)TuneMenu, (void*) NotchFilterMenu, &NOTCH_DESC_STR1, &NOTCH_DESC_STR2, &NOTCH_DESC_STR3, suffix, 0);
-}
+}*/
 
 void* TuneMenu()
 {
@@ -278,7 +278,7 @@ void* TuneMenu()
       case 4:
         lpf_frq = checkSetting(lpf_frq, 0, 6, fcSettingChanged);
       break;
-      case 5:
+      /*case 5:
         if(notchFilterEnabled < 2)
         {
           notchFilterEnabled = checkSetting(notchFilterEnabled, 0, 1, fcSettingChanged);
@@ -290,8 +290,8 @@ void* TuneMenu()
           cleanScreen();
           return (void*)NotchFilterMenu;
         }
-      break;      
-      case 7:
+      break;*/      
+      case 5:
         cleanScreen();
         activeTuneMenuItem = 0;
         return (void*)MainMenu;
@@ -299,16 +299,14 @@ void* TuneMenu()
     }
   }
 
-  static const uint8_t TUNE_MENU_ITEMS = 8;
+  static const uint8_t TUNE_MENU_ITEMS = 6;
   activeTuneMenuItem = checkMenuItem(activeTuneMenuItem, TUNE_MENU_ITEMS);
   
 //FLASH_STRING(ROLL_STR,  "roll  ");
 //FLASH_STRING(PITCH_STR, "pitch ");
 //FLASH_STRING(YAW_STR,   "yaw   ");
   FLASH_STRING(TPA_STR,   "tpa");
-  FLASH_STRING(LPF_STR,   "lpf          : ");
-  FLASH_STRING(NOTCH_STR, "notch filter : ");
-  FLASH_STRING(NOTCH2_STR,"notch settings");
+  FLASH_STRING(LPF_STR,   "lpf : ");
 //FLASH_STRING(BACK_STR,  "back");
   
   FLASH_STRING(LPF1_STR, "off ");
@@ -321,7 +319,7 @@ void* TuneMenu()
   static _FLASH_STRING LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR };
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - (NOTCH2_STR.length()+LPF7_STR.length())/2;
+  uint8_t startCol = COLS/2 - (LPF_STR.length()+LPF7_STR.length())/2;
   FLASH_STRING(TUNE_MENU_TITLE_STR, "tune menu");
   OSD.printFS(COLS/2 - TUNE_MENU_TITLE_STR.length()/2, ++startRow, &TUNE_MENU_TITLE_STR);
   
@@ -331,9 +329,9 @@ void* TuneMenu()
   OSD.printFS( startCol, ++startRow, &TPA_STR, activeTuneMenuItem);
   OSD.printFS( startCol, ++startRow, &LPF_STR, activeTuneMenuItem);
   OSD.print( fixFlashStr(&LPF_FRQ_STR[lpf_frq]) );
-  OSD.printFS( startCol, ++startRow, &NOTCH_STR, activeTuneMenuItem);
+  /*OSD.printFS( startCol, ++startRow, &NOTCH_STR, activeTuneMenuItem);
   OSD.print( fixStr(ON_OFF_STR[notchFilterEnabled]) );
-  OSD.printFS( startCol, ++startRow, &NOTCH2_STR, activeTuneMenuItem);
+  OSD.printFS( startCol, ++startRow, &NOTCH2_STR, activeTuneMenuItem);*/
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeTuneMenuItem);
   
   return (void*)TuneMenu;

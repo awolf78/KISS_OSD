@@ -76,14 +76,14 @@ When you turn your radio on with DV all the way to minimum volume you will see o
 the the mAh consumption. Turning the DV dial a little higher your nickname will pop up (don't forget to arm 
 first). Turning it even further will display the combination current.
 =============================*/
-static int16_t DISPLAY_NICKNAME_DV =           2; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.  
+static int16_t DISPLAY_NICKNAME_DV =           3; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.  
 static int16_t DISPLAY_TIMER_DV =              1; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
 static int16_t DISPLAY_RC_THROTTLE_DV =        6; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
-static int16_t DISPLAY_COMB_CURRENT_DV =       3; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
+static int16_t DISPLAY_COMB_CURRENT_DV =       4; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
 static int16_t DISPLAY_LIPO_VOLTAGE_DV =       0; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
 static int16_t DISPLAY_MA_CONSUMPTION_DV =     0; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
-static int16_t DISPLAY_ESC_KRPM_DV =           5; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
-static int16_t DISPLAY_ESC_CURRENT_DV =        4; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
+static int16_t DISPLAY_ESC_KRPM_DV =           2; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
+static int16_t DISPLAY_ESC_CURRENT_DV =        5; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
 static int16_t DISPLAY_STATS_DV =              0; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
 static int16_t DISPLAY_ESC_TEMPERATURE_DV =    7; // 0-10, 0 = always on, -1 = never on, 1 = first, 2 = second, etc.
 
@@ -657,7 +657,7 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_KRPM_DV)
         {
-          static char KR[3][4];
+          static char KR[4];
           if(settings.m_displaySymbols == 1)
           {
             for(i=0; i<4; i++)
@@ -671,23 +671,28 @@ void loop(){
                   krSymbol[i] = 0x9C;
                 }
               }
-              KR[i][0] = (char)krSymbol[i];
-              KR[i][1] = ' ';
+              KR[i] = (char)krSymbol[i];
             }
+            OSD.setCursor(0, ESCmarginTop);
+            OSD.print(KR[0]);
+            OSD.setCursor(-2, ESCmarginTop);
+            OSD.print(KR[1]);
+            OSD.setCursor(-2, -(1+ESCmarginBot));
+            OSD.print(KR[2]);
+            OSD.setCursor(0, -(1+ESCmarginBot));
+            OSD.print(KR[3]);
           }
           else
           {
-            for(i=0; i<4; i++)
-            {
-              KR[i][0] = 'k';
-              KR[i][1] = 'r';
-              KR[i][2] = 0x00;
-            }
+            static char KR2[3];
+            KR2[0] = 'k';
+            KR2[1] = 'r';
+            KR2[2] = 0x00;
+            OSD.printInt16(0, ESCmarginTop, motorKERPM[0], 1, 1, KR2, true);
+            OSD.printAligned(ESCmarginTop, motorKERPM[1], 1, 0, KR2);
+            OSD.printAligned(-(1+ESCmarginBot), motorKERPM[2], 1, 0, KR2);
+            OSD.printInt16( 0, -(1+ESCmarginBot), motorKERPM[3], 1, 1, KR2, true);
           }
-          OSD.printInt16(0, ESCmarginTop, motorKERPM[0], 1, 1, KR[0], true);
-          OSD.printAligned(ESCmarginTop, motorKERPM[1], 1, 0, KR[1]);
-          OSD.printAligned(-(1+ESCmarginBot), motorKERPM[2], 1, 0, KR[2]);
-          OSD.printInt16( 0, -(1+ESCmarginBot), motorKERPM[3], 1, 1, KR[3], true);
           
           TMPmargin++;
           CurrentMargin++;

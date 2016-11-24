@@ -18,6 +18,7 @@
 
 The version on the flyduino page is very basic. Some people like that. This one can do more:
 
+* Read the following or simply watch this: https://www.youtube.com/watch?v=9I2e-RJFXz8
 * Displays statistics when you land (such as max amps, max watts, max RPM, etc.)
 * You can make the OSD more or less busy using a digital volume (DV) dial on your radio
 * Battery management
