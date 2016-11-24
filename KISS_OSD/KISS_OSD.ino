@@ -632,7 +632,7 @@ void loop(){
           {
             uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
             uint8_t batStatus = 0xEC;
-            while(batCount > 3)
+            while(batCount > 4)
             {
               batStatus--;
               batCount--;
