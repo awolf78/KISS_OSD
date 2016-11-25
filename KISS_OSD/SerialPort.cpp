@@ -21,7 +21,7 @@
  * @file
  * @brief Serial Port class
  */
-#include <SerialPort.h>
+#include "SerialPort.h"
 //------------------------------------------------------------------------------
 /** @return The number of bytes in the ring buffer.
  *

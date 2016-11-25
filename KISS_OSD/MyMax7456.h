@@ -1,7 +1,7 @@
 #ifndef MYMAX7456_H
 #define MYMAX7456_H
 
-#include <MAX7456.h>
+#include "MAX7456.h"
 #include "Flash.h"
 
 class CMyMax7456 : public MAX7456

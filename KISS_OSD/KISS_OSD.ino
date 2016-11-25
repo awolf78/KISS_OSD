@@ -115,7 +115,7 @@ const char KISS_OSD_VER[] = "kiss osd v2.1";
 
 #include "Flash.h"
 #include <SPI.h>
-#include <MAX7456.h>
+#include "MAX7456.h"
 #include "MyMAX7456.h"
 #include <EEPROM.h>
 #include "SerialPort.h"
