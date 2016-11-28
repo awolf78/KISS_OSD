@@ -6,13 +6,7 @@
 
 ## How-to upload it to your MinimOSD
 
-* http://kiss.flyduino.net/dwkb/flash-kiss-osd/
-* Follow the above manual, however before you flash MW-OSD, do the following:
-* Go to the MW_OSD folder in this release.
-* Open MW_OSD.ino and flash MW_OSD.ino. 
-* After flashing is done, disconnect your FTDI and connect a battery. THIS IS VERY IMPORTANT. The font might not be properly uploaded if not using a battery. And you will get all kinds of strange symbols on your screen.
-* Wait for about 30 seconds after you connect the battery. You can see the green LED flashing around, then staying lit and then go out. Then you can disconnect the battery again.
-* Connect your FTDI again and flash KISS-OSD as shown in the flyduino manual.
+* Read the Wiki
 
 ## Why use this version? Why not use the one from flyduino?
 
