@@ -6,7 +6,7 @@
 
 ## How-to upload it to your MinimOSD
 
-* Read the Wiki
+* Read the Wiki: https://github.com/awolf78/KISS_OSD/wiki
 
 ## Why use this version? Why not use the one from flyduino?
 
