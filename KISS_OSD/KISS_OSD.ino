@@ -66,7 +66,6 @@ display set to -1.
 Example:
 You want the Lipo voltage and mAh consumption to be shown at all times and then be able
 to show your nickname and after the the combination current with the DV dial:
-- set DV_CHAN to the channel for the DV dial (and set it to the same channel on your radio)
 - set DISPLAY_MA_CONSUMPTION_DV to 0
 - set DISPLAY_LIPO_VOLTAGE_DV to 0
 - set DISPLAY_NICKNAME_DV to 1
@@ -327,6 +326,7 @@ static int16_t versionProto = 0;
 #endif
 
 static unsigned long _StartupTime = 0;
+extern void* MainMenu();
 
 void loop(){
   uint16_t i = 0;

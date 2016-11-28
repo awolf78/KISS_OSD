@@ -47,7 +47,7 @@
 
 // Example: FLASH_STRING_ARRAY(nums, PSTR("One"), PSTR("Two"), PSTR("Three"), PSTR("Four"), PSTR("Five"));
 #define FLASH_STRING_ARRAY(name, values...) \
-  const PROGMEM char *name##_arr[] = { values }; \
+  PGM_P const name##_arr[] PROGMEM = { values }; \
   _FLASH_STRING_ARRAY name(name##_arr, sizeof(name##_arr) / sizeof(name##_arr[0]));
 
 #ifndef ARDUINO_CORE_PRINTABLE_SUPPORT
@@ -67,7 +67,7 @@ public:
 class _FLASH_STRING : public _Printable
 {
 public:
-  _FLASH_STRING(const prog_char *arr);
+  _FLASH_STRING(const char *arr);
 
   size_t length() const 
   { return strlen_P(_arr); }
@@ -78,7 +78,7 @@ public:
       strcpy_P(to, _arr + offset) : strncpy_P(to, _arr + offset, size);
   }
 
-  const prog_char *access() const 
+  const char *access() const 
   { return _arr; }
 
   const _Printable &Printable() const
@@ -90,7 +90,7 @@ public:
   void print(Print &stream) const;
 
 private:
-  const prog_char *_arr;
+  const char *_arr;
 };
 
 /* _FLASH_ARRAY template class.  Use the FLASH_ARRAY() macro to create these. */
@@ -180,7 +180,7 @@ private:
 class _FLASH_STRING_ARRAY : public _Printable
 {
 public:
-  _FLASH_STRING_ARRAY(const prog_char **arr, size_t count) : _arr(arr), _size(count)
+  _FLASH_STRING_ARRAY(const char **arr, size_t count) : _arr(arr), _size(count)
   { }
 
   size_t count() const 
@@ -200,7 +200,7 @@ public:
   }
 
 private:
-  const prog_char **_arr;
+  const char **_arr;
   size_t _size;
 };
 
