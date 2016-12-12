@@ -11,6 +11,7 @@ static uint8_t activeRatesYawMenuItem = 0;
 static uint8_t activeBatteryMenuItem = 0;
 static uint8_t activeDisplayMenuItem = 0;
 //static uint8_t activeNotchMenuItem = 0;
+static uint8_t activeVTXMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
@@ -27,25 +28,82 @@ FLASH_STRING(YAW_STR,   "yaw   ");
 extern void* MainMenu();
 extern void* RatesMenu();
 
-int16_t checkCode(int16_t value, int16_t STEP)
+boolean checkCode(int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
-  if((code &  inputChecker.ROLL_LEFT) && (value-STEP) >= 0)
+  boolean changed = false;
+  if(code &  inputChecker.ROLL_LEFT)
   {
-    value -= STEP;
+    if((value-STEP) >= minVal)
+    {
+      value -= STEP;
+      changed = true;
+    }
+    else
+    {
+      if(value > minVal)
+      {
+        changed = true;
+      }
+      value = minVal;        
+    }
   }
-  if((code &  inputChecker.YAW_LEFT) && (value-(STEP/10)) >= 0)
+  if(code &  inputChecker.YAW_LEFT)
   {
-    value -= STEP/10;
+    if((value-(STEP/10)) >= minVal)
+    {
+      changed = true;
+      value -= STEP/10;
+    }
+    else
+    {
+      if(value > minVal)
+      {
+        changed = true;
+      }
+      value = minVal;
+    }
   }
-  if((code &  inputChecker.ROLL_RIGHT) && (value+STEP) <= 32000)
+  if(code &  inputChecker.ROLL_RIGHT)
   {
-    value += STEP;
+    if((value+STEP) <= maxVal)
+    {
+      changed = true;
+      value += STEP;
+    }
+    else
+    {
+      if(value < maxVal)
+      {
+        changed = true;
+      }
+      value = maxVal;
+    }
   }
-  if((code &  inputChecker.YAW_RIGHT) && (value+(STEP/10)) <= 32000)
+  if(code &  inputChecker.YAW_RIGHT)
   {
-    value += STEP/10;
+    if((value+(STEP/10)) <= maxVal)
+    {
+      changed = true;
+      value += STEP/10;
+    }
+    else
+    {
+      if(value < maxVal)
+      {
+        changed = true;
+      }
+      value = maxVal;
+    }
   }
-  return value;
+  return changed;
+}
+
+boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+{
+  int16_t tempValue = value;
+  boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
+  value = (uint8_t) tempValue;
+  return changed;
 }
 
 uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
@@ -73,57 +131,35 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
   return menuItem; 
 }
 
-uint8_t checkSetting(uint8_t setting, uint8_t lowLim, uint8_t upLim, boolean &changed)
-{
-  if((code &  inputChecker.ROLL_LEFT) && setting > lowLim)
-  {
-    changed = true;
-    setting--;
-  }
-  if(code &  inputChecker.ROLL_RIGHT && setting < upLim)
-  {
-    changed = true;
-    setting++;
-  }
-  return setting;
-}
-
 static char emptySuffix[][3] = { "", "", "" };
 
 void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &item2, int16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, _FLASH_STRING *itemDescription1 = 0, _FLASH_STRING *itemDescription2 = 0, _FLASH_STRING *itemDescription3 = 0, char (*suffix)[3] = NULL, uint8_t dec = 3)
 {
-  if(active3MenuItem < 3 && ((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT)))
+  switch(active3MenuItem)
   {
-    fcSettingChanged = true;
-  }
-  if(code > 0)
-  {
-    switch(active3MenuItem)
-    {
-      case 0:
-        item1 = checkCode(item1, item1_step);
-      break;
-      case 1:
-        item2 = checkCode(item2, item2_step);        
-      break;
-      case 2:
-        item3 = checkCode(item3, item3_step);        
-      break;
-      case 3:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          active3MenuItem = 0;
-          cleanScreen();
-          return prevPage;
-        }
-      case 4:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          active3MenuItem = 0;
-          menuActive = false;
-          menuWasActive = true;
-        }
-    }
+    case 0:
+      fcSettingChanged = checkCode(item1, item1_step);
+    break;
+    case 1:
+      fcSettingChanged = checkCode(item2, item2_step);        
+    break;
+    case 2:
+      fcSettingChanged = checkCode(item3, item3_step);        
+    break;
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        active3MenuItem = 0;
+        cleanScreen();
+        return prevPage;
+      }
+    case 4:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        active3MenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+      }
   }
   
   if(suffix == NULL)
@@ -255,59 +291,79 @@ void* TPAMenu()
 
 void* TuneMenu()
 {
-  if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
+  switch(activeTuneMenuItem)
   {
-    switch(activeTuneMenuItem)
-    {
-      case 0:
+    case 0:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)PIDRollMenu;
-      break;
-      case 1:
+      }
+    break;
+    case 1:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)PIDPitchMenu;
-      break;
-      case 2:
+      }
+    break;
+    case 2:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)PIDYawMenu;
-      break;
-      case 3:
+      }
+    break;
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)TPAMenu;
-      break;
-      case 4:
-        lpf_frq = checkSetting(lpf_frq, 0, 6, fcSettingChanged);
-      break;
-      /*case 5:
-        if(notchFilterEnabled < 2)
-        {
-          notchFilterEnabled = checkSetting(notchFilterEnabled, 0, 1, fcSettingChanged);
-        }
-      break;
-      case 6:
-        if(notchFilterEnabled == 1)
-        {
-          cleanScreen();
-          return (void*)NotchFilterMenu;
-        }
-      break;*/      
-      case 5:
+      }
+    break;
+    case 4:
+        fcSettingChanged = checkCode(lpf_frq, 1, 0, 6);
+    break;
+    /*case 5:
+      if(notchFilterEnabled < 2)
+      {
+        notchFilterEnabled = checkSetting(notchFilterEnabled, 0, 1, fcSettingChanged);
+      }
+    break;
+    case 6:
+      if(notchFilterEnabled == 1)
+      {
+        cleanScreen();
+        return (void*)NotchFilterMenu;
+      }
+    break;*/
+    case 5:
+      fcSettingChanged = checkCode(minCommand, 10, 1000, 2000);
+    break;
+    case 6:
+      fcSettingChanged = checkCode(minThrottle, 10, 1000, 2000);
+    break;        
+    case 7:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         activeTuneMenuItem = 0;
         return (void*)MainMenu;
-      break;
-    }
+      }
+    break;
   }
 
-  static const uint8_t TUNE_MENU_ITEMS = 6;
+  static const uint8_t TUNE_MENU_ITEMS = 8;
   activeTuneMenuItem = checkMenuItem(activeTuneMenuItem, TUNE_MENU_ITEMS);
   
-//FLASH_STRING(ROLL_STR,  "roll  ");
-//FLASH_STRING(PITCH_STR, "pitch ");
-//FLASH_STRING(YAW_STR,   "yaw   ");
-  FLASH_STRING(TPA_STR,   "tpa");
-  FLASH_STRING(LPF_STR,   "lpf : ");
-//FLASH_STRING(BACK_STR,  "back");
+//FLASH_STRING(ROLL_STR,     "roll  ");
+//FLASH_STRING(PITCH_STR,    "pitch ");
+//FLASH_STRING(YAW_STR,      "yaw   ");
+  FLASH_STRING(TPA_STR,      "tpa");
+  FLASH_STRING(LPF_STR,      "lpf       : ");
+  FLASH_STRING(MINCMD_STR,   "min cmd   : ");
+  FLASH_STRING(MINTHRTL_STR, "min thrtl : ");
+//FLASH_STRING(BACK_STR,     "back");
   
   FLASH_STRING(LPF1_STR, "off ");
   FLASH_STRING(LPF2_STR, "high    ");
@@ -332,6 +388,8 @@ void* TuneMenu()
   /*OSD.printFS( startCol, ++startRow, &NOTCH_STR, activeTuneMenuItem);
   OSD.print( fixStr(ON_OFF_STR[notchFilterEnabled]) );
   OSD.printFS( startCol, ++startRow, &NOTCH2_STR, activeTuneMenuItem);*/
+  OSD.printIntArrow( startCol, ++startRow, &MINCMD_STR, minCommand, 0, 1, activeTuneMenuItem);
+  OSD.printIntArrow( startCol, ++startRow, &MINTHRTL_STR, minThrottle, 0, 1, activeTuneMenuItem);
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeTuneMenuItem);
   
   return (void*)TuneMenu;
@@ -342,34 +400,40 @@ void* TuneMenu()
 void* BatteryMenu()
 {
   boolean changed = false;
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  switch(activeBatteryMenuItem)
   {
-    switch(activeBatteryMenuItem)
-    {
-      case 0:
+    case 0:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         batterySelect = true;
-      break;
-      case 1:
-        settings.m_batWarning = checkSetting(settings.m_batWarning, 0, 1, settingChanged);
-      break;
-      case 2:
-        settings.m_batWarningPercent = checkSetting(settings.m_batWarningPercent, 0, 100, changed);
-        settingChanged |= changed;
-        if(changed)
-        {
-          settings.FixBatWarning();
-        }
-      break;
-      case 3:
+      }
+    break;
+    case 1:
+      settingChanged = checkCode(settings.m_batWarning, 1, 0, 1);
+    break;
+    case 2:
+      changed = checkCode(settings.m_batWarningPercent, 1, 0, 100);
+      settingChanged |= changed;
+      if(changed)
+      {
+        settings.FixBatWarning();
+      }
+    break;
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         menuActive = false;
         menuWasActive = true;
-      break;
-      case 4:
+      }
+    break;
+    case 4:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         activeBatteryMenuItem = 0;
         return (void*)MainMenu;
-      break;
-    }
+      }
+    break;
   }
   static const uint8_t BATTERY_MENU_ITEMS = 5;
   activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
@@ -406,35 +470,45 @@ void* DisplayMenu()
     switch(activeDisplayMenuItem)
     {
       case 0:
-        settings.m_DVchannel = checkSetting(settings.m_DVchannel, 0, 3, settingChanged);
+        settingChanged = checkCode(settings.m_DVchannel, 1, 0, 3);
       break;
       case 1:
-        settings.m_tempUnit = checkSetting(settings.m_tempUnit, 0, 1, settingChanged);
+        settingChanged = checkCode(settings.m_tempUnit, 1, 0, 1);
       break;
       case 2:
-        settings.m_fontSize = checkSetting(settings.m_fontSize, 0, 1, settingChanged);
+        settingChanged = checkCode(settings.m_fontSize, 1, 0, 1);
       break;
       case 3:
-        settings.m_displaySymbols = checkSetting(settings.m_displaySymbols, 0, 1, settingChanged);
+        settingChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
       break;
       case 4:
-        menuActive = false;
-        menuWasActive = true;
+        settingChanged = checkCode(settings.m_goggle, 1, 0, 1);
       break;
       case 5:
-        activeDisplayMenuItem = 0;
-        cleanScreen();
-        return (void*)MainMenu;
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          menuActive = false;
+          menuWasActive = true;
+        }
+      break;
+      case 6:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          activeDisplayMenuItem = 0;
+          cleanScreen();
+          return (void*)MainMenu;
+        }
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 6;
+  static const uint8_t DISPLAY_MENU_ITEMS = 7;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
-  FLASH_STRING(DV_CHANNEL_STR,      "dv channel   : ");
-  FLASH_STRING(TEMP_UNIT_STR,       "temp. unit   : ");
-  FLASH_STRING(FONT_SIZE_STR,       "font size    : ");
-  FLASH_STRING(SYMBOLS_SIZE_STR,    "symbols      : ");
+  FLASH_STRING(DV_CHANNEL_STR,      "dv channel : ");
+  FLASH_STRING(TEMP_UNIT_STR,       "temp. unit : ");
+  FLASH_STRING(FONT_SIZE_STR,       "font size  : ");
+  FLASH_STRING(SYMBOLS_SIZE_STR,    "symbols    : ");
+  FLASH_STRING(GOGGLE_STR,          "goggle     : ");
 //FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
 //FLASH_STRING(BACK_STR,            "back");
   
@@ -459,11 +533,92 @@ void* DisplayMenu()
   
   OSD.printFS( startCol, ++startRow, &SYMBOLS_SIZE_STR, activeDisplayMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+
+  FLASH_STRING(FATSHARK_STR,  "fshark");
+  FLASH_STRING(HEADPLAY_STR,  "hplay ");
+  static _FLASH_STRING GOGGLES_STR[] = { FATSHARK_STR, HEADPLAY_STR };
+  OSD.printFS( startCol, ++startRow, &GOGGLE_STR, activeDisplayMenuItem );
+  OSD.print( fixFlashStr(&GOGGLES_STR[settings.m_goggle]) );
   
   OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeDisplayMenuItem );
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeDisplayMenuItem );
   
   return (void*)DisplayMenu;
+}
+
+static bool vTxSettingChanged = false;
+
+void* vTxMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeVTXMenuItem)
+    {
+      case 0:
+        vTxSettingChanged = checkCode(settings.m_vTxPower, 1, 0, 2);
+      break;
+      case 1:
+        vTxSettingChanged = checkCode(settings.m_vTxBand, 1, 0, 4);
+      break;
+      case 2:
+        vTxSettingChanged = checkCode(settings.m_vTxChannel, 1, 0, 7);
+      break;
+      case 3:
+        vTxPower = settings.m_vTxPower;
+        vTxBand = settings.m_vTxBand;
+        vTxChannel = settings.m_vTxChannel;
+        settingChanged |= vTxSettingChanged;
+        menuActive = false;
+        menuWasActive = true;
+      break;
+      case 4:
+        activeVTXMenuItem = 0;
+        if(!vTxSettingChanged)
+        {
+          settings.m_vTxPower = vTxPower;
+          settings.m_vTxBand = vTxBand;
+          settings.m_vTxChannel = vTxChannel;
+        }
+        vTxSettingChanged = false;
+        cleanScreen();
+        return (void*)MainMenu;
+      break;
+    }
+  }
+  static const uint8_t VTX_MENU_ITEMS = 5;
+  activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
+  
+  FLASH_STRING(VTX_POWER_STR,      "power   : ");
+  FLASH_STRING(VTX_BAND_STR,       "band    : ");
+  FLASH_STRING(VTX_CHANNEL_STR,    "channel : ");
+//FLASH_STRING(SAVE_EXIT_STR,      "save+exit");
+//FLASH_STRING(BACK_STR,           "back");
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = COLS/2 - (VTX_POWER_STR.length()+6)/2;
+  FLASH_STRING(VTX_TITLE_STR, "vtx menu");
+  OSD.printFS( COLS/2 - VTX_TITLE_STR.length()/2, ++startRow, &VTX_TITLE_STR );
+
+  FLASH_STRING(_25MW_STR,   "25mw ");
+  FLASH_STRING(_200MW_STR,  "200mw");
+  FLASH_STRING(_500MW_STR,  "500mw");
+  static _FLASH_STRING VTX_POWERS_STR[] = { _25MW_STR, _200MW_STR, _500MW_STR };
+  OSD.printFS( startCol, ++startRow, &VTX_POWER_STR, activeVTXMenuItem );
+  OSD.print( fixFlashStr(&VTX_POWERS_STR[settings.m_vTxPower]) );
+
+  static const char bandSymbols[][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
+  OSD.printFS( startCol, ++startRow, &VTX_BAND_STR, activeVTXMenuItem );
+  OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
+  
+  OSD.printIntArrow( startCol, ++startRow, &VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
+#ifdef IMPULSERC_VTX
+  OSD.printInt16( startCol + VTX_CHANNEL_STR.length() + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
+#endif
+  
+  OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeVTXMenuItem );
+  OSD.printFS( startCol, ++startRow, &BACK_STR, activeVTXMenuItem );
+  
+  return (void*)vTxMenu;
 }
 
 
@@ -497,10 +652,16 @@ void* MainMenu()
         return (void*)BatteryMenu;
       break;
       case 4:
+#ifdef IMPULSERC_VTX
+        cleanScreen();
+        return (void*)vTxMenu;
+#endif
+      break;
+      case 5:
         menuActive = false;
         menuWasActive = true;
       break;
-      case 5:
+      case 6:
         menuActive = false;
         menuWasActive = true;
         settingChanged = false;
@@ -510,13 +671,14 @@ void* MainMenu()
       break;
     }
   }
-  static const uint8_t MAIN_MENU_ITEMS = 6;
+  static const uint8_t MAIN_MENU_ITEMS = 7;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
   FLASH_STRING(PID_STR,             "tune");
   FLASH_STRING(RATES_STR,           "rates");
   FLASH_STRING(DISPLAY_PAGE_STR,    "display");
   FLASH_STRING(BATTERY_PAGE_STR,    "battery");
+  FLASH_STRING(VTX_PAGE_STR,        "vtx");
 //FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
   FLASH_STRING(CANCEL_STR,          "cancel");
   
@@ -531,6 +693,7 @@ void* MainMenu()
   OSD.printFS( startCol, ++startRow, &RATES_STR, activeMenuItem );
   OSD.printFS( startCol, ++startRow, &DISPLAY_PAGE_STR, activeMenuItem );
   OSD.printFS( startCol, ++startRow, &BATTERY_PAGE_STR, activeMenuItem );
+  OSD.printFS( startCol, ++startRow, &VTX_PAGE_STR, activeMenuItem );
   OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeMenuItem );
   OSD.printFS( startCol, ++startRow, &CANCEL_STR, activeMenuItem );
   

@@ -1,7 +1,10 @@
 #include "MyMax7456.h"
 #include "fixFont.h"
+#include "CSettings.h"
 
 //#define COMPRESSED_FONT
+
+extern CSettings settings;
 
 CMyMax7456::CMyMax7456(uint8_t chipSelect) : MAX7456(chipSelect)
 {
@@ -35,7 +38,7 @@ void CMyMax7456::printInt16(uint8_t col, uint8_t row, _FLASH_STRING *key, int16_
 void CMyMax7456::printAligned(uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix)
 {
   uint8_t pos = print_int16(value, printBuf2, dec, AlignLeft);
-  setCursor(-(pos+strlen(suffix)+1), row);
+  setCursor(-(pos+strlen(suffix)+settings.m_goggle), row);
   printInternal(suffix, false);
 }
 

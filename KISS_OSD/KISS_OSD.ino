@@ -3,7 +3,7 @@ KISS FC OSD v1.0
 By Felix Niessen (felix.niessen@googlemail.com)
 for Flyduino.net
 
-KISS FC OSD v2.0
+KISS FC OSD v2.x
 by Alexander Wolf (awolf78@gmx.de)
 for everyone who loves KISS
 
@@ -37,6 +37,10 @@ For more information, please refer to <http://unlicense.org>
 // CONFIGURATION
 //=========================================================================================================================
 #define NICKNAME "airwolf"
+
+// vTx config
+//=============================
+#define IMPULSERC_VTX
 
 // video system
 //=============================
@@ -110,7 +114,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define DEBUG
 //#define PROTODEBUG
 
-const char KISS_OSD_VER[] = "kiss osd v2.1";
+const char KISS_OSD_VER[] = "kiss osd v2.2";
 
 #include "Flash.h"
 #include <SPI.h>
@@ -135,6 +139,19 @@ static const uint8_t COLS = MAX7456_COLS_P1;
 #else
 static const uint8_t ROWS = MAX7456_ROWS_N0;
 static const uint8_t COLS = MAX7456_COLS_N1;
+#endif
+
+#ifdef IMPULSERC_VTX
+const uint8_t VTX_BAND_COUNT = 5;
+const uint8_t VTX_CHANNEL_COUNT = 8;
+
+const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
+    { 5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725 }, //A
+    { 5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866 }, //B
+    { 5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945 }, //E
+    { 5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880 }, //F
+    { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }  //R
+  };
 #endif
 
 CMyMax7456 OSD( osdChipSelect );
@@ -182,6 +199,15 @@ void setupMAX7456()
   OSD.display(); 
 }
 
+static uint8_t vTxChannel, vTxBand, vTxPower;
+
+void setvTxSettings()
+{
+  vTxChannel = settings.m_vTxChannel;
+  vTxBand =  settings.m_vTxBand;
+  vTxPower = settings.m_vTxPower;
+}
+
 void setup()
 {
   uint8_t i = 0;
@@ -193,6 +219,12 @@ void setup()
   while (!OSD.notInVSync());
   cleanScreen();
   settings.ReadSettings();
+#ifdef IMPULSERC_VTX
+  setvTxSettings();
+  vtx_init();
+  vtx_set_frequency(vTxBand, vTxChannel);
+  vtx_flash_led(5);
+#endif
   lastTempUnit = settings.m_tempUnit;
   DISPLAY_NICKNAME_DV = setupPPM(DISPLAY_NICKNAME_DV);
   DISPLAY_TIMER_DV = setupPPM(DISPLAY_TIMER_DV);
@@ -290,7 +322,7 @@ void ReviveOSD()
 static int16_t p_roll = 0;
 static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
 static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
-static int16_t lpf_frq;
+static int16_t lpf_frq, minCommand, minThrottle;
 static uint8_t notchFilterEnabled = 2;
 static int16_t notchFilterCenter, notchFilterCut;
 static int16_t yawFilterCut;
@@ -331,6 +363,10 @@ extern void* MainMenu();
 void loop(){
   uint16_t i = 0;
   static uint8_t blink_i = 1;
+
+#ifdef IMPULSERC_VTX
+  vtx_process_state(millis(), vTxBand, vTxChannel);
+#endif
   
   if(!OSD.status()) //trying to revive MAX7456 if it got a voltage hickup
   {
@@ -343,12 +379,19 @@ void loop(){
   }
   
   if(micros()-LastLoopTime > 10000)
-  {
+  { 
     LastLoopTime = micros();
     blink_i++;
     if (blink_i > 100){
       blink_i = 1;
     }
+    
+#ifdef IMPULSERC_VTX
+     if (blink_i % 20 == 0) 
+     {
+        vtx_set_power(armed ? vTxPower : 0);
+     }
+#endif
     
     if(!fcSettingsReceived)
     {
@@ -384,7 +427,7 @@ void loop(){
         return;
       }
     }    
-  
+
     while (!OSD.notInVSync());
 
       #ifdef DEBUG
@@ -645,7 +688,7 @@ void loop(){
               batCount--;
             }
             batterySymbol[1] = (char)batStatus;
-            OSD.setCursor(-7, -1);
+            OSD.setCursor(-5-settings.m_goggle, -1);
             OSD.print(batterySymbol);
           }
           else
@@ -665,19 +708,30 @@ void loop(){
               if(millis() - krTime[i] > (10000/motorKERPM[i]))
               {
                 krTime[i] = millis();
-                krSymbol[i]++;
+                if((i+1)%2 == 0)
+                {
+                  krSymbol[i]--;
+                }
+                else
+                {
+                  krSymbol[i]++;
+                }
                 if(krSymbol[i] > 0xA3)
                 {
                   krSymbol[i] = 0x9C;
+                }
+                if(krSymbol[i] < 0x9C)
+                {
+                  krSymbol[i] = 0xA3;
                 }
               }
               KR[i] = (char)krSymbol[i];
             }
             OSD.setCursor(0, ESCmarginTop);
             OSD.print(KR[0]);
-            OSD.setCursor(-2, ESCmarginTop);
+            OSD.setCursor(-1-settings.m_goggle, ESCmarginTop);
             OSD.print(KR[1]);
-            OSD.setCursor(-2, -(1+ESCmarginBot));
+            OSD.setCursor(-1-settings.m_goggle, -(1+ESCmarginBot));
             OSD.print(KR[2]);
             OSD.setCursor(0, -(1+ESCmarginBot));
             OSD.print(KR[3]);

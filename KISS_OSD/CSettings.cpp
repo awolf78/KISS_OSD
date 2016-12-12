@@ -14,8 +14,12 @@ CSettings::CSettings()
   m_DVchannel = 0; //AUX1 default
   m_tempUnit = 0; //°C default
   m_lastMAH = 0;
-  m_fontSize = 0;
+  m_fontSize = 1;
   m_displaySymbols = 1;
+  m_goggle = 0;
+  m_vTxChannel = 4; // Raceband 5 @ 25mW default
+  m_vTxBand = 4;
+  m_vTxPower = 0;
   
   /*itemPositions.nick[0] = m_COLS/2 - 4;
   itemPositions.nick[1] = -1;
@@ -46,11 +50,11 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
 
 void CSettings::ReadSettings()
 {
-  if(EEPROM.read(0x01) < 0x03) //first start of OSD
+  if(EEPROM.read(0x01) < 0x04) //first start of OSD
   //if(true)
   {
     WriteSettings(); //write defaults
-    EEPROM.write(0x01,0x03);
+    EEPROM.write(0x01,0x04);
   }
   else
   {
@@ -72,6 +76,14 @@ void CSettings::ReadSettings()
     m_fontSize = EEPROM.read(pos);
     pos++;
     m_displaySymbols = EEPROM.read(pos);
+    pos++;
+    m_goggle = EEPROM.read(pos);
+    pos++;
+    m_vTxChannel = EEPROM.read(pos);
+    pos++;
+    m_vTxBand = EEPROM.read(pos);
+    pos++;
+    m_vTxPower = EEPROM.read(pos);
     pos++;
     
     m_lastMAH = ReadInt16_t(100, 101);
@@ -110,6 +122,13 @@ void CSettings::WriteSettings()
   pos++;
   EEPROM.write(pos, (byte)m_displaySymbols);
   pos++;
+  EEPROM.write(pos, (byte)m_goggle);
+  pos++;
+  EEPROM.write(pos, (byte)m_vTxChannel);
+  pos++;
+  EEPROM.write(pos, (byte)m_vTxBand);
+  pos++;
+  EEPROM.write(pos, (byte)m_vTxPower);
 }
 
 void CSettings::FixBatWarning()

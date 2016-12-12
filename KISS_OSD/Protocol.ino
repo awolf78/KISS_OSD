@@ -271,19 +271,19 @@ void ReadFCSettings(boolean skipValues = false)
          return; //throwing away garbage data sent by FC during startup phase
        }
        
-       uint32_t checksum = 0;
-       uint32_t dataCount = 0;
+       double checksum = 0.0;
+       double dataCount = 0.0;
        for(i=2;i<minBytes;i++){
           checksum += serialBuf2[i];
           dataCount++;
        }
-       checksum = (uint32_t)checksum/dataCount;
+       uint8_t checksum2 = (uint8_t)floor(checksum/dataCount);
        #ifdef PROTODEBUG
        checkCalced = checksum;
        bufminus1 = serialBuf2[recBytes-1];
        #endif
        
-       if(checksum == serialBuf2[recBytes-1])// || (checksum-1) == serialBuf2[recBytes-1])
+       if(checksum2 == serialBuf2[recBytes-1])// || (checksum-1) == serialBuf2[recBytes-1])
        //if(minBytes > 140)
        {
          minBytesSettings = minBytes;
@@ -333,6 +333,11 @@ void ReadFCSettings(boolean skipValues = false)
            {
              dShotEnabled = true;
            }
+
+           index = 56;
+           minCommand = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT])+1000;
+           index += 4;
+           minThrottle = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT])+1000;
            
            index = 73;
            protoVersion = serialBuf2[92+STARTCOUNT];
@@ -429,6 +434,13 @@ boolean SendFCSettings()
     serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_pitch & 0x00FF);
     serialBuf2[STARTCOUNT+index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
     serialBuf2[STARTCOUNT+index++] = (byte)(rccurve_yaw & 0x00FF);
+
+    index = 56;
+    serialBuf2[STARTCOUNT+index++] = (byte)(((minCommand-1000) & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)((minCommand-1000) & 0x00FF);
+    index += 2;
+    serialBuf2[STARTCOUNT+index++] = (byte)(((minThrottle-1000) & 0xFF00) >> 8);
+    serialBuf2[STARTCOUNT+index++] = (byte)((minThrottle-1000) & 0x00FF);
     
     index = 79;
     serialBuf2[STARTCOUNT+index] = lpf_frq;
@@ -472,15 +484,15 @@ boolean SendFCSettings()
       serialBuf2[STARTCOUNT+index++] = (byte) yawFilterCut;
     }
     
-    uint32_t checksum = 0;
-    uint32_t dataCount = 0;
+    double checksum = 0.0;
+    double dataCount = 0.0;
     for(i=2;i<minBytesSettings;i++)
     {
      checksum += serialBuf2[i];
      dataCount++;
     }
     checksum = checksum/dataCount;
-    serialBuf2[minBytesSettings-1] = checksum;
+    serialBuf2[minBytesSettings-1] = (uint8_t)floor(checksum);
     
     NewSerial.write(0x10); //Set settings
     for(i=0;i<minBytesSettings;i++)

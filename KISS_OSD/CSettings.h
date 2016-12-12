@@ -37,6 +37,8 @@ class CSettings
   volatile int16_t m_lastMAH; // mAh value from previous run
   volatile uint8_t m_fontSize; // 0 = normal font; 1 = large font
   volatile uint8_t m_displaySymbols; // 0 = no; 1 = yes (symbols such as battery and timer)
+  volatile uint8_t m_goggle; //0 = fatshark; 1 = headplay
+  volatile uint8_t m_vTxChannel, m_vTxBand, m_vTxPower; // vTx settings
   
   private:
   int16_t ReadInt16_t(byte lsbPos, byte msbPos);
