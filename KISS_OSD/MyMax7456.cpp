@@ -12,9 +12,10 @@ CMyMax7456::CMyMax7456(uint8_t chipSelect) : MAX7456(chipSelect)
 
 static char printBuf2[30];
 
-void CMyMax7456::printInt16(uint8_t col, uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, boolean twoBlanks)
+void CMyMax7456::printInt16(uint8_t col, uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, boolean twoBlanks, const char* prefix)
 {
   setCursor(col, row);
+  print(fixStr(prefix));
   print_int16(value, printBuf2, dec, AlignLeft);
   printInternal(suffix, twoBlanks);
 }
@@ -35,10 +36,11 @@ void CMyMax7456::printInt16(uint8_t col, uint8_t row, _FLASH_STRING *key, int16_
   printInt16(col+key->length(), row, value, dec, AlignLeft, suffix, twoBlanks);
 }
 
-void CMyMax7456::printAligned(uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix)
+void CMyMax7456::printAligned(uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, const char* prefix)
 {
   uint8_t pos = print_int16(value, printBuf2, dec, AlignLeft);
-  setCursor(-(pos+strlen(suffix)+settings.m_goggle), row);
+  setCursor(-(pos+strlen(suffix)+strlen(prefix)+settings.m_goggle), row);
+  print(fixStr(prefix));
   printInternal(suffix, false);
 }
 

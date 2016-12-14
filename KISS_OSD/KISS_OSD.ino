@@ -177,6 +177,7 @@ void cleanScreen()
 }
 
 static uint8_t lastTempUnit;
+static uint8_t padLeft = 0;
 
 void setupMAX7456()
 {
@@ -184,6 +185,7 @@ void setupMAX7456()
     OSD.begin(COLS,ROWS,0);
     OSD.setTextOffset(-1,-6);
     OSD.setDefaultSystem(MAX7456_PAL);
+    padLeft = 1;
   #endif
   #if defined(NTSC)
     OSD.begin(COLS,ROWS);
@@ -336,6 +338,7 @@ extern void ReadFCSettings(boolean skipValues);
 
 typedef void* (*fptr)();
 static char tempSymbol[] = {0xB0, 0x00};
+static char ESCSymbol[] = {0x7E, 0x00};
 static uint8_t code = 0;
 static boolean menuActive = false;
 static boolean menuWasActive = false;
@@ -647,7 +650,7 @@ void loop(){
         uint8_t CurrentMargin      = 0;
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_RC_THROTTLE_DV)
         {
-          OSD.printInt16( 0, 0, throttle, 0, 1, "%", true);
+          OSD.printInt16( 0+padLeft, 0, throttle, 0, 1, "%", true);
           ESCmarginTop = 1;
         }
           
@@ -665,7 +668,7 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_LIPO_VOLTAGE_DV)
         {
-          OSD.printInt16( 0, -1, LipoVoltage / 10, 1, 1, "v", true);
+          OSD.printInt16( 0+padLeft, -1, LipoVoltage / 10, 1, 1, "v", true);
           ESCmarginBot = 1;
         }
         
@@ -697,6 +700,15 @@ void loop(){
           }
           ESCmarginBot = 1;
         }
+
+        if(settings.m_displaySymbols == 1)
+        {
+          ESCSymbol[0] = fixChar((char)0x7E);
+        }
+        else
+        {
+          ESCSymbol[0] = fixChar(' ');
+        }
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_KRPM_DV)
         {
@@ -727,13 +739,13 @@ void loop(){
               }
               KR[i] = (char)krSymbol[i];
             }
-            OSD.setCursor(0, ESCmarginTop);
+            OSD.setCursor(0+padLeft, ESCmarginTop);
             OSD.print(KR[0]);
             OSD.setCursor(-1-settings.m_goggle, ESCmarginTop);
             OSD.print(KR[1]);
             OSD.setCursor(-1-settings.m_goggle, -(1+ESCmarginBot));
             OSD.print(KR[2]);
-            OSD.setCursor(0, -(1+ESCmarginBot));
+            OSD.setCursor(0+padLeft, -(1+ESCmarginBot));
             OSD.print(KR[3]);
           }
           else
@@ -742,10 +754,10 @@ void loop(){
             KR2[0] = 'k';
             KR2[1] = 'r';
             KR2[2] = 0x00;
-            OSD.printInt16(0, ESCmarginTop, motorKERPM[0], 1, 1, KR2, true);
+            OSD.printInt16(0+padLeft, ESCmarginTop, motorKERPM[0], 1, 1, KR2, true);
             OSD.printAligned(ESCmarginTop, motorKERPM[1], 1, 0, KR2);
             OSD.printAligned(-(1+ESCmarginBot), motorKERPM[2], 1, 0, KR2);
-            OSD.printInt16( 0, -(1+ESCmarginBot), motorKERPM[3], 1, 1, KR2, true);
+            OSD.printInt16( 0+padLeft, -(1+ESCmarginBot), motorKERPM[3], 1, 1, KR2, true);
           }
           
           TMPmargin++;
@@ -754,19 +766,19 @@ void loop(){
      
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_CURRENT_DV)
         {
-          OSD.printInt16( 0, CurrentMargin+ESCmarginTop, motorCurrent[0], 2, 1, "a", true);
-          OSD.printAligned(CurrentMargin+ESCmarginTop, motorCurrent[1], 2, 0, "a");
-          OSD.printAligned(-(1+CurrentMargin+ESCmarginBot), motorCurrent[2], 2, 0, "a" );
-          OSD.printInt16( 0, -(1+CurrentMargin+ESCmarginBot), motorCurrent[3], 2 ,1, "a", true );
+          OSD.printInt16( 0+padLeft, CurrentMargin+ESCmarginTop, motorCurrent[0], 2, 1, "a", true, ESCSymbol);
+          OSD.printAligned(CurrentMargin+ESCmarginTop, motorCurrent[1], 2, 0, "a", ESCSymbol);
+          OSD.printAligned(-(1+CurrentMargin+ESCmarginBot), motorCurrent[2], 2, 0, "a", ESCSymbol);
+          OSD.printInt16( 0+padLeft, -(1+CurrentMargin+ESCmarginBot), motorCurrent[3], 2 ,1, "a", true, ESCSymbol);
           TMPmargin++;
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_TEMPERATURE_DV)
         {
-          OSD.printInt16( 0, TMPmargin+ESCmarginTop, ESCTemps[0], 0, 1, tempSymbol, true);
-          OSD.printAligned(TMPmargin+ESCmarginTop, ESCTemps[1], 0, 0, tempSymbol );
-          OSD.printAligned(-(1+TMPmargin+ESCmarginBot), ESCTemps[2], 0, 0, tempSymbol );
-          OSD.printInt16( 0, -(1+TMPmargin+ESCmarginBot), ESCTemps[3], 0, 1, tempSymbol, true );
+          OSD.printInt16( 0+padLeft, TMPmargin+ESCmarginTop, ESCTemps[0], 0, 1, tempSymbol, true, ESCSymbol);
+          OSD.printAligned(TMPmargin+ESCmarginTop, ESCTemps[1], 0, 0, tempSymbol, ESCSymbol);
+          OSD.printAligned(-(1+TMPmargin+ESCmarginBot), ESCTemps[2], 0, 0, tempSymbol, ESCSymbol);
+          OSD.printInt16( 0+padLeft, -(1+TMPmargin+ESCmarginBot), ESCTemps[3], 0, 1, tempSymbol, true, ESCSymbol);
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_TIMER_DV) 
