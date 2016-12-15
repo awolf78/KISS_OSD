@@ -618,28 +618,33 @@ void loop(){
         }
         else
         {
-          FLASH_STRING(ESC_STAT_STR,"esc");
+          static char ESC_STAT_STR1[] = "esc";
+          char* ESC_STAT_STR = ESC_STAT_STR1;
+          if(settings.m_displaySymbols == 1)
+          {
+            ESC_STAT_STR = ESCSymbol;
+          }
           FLASH_STRING(ESC_RPM_STR, " max rpm : ");
           FLASH_STRING(ESC_A_STR,   " max a   : ");
           FLASH_STRING(ESC_TEMP_STR," max temp: ");
           FLASH_STRING(ESC_MINV_STR," min v   : ");
           FLASH_STRING(ESC_MAH_STR, " mah     : ");
           
-          uint8_t startCol = COLS/2 - (ESC_RPM_STR.length()+ESC_STAT_STR.length()+7)/2;
-          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_RPM_STR, maxKERPM[statPage-1], 1, 1, "kr");
+          uint8_t startCol = COLS/2 - (ESC_RPM_STR.length()+strlen(ESC_STAT_STR)+7)/2;
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, &ESC_RPM_STR, maxKERPM[statPage-1], 1, 1, "kr");
           
-          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_A_STR, maxCurrent[statPage-1], 2, 1, "a"); 
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, &ESC_A_STR, maxCurrent[statPage-1], 2, 1, "a"); 
           
-          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_TEMP_STR, maxTemps[statPage-1], 0, 1, tempSymbol);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, &ESC_TEMP_STR, maxTemps[statPage-1], 0, 1, tempSymbol);
           
-          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_MINV_STR, minVoltage[statPage-1], 2, 1, "v");
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, &ESC_MINV_STR, minVoltage[statPage-1], 2, 1, "v");
           
-          OSD.printInt16( startCol, ++middle_infos_y, &ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16( startCol + ESC_STAT_STR.length() + 1, middle_infos_y, &ESC_MAH_STR, ESCmAh[statPage-1], 0, 1, "mah"); 
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, &ESC_MAH_STR, ESCmAh[statPage-1], 0, 1, "mah"); 
         }
      }
      else 
@@ -707,7 +712,7 @@ void loop(){
         }
         else
         {
-          ESCSymbol[0] = fixChar(' ');
+          ESCSymbol[0] = 0x00;
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DISPLAY_ESC_KRPM_DV)
