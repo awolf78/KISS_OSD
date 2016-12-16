@@ -144,6 +144,8 @@ static const uint8_t COLS = MAX7456_COLS_N1;
 #ifdef IMPULSERC_VTX
 const uint8_t VTX_BAND_COUNT = 5;
 const uint8_t VTX_CHANNEL_COUNT = 8;
+//static unsigned long changevTxTime = 0;
+static const char bandSymbols[][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
 
 const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
     { 5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725 }, //A
@@ -201,12 +203,12 @@ void setupMAX7456()
   OSD.display(); 
 }
 
-static uint8_t vTxChannel, vTxBand, vTxPower;
+static uint8_t vTxChannel, vTxBand, vTxPower, oldvTxChannel, oldvTxBand;
 
 void setvTxSettings()
 {
-  vTxChannel = settings.m_vTxChannel;
-  vTxBand =  settings.m_vTxBand;
+  oldvTxChannel = vTxChannel = settings.m_vTxChannel;
+  oldvTxBand = vTxBand =  settings.m_vTxBand;
   vTxPower = settings.m_vTxPower;
 }
 
@@ -368,7 +370,19 @@ void loop(){
   static uint8_t blink_i = 1;
 
 #ifdef IMPULSERC_VTX
-  vtx_process_state(millis(), vTxBand, vTxChannel);
+  /*if(oldvTxBand != vTxBand || oldvTxChannel != vTxChannel || changevTxTime > 0)
+  {
+    if(changevTxTime == 0)
+    {
+      changevTxTime = millis();
+      oldvTxBand = vTxBand;
+      oldvTxChannel = vTxChannel;
+    }
+  }
+  else
+  {*/
+    vtx_process_state(millis(), vTxBand, vTxChannel);
+  //}
 #endif
   
   if(!OSD.status()) //trying to revive MAX7456 if it got a voltage hickup
@@ -432,6 +446,23 @@ void loop(){
     }    
 
     while (!OSD.notInVSync());
+
+#ifdef IMPULSERC_VTX
+      /*if(changevTxTime > 0)
+      {
+        FLASH_STRING(CHANGE_CHANNELS_STR, "changing vtx to ");
+        OSD.printFS(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
+        OSD.printInt16(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
+        OSD.printInt16(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
+        uint8_t timeLeft = (uint8_t)((6000 - (millis() - changevTxTime))/1000);   
+        OSD.printInt16(COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
+        if(timeLeft < 1)
+        {
+          changevTxTime = 0;
+          cleanScreen();
+        }
+      }*/
+#endif
 
       #ifdef DEBUG
       OSD.printInt16(8,-3,versionProto,0,1);

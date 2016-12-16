@@ -138,13 +138,13 @@ void* ThreeItemPlusBackMenu(uint8_t &active3MenuItem, int16_t &item1, int16_t &i
   switch(active3MenuItem)
   {
     case 0:
-      fcSettingChanged = checkCode(item1, item1_step);
+      fcSettingChanged |= checkCode(item1, item1_step);
     break;
     case 1:
-      fcSettingChanged = checkCode(item2, item2_step);        
+      fcSettingChanged |= checkCode(item2, item2_step);        
     break;
     case 2:
-      fcSettingChanged = checkCode(item3, item3_step);        
+      fcSettingChanged |= checkCode(item3, item3_step);        
     break;
     case 3:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -322,7 +322,7 @@ void* TuneMenu()
       }
     break;
     case 4:
-        fcSettingChanged = checkCode(lpf_frq, 1, 0, 6);
+        fcSettingChanged |= checkCode(lpf_frq, 1, 0, 6);
     break;
     /*case 5:
       if(notchFilterEnabled < 2)
@@ -338,10 +338,10 @@ void* TuneMenu()
       }
     break;*/
     case 5:
-      fcSettingChanged = checkCode(minCommand, 10, 1000, 2000);
+      fcSettingChanged |= checkCode(minCommand, 10, 1000, 2000);
     break;
     case 6:
-      fcSettingChanged = checkCode(minThrottle, 10, 1000, 2000);
+      fcSettingChanged |= checkCode(minThrottle, 10, 1000, 2000);
     break;        
     case 7:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -409,7 +409,7 @@ void* BatteryMenu()
       }
     break;
     case 1:
-      settingChanged = checkCode(settings.m_batWarning, 1, 0, 1);
+      settingChanged |= checkCode(settings.m_batWarning, 1, 0, 1);
     break;
     case 2:
       changed = checkCode(settings.m_batWarningPercent, 1, 0, 100);
@@ -470,19 +470,19 @@ void* DisplayMenu()
     switch(activeDisplayMenuItem)
     {
       case 0:
-        settingChanged = checkCode(settings.m_DVchannel, 1, 0, 3);
+        settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 3);
       break;
       case 1:
-        settingChanged = checkCode(settings.m_tempUnit, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_tempUnit, 1, 0, 1);
       break;
       case 2:
-        settingChanged = checkCode(settings.m_fontSize, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
       break;
       case 3:
-        settingChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_displaySymbols, 1, 0, 1);
       break;
       case 4:
-        settingChanged = checkCode(settings.m_goggle, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_goggle, 1, 0, 1);
       break;
       case 5:
         if(code &  inputChecker.ROLL_RIGHT)
@@ -555,13 +555,13 @@ void* vTxMenu()
     switch(activeVTXMenuItem)
     {
       case 0:
-        vTxSettingChanged = checkCode(settings.m_vTxPower, 1, 0, 2);
+        vTxSettingChanged |= checkCode(settings.m_vTxPower, 1, 0, 2);
       break;
       case 1:
-        vTxSettingChanged = checkCode(settings.m_vTxBand, 1, 0, 4);
+        vTxSettingChanged |= checkCode(settings.m_vTxBand, 1, 0, 4);
       break;
       case 2:
-        vTxSettingChanged = checkCode(settings.m_vTxChannel, 1, 0, 7);
+        vTxSettingChanged |= checkCode(settings.m_vTxChannel, 1, 0, 7);
       break;
       case 3:
         vTxPower = settings.m_vTxPower;
@@ -606,9 +606,10 @@ void* vTxMenu()
   OSD.printFS( startCol, ++startRow, &VTX_POWER_STR, activeVTXMenuItem );
   OSD.print( fixFlashStr(&VTX_POWERS_STR[settings.m_vTxPower]) );
 
-  static const char bandSymbols[][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
   OSD.printFS( startCol, ++startRow, &VTX_BAND_STR, activeVTXMenuItem );
+#ifdef IMPULSERC_VTX
   OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
+#endif
   
   OSD.printIntArrow( startCol, ++startRow, &VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
 #ifdef IMPULSERC_VTX

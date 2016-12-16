@@ -492,7 +492,7 @@ boolean SendFCSettings()
      dataCount++;
     }
     checksum = checksum/dataCount;
-    serialBuf2[minBytesSettings-1] = (uint8_t)floor(checksum);
+    serialBuf2[minBytesSettings-1] = floor(checksum);
     
     NewSerial.write(0x10); //Set settings
     for(i=0;i<minBytesSettings;i++)
