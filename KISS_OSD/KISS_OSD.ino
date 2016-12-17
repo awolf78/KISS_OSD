@@ -185,9 +185,8 @@ void setupMAX7456()
 {
   #if defined(PAL)
     OSD.begin(COLS,ROWS,0);
-    OSD.setTextOffset(-1,-6);
     OSD.setDefaultSystem(MAX7456_PAL);
-    padLeft = 1;
+    //padLeft = 1;
   #endif
   #if defined(NTSC)
     OSD.begin(COLS,ROWS);
@@ -200,6 +199,7 @@ void setupMAX7456()
   #if defined(USE_MAX7456_MAXIM)
     OSD.setCharEncoding( MAX7456_MAXIM );  
   #endif
+  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
   OSD.display(); 
 }
 
@@ -217,12 +217,12 @@ void setup()
   uint8_t i = 0;
   SPI.begin();
   SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
+  settings.ReadSettings();
   setupMAX7456();
   
   //clean used area
   while (!OSD.notInVSync());
   cleanScreen();
-  settings.ReadSettings();
 #ifdef IMPULSERC_VTX
   setvTxSettings();
   vtx_init();
@@ -347,6 +347,7 @@ static boolean menuWasActive = false;
 static boolean fcSettingChanged = false;
 static void* activePage = NULL;
 static boolean batterySelect = false;
+static boolean shiftOSDactive = false;
 static boolean triggerCleanScreen = false;
 static boolean bat_clear = false;
 static uint8_t activeMenuItem = 0;
@@ -515,6 +516,48 @@ void loop(){
         }  
         return;
       }
+
+      if(shiftOSDactive && armed == 0)
+      {
+        FLASH_STRING(OSD_SHIFT_STR, "roll/pitch to center osd");
+        OSD.printFS(COLS/2 - (OSD_SHIFT_STR.length())/2, ROWS/2 - 1, &OSD_SHIFT_STR);       
+        FLASH_STRING(OSD_SHIFT_EXIT_STR, "yaw left to exit");
+        OSD.printFS(COLS/2 - OSD_SHIFT_EXIT_STR.length()/2, ROWS/2, &OSD_SHIFT_EXIT_STR);
+
+        boolean changedOffset = false;
+        if(code & inputChecker.ROLL_RIGHT)
+        {
+          settings.m_xOffset++;
+          changedOffset = true;
+        }
+        if(code & inputChecker.ROLL_LEFT)
+        {
+          settings.m_xOffset--;
+          changedOffset = true;
+        }
+        if(code & inputChecker.PITCH_UP)
+        {
+          settings.m_yOffset--;
+          changedOffset = true;
+        }
+        if(code & inputChecker.PITCH_DOWN)
+        {
+          settings.m_yOffset++;
+          changedOffset = true;
+        }
+        settingChanged |= changedOffset;
+        if(changedOffset)
+        {
+          cleanScreen();
+          OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+        }
+        if(code & inputChecker.YAW_LEFT)
+        {
+          shiftOSDactive = false;
+          menuActive = true;
+          cleanScreen();
+        }        
+      }
       
       if(batterySelect || (!menuActive && !armOnYaw && yaw > 1750 && armed == 0))
       {
@@ -597,11 +640,11 @@ void loop(){
         }        
       }
       
-      if(settingChanged)
+      if(settingChanged && !shiftOSDactive)
       {
         settings.WriteSettings();
+        settingChanged = false;
       }
-      settingChanged = false;
       if(armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[settings.m_DVchannel]) 
       {
         DV_change_time = millis();
@@ -881,7 +924,7 @@ void loop(){
           DV_change_time = 0;
           cleanScreen();
         }
-        if(!logoDone && armed == 0 && !menuActive && !armedOnce)
+        if(!logoDone && armed == 0 && !menuActive && !armedOnce && !shiftOSDactive)
         {
           uint8_t logoCol = 11;
           uint8_t logoRow = 5;

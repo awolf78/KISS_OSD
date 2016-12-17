@@ -487,11 +487,20 @@ void* DisplayMenu()
       case 5:
         if(code &  inputChecker.ROLL_RIGHT)
         {
+          cleanScreen();
+          menuActive = false;
+          shiftOSDactive = true;
+          return (void*)DisplayMenu;
+        }
+      break;
+      case 6:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
           menuActive = false;
           menuWasActive = true;
         }
       break;
-      case 6:
+      case 7:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeDisplayMenuItem = 0;
@@ -501,7 +510,7 @@ void* DisplayMenu()
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 7;
+  static const uint8_t DISPLAY_MENU_ITEMS = 8;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   FLASH_STRING(DV_CHANNEL_STR,      "dv channel : ");
@@ -509,6 +518,7 @@ void* DisplayMenu()
   FLASH_STRING(FONT_SIZE_STR,       "font size  : ");
   FLASH_STRING(SYMBOLS_SIZE_STR,    "symbols    : ");
   FLASH_STRING(GOGGLE_STR,          "goggle     : ");
+  FLASH_STRING(CENTER_OSD_STR,      "center osd");
 //FLASH_STRING(SAVE_EXIT_STR,       "save+exit");
 //FLASH_STRING(BACK_STR,            "back");
   
@@ -539,7 +549,8 @@ void* DisplayMenu()
   static _FLASH_STRING GOGGLES_STR[] = { FATSHARK_STR, HEADPLAY_STR };
   OSD.printFS( startCol, ++startRow, &GOGGLE_STR, activeDisplayMenuItem );
   OSD.print( fixFlashStr(&GOGGLES_STR[settings.m_goggle]) );
-  
+
+  OSD.printFS( startCol, ++startRow, &CENTER_OSD_STR, activeDisplayMenuItem );
   OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeDisplayMenuItem );
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeDisplayMenuItem );
   

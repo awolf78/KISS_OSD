@@ -39,6 +39,7 @@ class CSettings
   volatile uint8_t m_displaySymbols; // 0 = no; 1 = yes (symbols such as battery and timer)
   volatile uint8_t m_goggle; //0 = fatshark; 1 = headplay
   volatile uint8_t m_vTxChannel, m_vTxBand, m_vTxPower; // vTx settings
+  volatile int8_t m_xOffset, m_yOffset;
   
   private:
   int16_t ReadInt16_t(byte lsbPos, byte msbPos);

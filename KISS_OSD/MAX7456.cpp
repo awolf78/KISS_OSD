@@ -240,7 +240,7 @@
   
   // This is code page remapping array for converting ASCII encoded
   // characters to the Maxim default character map.
-  const uint8_t MAX7456::defaultCodePage[128] = 
+  /*const uint8_t MAX7456::defaultCodePage[128] = 
                  {    0,    0,    0,    0,    0,    0,    0,    0,
                       0,    0,    0,    0,    0,    0,    0,    0,
                       0,    0,    0,    0,    0,    0,    0,    0,
@@ -256,7 +256,7 @@
                       0, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B,
                    0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33,
                    0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B,
-                   0x3C, 0x3D, 0x3E,    0,    0,    0,    0,    0  };
+                   0x3C, 0x3D, 0x3E,    0,    0,    0,    0,    0  };*/
 
 
 
@@ -2084,7 +2084,7 @@
                             ) 
   {
     
-    if (charEncoding == MAX7456_MAXIM)
+    /*if (charEncoding == MAX7456_MAXIM)
     {
       if (symbol < 128 && 
           symbol >= 0    ) 
@@ -2099,8 +2099,8 @@
     else if (charEncoding == MAX7456_ASCII) 
     {
       return symbol;                            // Send symbol to display.
-    } 
-    
+    }*/ 
+    return symbol;
   }
   // end decode()
   

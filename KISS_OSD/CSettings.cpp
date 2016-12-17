@@ -20,6 +20,8 @@ CSettings::CSettings()
   m_vTxChannel = 4; // Raceband 5 @ 25mW default
   m_vTxBand = 4;
   m_vTxPower = 0;
+  m_xOffset = 0; // Center OSD offsets
+  m_yOffset = 0;
   
   /*itemPositions.nick[0] = m_COLS/2 - 4;
   itemPositions.nick[1] = -1;
@@ -50,11 +52,11 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
 
 void CSettings::ReadSettings()
 {
-  if(EEPROM.read(0x01) < 0x04) //first start of OSD
+  if(EEPROM.read(0x01) < 0x05) //first start of OSD
   //if(true)
   {
     WriteSettings(); //write defaults
-    EEPROM.write(0x01,0x04);
+    EEPROM.write(0x01,0x05);
   }
   else
   {
@@ -85,6 +87,9 @@ void CSettings::ReadSettings()
     pos++;
     m_vTxPower = EEPROM.read(pos);
     pos++;
+    m_xOffset = EEPROM.read(pos);
+    pos++;
+    m_yOffset = EEPROM.read(pos);
     
     m_lastMAH = ReadInt16_t(100, 101);
   }
@@ -129,6 +134,10 @@ void CSettings::WriteSettings()
   EEPROM.write(pos, (byte)m_vTxBand);
   pos++;
   EEPROM.write(pos, (byte)m_vTxPower);
+  pos++;
+  EEPROM.write(pos, (byte)m_xOffset);
+  pos++;
+  EEPROM.write(pos, (byte)m_yOffset);
 }
 
 void CSettings::FixBatWarning()
