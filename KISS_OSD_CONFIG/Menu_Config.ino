@@ -153,6 +153,7 @@ void* ChangeOrder()
         settings.m_DISPLAY_DV[reverseLUT[activeOrderMenuSelectedItem]]--;
         activeOrderMenuSelectedItem--;
         settings.SetupPPMs(DV_PPMs);
+        settingChanged = true;
       }
     }
     if(code & inputChecker.PITCH_DOWN && selectedOrder)
@@ -163,6 +164,7 @@ void* ChangeOrder()
         settings.m_DISPLAY_DV[reverseLUT[activeOrderMenuSelectedItem]]++;
         activeOrderMenuSelectedItem++;
         settings.SetupPPMs(DV_PPMs);
+        settingChanged = true;
       }
     }
   }
@@ -388,7 +390,7 @@ void* vTxMenu()
   FLASH_STRING(VTX_POWER_STR,      "power   : ");
   FLASH_STRING(VTX_BAND_STR,       "band    : ");
   FLASH_STRING(VTX_CHANNEL_STR,    "channel : ");
-//FLASH_STRING(BACK_STR,           "back");
+  FLASH_STRING(SET_AND_BACK_STR,   "set+back");
   
   uint8_t startRow = 1;
   uint8_t startCol = COLS/2 - (VTX_POWER_STR.length()+6)/2;
@@ -413,7 +415,7 @@ void* vTxMenu()
   OSD.printInt16(tempCol, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
 #endif
   
-  OSD.printFS( startCol, ++startRow, &BACK_STR, activeVTXMenuItem );
+  OSD.printFS( startCol, ++startRow, &SET_AND_BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;
 }

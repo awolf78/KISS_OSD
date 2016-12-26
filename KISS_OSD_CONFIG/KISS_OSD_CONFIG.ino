@@ -32,7 +32,7 @@ For more information, please refer to <http://unlicense.org>
 
 // CONFIGURATION
 
-// MAX7456 Charset (change if you get sensless signs)
+// MAX7456 Charset
 //=============================
 #define USE_MAX7456_ASCII
 
@@ -69,7 +69,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define PROTODEBUG
 #define KISS_OSD_CONFIG
 
-const char KISS_OSD_VER[] = "kiss config v2.2";
+const char KISS_OSD_VER[] = "kiss osd config v2.2";
 
 #include "Flash.h"
 #include <SPI.h>
@@ -132,14 +132,12 @@ void cleanScreen()
 }
 
 static uint8_t lastTempUnit;
-static uint8_t padLeft = 0;
 
 void setupMAX7456()
 {
   #if defined(PAL)
     OSD.begin(COLS,ROWS,0);
     OSD.setDefaultSystem(MAX7456_PAL);
-    //padLeft = 1;
   #endif
   #if defined(NTSC)
     OSD.begin(COLS,ROWS);
@@ -151,13 +149,13 @@ void setupMAX7456()
   #endif 
   #if defined(USE_MAX7456_MAXIM)
     OSD.setCharEncoding( MAX7456_MAXIM );  
-  #endif
-  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+  #endif  
   OSD.display();
 #ifdef IMPULSERC_VTX
   delay(100);
   MAX7456Setup();
 #endif
+  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
 }
 
 /*extern boolean ReadTelemetry();
@@ -182,7 +180,7 @@ void setup()
 {
   SPI.begin();
   SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
-  //settings.ReadSettings();
+  settings.ReadSettings();
   setupMAX7456();
   
   //clean used area
@@ -451,6 +449,7 @@ void loop(){
           {
             charIndex--;
           }
+          settingChanged = true;
         }
         if(code & inputChecker.PITCH_DOWN)
         {
@@ -462,6 +461,7 @@ void loop(){
           {
             charIndex++;
           }
+          settingChanged = true;
         }
         if(code & inputChecker.ROLL_LEFT && charSelected > 0)
         {
@@ -546,6 +546,7 @@ void loop(){
             {
               settings.m_OSDItems[moveSelected][1]--;
               cleanScreen();
+              settingChanged = true;
             }
           }
           if(code & inputChecker.PITCH_DOWN)
@@ -554,6 +555,7 @@ void loop(){
             {
               settings.m_OSDItems[moveSelected][1]++;
               cleanScreen();
+              settingChanged = true;
             }
           }
           if(code & inputChecker.ROLL_LEFT)
@@ -562,6 +564,7 @@ void loop(){
             {
               settings.m_OSDItems[moveSelected][0]--;
               cleanScreen();
+              settingChanged = true;
             }
           }
           if(code & inputChecker.ROLL_RIGHT)
@@ -570,6 +573,7 @@ void loop(){
             {
               settings.m_OSDItems[moveSelected][0]++;
               cleanScreen();
+              settingChanged = true;
             }
           }
           moveSelected++;

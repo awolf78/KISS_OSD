@@ -559,6 +559,7 @@ void* DisplayMenu()
 
 static bool vTxSettingChanged = false;
 
+#ifdef IMPULSERC_VTX
 void* vTxMenu()
 {
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
@@ -620,21 +621,17 @@ void* vTxMenu()
   OSD.print( fixFlashStr(&VTX_POWERS_STR[settings.m_vTxPower]) );
 
   OSD.printFS( startCol, ++startRow, &VTX_BAND_STR, activeVTXMenuItem );
-#ifdef IMPULSERC_VTX
   OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
-#endif
   
   OSD.printIntArrow( startCol, ++startRow, &VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
-#ifdef IMPULSERC_VTX
   OSD.printInt16( startCol + VTX_CHANNEL_STR.length() + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
-#endif
   
   OSD.printFS( startCol, ++startRow, &SAVE_EXIT_STR, activeVTXMenuItem );
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;
 }
-
+#endif
 
 
 void* MainMenu()

@@ -1,7 +1,6 @@
 #include "MyMax7456.h"
 #include "fixFont.h"
 #include "CSettings.h"
-#include "fontCompressed.h"
 #include "Config.h"
 
 extern volatile boolean timer1sec;

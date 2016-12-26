@@ -1,7 +1,14 @@
 #include "CSettings.h"
 #include <EEPROM.h>
+#include "Config.h"
+#include "fixFont.h"
 
 CSettings::CSettings()
+{
+  LoadDefaults();
+}
+
+void CSettings::LoadDefaults()
 {
   m_batWarning = 1; //on by default
   m_batMAH[0] = 1300; //1300 mAh by default
@@ -16,25 +23,60 @@ CSettings::CSettings()
   m_lastMAH = 0;
   m_fontSize = 1;
   m_displaySymbols = 1;
-  m_goggle = 0;
   m_vTxChannel = 4; // Raceband 5 @ 25mW default
   m_vTxBand = 4;
   m_vTxPower = 0;
   m_xOffset = 0; // Center OSD offsets
   m_yOffset = 0;
-  
-  /*itemPositions.nick[0] = m_COLS/2 - 4;
-  itemPositions.nick[1] = -1;
-  itemPositions.time[0] = COLS/2 - 3;
-  itemPositions.time[1] = -2;
-  itemPositions.voltage[0] = 0;
-  itemPositions.voltage[1] = -1;
-  itemPositions.mAh[0] = -1; //FIXME
-  itemPositions.mAh[1] = -1;
-  itemPositions.amps[0] = -1; //FIXME
-  itemPositions.amps[1] = 0;
-  itemPositions.throttle[0] = 0;
-  itemPositions.throttle[1] = 0;*/
+  m_stats = 1;
+  m_DISPLAY_DV[DISPLAY_NICKNAME] = 3;
+  m_DISPLAY_DV[DISPLAY_TIMER] = 2;
+  m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 7;
+  m_DISPLAY_DV[DISPLAY_COMB_CURRENT] = 5;
+  m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE] = 0;
+  m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION] = 1;
+  m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 4;
+  m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 6;
+  m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 8;
+  strcpy(m_nickname, fixStr("nickname"));
+  m_nickname[8] = 0x00;
+  m_OSDItems[ESC1kr][0] = 0;
+  m_OSDItems[ESC1kr][1] = 1;
+  m_OSDItems[ESC1voltage][0] = 0;
+  m_OSDItems[ESC1voltage][1] = 1;
+  m_OSDItems[ESC1temp][0] = 0;
+  m_OSDItems[ESC1temp][1] = 1;
+  m_OSDItems[ESC2kr][0] = COLS-1;
+  m_OSDItems[ESC2kr][1] = 1;
+  m_OSDItems[ESC2voltage][0] = COLS;
+  m_OSDItems[ESC2voltage][1] = 1;
+  m_OSDItems[ESC2temp][0] = COLS;
+  m_OSDItems[ESC2temp][1] = 1;
+  m_OSDItems[ESC3kr][0] = COLS-1;
+  m_OSDItems[ESC3kr][1] = ROWS-2;
+  m_OSDItems[ESC3voltage][0] = COLS;
+  m_OSDItems[ESC3voltage][1] = ROWS-2;
+  m_OSDItems[ESC3temp][0] = COLS;
+  m_OSDItems[ESC3temp][1] = ROWS-2;
+  m_OSDItems[ESC4kr][0] = 0;
+  m_OSDItems[ESC4kr][1] = ROWS-2;
+  m_OSDItems[ESC4voltage][0] = 0;
+  m_OSDItems[ESC4voltage][1] = ROWS-2;
+  m_OSDItems[ESC4temp][0] = 0;
+  m_OSDItems[ESC4temp][1] = ROWS-2;
+  m_OSDItems[VOLTAGE][0] = 0;
+  m_OSDItems[VOLTAGE][1] = ROWS-1;
+  m_OSDItems[AMPS][0] = COLS;
+  m_OSDItems[AMPS][1] = 0;
+  m_OSDItems[THROTTLE][0] = 0;
+  m_OSDItems[THROTTLE][1] = 0;
+  m_OSDItems[STOPW][0] = COLS/2 - 3;
+  m_OSDItems[STOPW][1] = ROWS - 2;
+  m_OSDItems[NICKNAME][0] = COLS/2 - 4;
+  m_OSDItems[NICKNAME][1] = ROWS - 1;
+  m_OSDItems[MAH][0] = COLS - 1;
+  m_OSDItems[MAH][1] = ROWS - 1;
+  m_goggle = 0; //0 = fatshark, 1 = headplay
 }
 
 int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
@@ -52,11 +94,11 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
 
 void CSettings::ReadSettings()
 {
-  if(EEPROM.read(0x01) < 0x05) //first start of OSD
+  if(EEPROM.read(0x01) < 0x09) //first start of OSD
   //if(true)
   {
     WriteSettings(); //write defaults
-    EEPROM.write(0x01,0x05);
+    EEPROM.write(0x01,0x09);
   }
   else
   {
@@ -79,8 +121,6 @@ void CSettings::ReadSettings()
     pos++;
     m_displaySymbols = EEPROM.read(pos);
     pos++;
-    m_goggle = EEPROM.read(pos);
-    pos++;
     m_vTxChannel = EEPROM.read(pos);
     pos++;
     m_vTxBand = EEPROM.read(pos);
@@ -90,8 +130,30 @@ void CSettings::ReadSettings()
     m_xOffset = EEPROM.read(pos);
     pos++;
     m_yOffset = EEPROM.read(pos);
-    
-    m_lastMAH = ReadInt16_t(100, 101);
+    pos++;
+    for(i=0; i<DISPLAY_DV_SIZE; i++)
+    {
+      m_DISPLAY_DV[i] = EEPROM.read(pos);
+      pos++;
+    }
+    for(i=0; i<NICKNAME_STR_SIZE; i++)
+    {
+      m_nickname[i] = EEPROM.read(pos);
+      pos++;
+    }
+    uint8_t j;
+    for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+    {
+      for(j=0; j<2; j++)
+      {
+        m_OSDItems[i][j] = EEPROM.read(pos);
+        pos++;
+      }
+    }
+    m_goggle = EEPROM.read(pos);
+    pos++;
+   
+    m_lastMAH = ReadInt16_t(200, 201);
   }
   FixBatWarning();
 }
@@ -127,8 +189,6 @@ void CSettings::WriteSettings()
   pos++;
   EEPROM.write(pos, (byte)m_displaySymbols);
   pos++;
-  EEPROM.write(pos, (byte)m_goggle);
-  pos++;
   EEPROM.write(pos, (byte)m_vTxChannel);
   pos++;
   EEPROM.write(pos, (byte)m_vTxBand);
@@ -138,6 +198,28 @@ void CSettings::WriteSettings()
   EEPROM.write(pos, (byte)m_xOffset);
   pos++;
   EEPROM.write(pos, (byte)m_yOffset);
+  pos++;
+  for(i=0; i<DISPLAY_DV_SIZE; i++)
+  {
+    EEPROM.write(pos, (byte)m_DISPLAY_DV[i]);
+    pos++;
+  }
+  for(i=0; i<NICKNAME_STR_SIZE; i++)
+  {
+    EEPROM.write(pos, (byte)m_nickname[i]);
+    pos++;
+  }
+  uint8_t j;
+  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  {
+    for(j=0; j<2; j++)
+    {
+      EEPROM.write(pos, (byte)m_OSDItems[i][j]);
+      pos++;
+    }
+  }
+  EEPROM.write(pos, (byte)m_goggle);
+  pos++;
 }
 
 void CSettings::FixBatWarning()
@@ -149,5 +231,25 @@ void CSettings::FixBatWarning()
 
 void CSettings::WriteLastMAH()
 {
-  WriteInt16_t(100, 101, m_lastMAH);
+  WriteInt16_t(200, 201, m_lastMAH);
 }
+
+void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
+{
+  uint8_t i;
+  if(all)
+  {
+    for(i=0; i<DISPLAY_DV_SIZE; i++)
+    {
+      dv_ppms[i] = -1001;      
+    }
+  }
+  else
+  {
+    for(i=0; i<DISPLAY_DV_SIZE; i++)
+    {
+      dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
+    }
+  }
+}
+
