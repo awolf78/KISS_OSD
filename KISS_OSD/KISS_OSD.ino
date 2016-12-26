@@ -127,7 +127,11 @@ const char KISS_OSD_VER[] = "kiss osd v2.2";
 #include "fixFont.h"
 #include "CMeanFilter.h"
 
+#ifdef IMPULSERC_VTX
+const uint8_t osdChipSelect          =            10;
+#else
 const uint8_t osdChipSelect          =            6;
+#endif
 const byte masterOutSlaveIn          =            MOSI;
 const byte masterInSlaveOut          =            MISO;
 const byte slaveClock                =            SCK;
@@ -141,7 +145,13 @@ static const uint8_t ROWS = MAX7456_ROWS_N0;
 static const uint8_t COLS = MAX7456_COLS_N1;
 #endif
 
+CMyMax7456 OSD( osdChipSelect );
+SerialPort<0, 64, 0> NewSerial;
+CStickInput inputChecker;
+CSettings settings;
+
 #ifdef IMPULSERC_VTX
+static volatile uint8_t vTxChannel, vTxBand, vTxPower, oldvTxChannel, oldvTxBand;
 const uint8_t VTX_BAND_COUNT = 5;
 const uint8_t VTX_CHANNEL_COUNT = 8;
 //static unsigned long changevTxTime = 0;
@@ -154,12 +164,14 @@ const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
     { 5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880 }, //F
     { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }  //R
   };
-#endif
 
-CMyMax7456 OSD( osdChipSelect );
-SerialPort<0, 64, 0> NewSerial;
-CStickInput inputChecker;
-CSettings settings;
+void setvTxSettings()
+{
+  oldvTxChannel = vTxChannel = settings.m_vTxChannel;
+  oldvTxBand = vTxBand =  settings.m_vTxBand;
+  vTxPower = settings.m_vTxPower;
+}
+#endif
 
 static const int16_t DV_PPM_INCREMENT = 100;
 
@@ -203,15 +215,6 @@ void setupMAX7456()
   OSD.display(); 
 }
 
-static uint8_t vTxChannel, vTxBand, vTxPower, oldvTxChannel, oldvTxBand;
-
-void setvTxSettings()
-{
-  oldvTxChannel = vTxChannel = settings.m_vTxChannel;
-  oldvTxBand = vTxBand =  settings.m_vTxBand;
-  vTxPower = settings.m_vTxPower;
-}
-
 void setup()
 {
   uint8_t i = 0;
@@ -224,6 +227,10 @@ void setup()
   while (!OSD.notInVSync());
   cleanScreen();
 #ifdef IMPULSERC_VTX
+  //Ignore setting because this is critical to making sure we can detect the
+  //VTX power jumper being installed. If we aren't using 5V ref there is
+  //the chance we will power up on wrong frequency.
+  analogReference(DEFAULT);
   setvTxSettings();
   vtx_init();
   vtx_set_frequency(vTxBand, vTxChannel);
@@ -463,6 +470,7 @@ void loop(){
           cleanScreen();
         }
       }*/
+      vtx_flash_led(1);
 #endif
 
       #ifdef DEBUG

@@ -24,7 +24,7 @@ The version on the flyduino page is very basic. Some people like that. This one 
 * Menu
 	* Yaw all the way to the left (while disarmed) for 3 seconds will enter the Menu. You can configure some of the settings.
 * PIDs and Rates
-	* You can see your PIDs and rates in the menu. BUT YOU CANNOT CHANGE THEM. Maybe in a future version of the KISS FC, but as of today (RC29-2) this does not work. 
+	* You can see your PIDs and rates in the menu. BUT YOU CANNOT CHANGE THEM. Maybe in a future version of the KISS FC, but as of today (1.1RC6) this does not work. 
 
 ## When should you not use this version?
 

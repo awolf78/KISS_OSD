@@ -581,6 +581,8 @@ void* vTxMenu()
         settingChanged |= vTxSettingChanged;
         menuActive = false;
         menuWasActive = true;
+        vtx_set_frequency(vTxBand, vTxChannel);
+        return (void*)MainMenu;
       break;
       case 4:
         activeVTXMenuItem = 0;

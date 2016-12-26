@@ -114,7 +114,7 @@
 
 
 /********************  OSD HARDWARE rule definitions  *********************/
-#ifdef RUSHDUINO                     
+#ifdef IMPULSERC_VTX                     
     # define MAX7456SELECT 10        // ss 
     # define MAX7456RESET  9         // RESET
 #else                                  

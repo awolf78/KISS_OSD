@@ -13,10 +13,10 @@
 
 /********************       OSD HARDWARE settings      *********************/
 //Choose ONLY ONE option:
-#define MINIMOSD                    // Uncomment this if using standard MINIMOSD hardware (default for 95% of boards) 
+//#define MINIMOSD                    // Uncomment this if using standard MINIMOSD hardware (default for 95% of boards) 
+#define IMPULSERC_VTX                 // Uncomment this if using Impulse RC vTx
 //#define WITESPYV1                 // Uncomment this if using Witespy V1.1 OSD, select this to correct for both swapped bat1/bat 2 and to also use alternative resistors / pinouts.  
 //#define WITESPYMICRO              // Uncomment this if using Witespy Micro Minim OSD, select this to correct for swapped bat1/bat 2.  
-//#define RUSHDUINO                 // Uncomment this if using Rushduino
 
 // NOTE-some of the popular RTFQ/Witespy boards have swapped bat1/bat2 pins and alternative voltage measuring resistors
 // If having difficulties, first select default MINIMOSD as above, then use the following to correct: 
