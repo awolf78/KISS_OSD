@@ -512,12 +512,12 @@ void loop(){
         if(startMoveTime == 0) startMoveTime = millis();
         FLASH_STRING(ROLL_UP_DOWN_MOVE_STR, "use pitch/roll to move");
         FLASH_STRING(YAW_LEFT_SELECT_STR, "yaw left for next item");
-        FLASH_STRING(YAW_RIGHT_EXIT_STR, "yaw right to exit");
+        FLASH_STRING(YAW_LONG_LEFT_EXIT_STR, "yaw long left to exit");
         if(millis() - startMoveTime < 5000)
         {
           OSD.printFS(COLS/2 - ROLL_UP_DOWN_MOVE_STR.length()/2, ROWS/2-1, &ROLL_UP_DOWN_MOVE_STR);
           OSD.printFS(COLS/2 - YAW_LEFT_SELECT_STR.length()/2, ROWS/2, &YAW_LEFT_SELECT_STR);
-          OSD.printFS(COLS/2 - YAW_RIGHT_EXIT_STR.length()/2, ROWS/2+1, &YAW_RIGHT_EXIT_STR);
+          OSD.printFS(COLS/2 - YAW_LONG_LEFT_EXIT_STR.length()/2, ROWS/2+1, &YAW_LONG_LEFT_EXIT_STR);
         }
         if(code & inputChecker.YAW_LEFT)
         {
@@ -586,7 +586,7 @@ void loop(){
         {
           moveSelected--;
         }
-        if(code & inputChecker.YAW_RIGHT)
+        if(code & inputChecker.YAW_LONG_LEFT)
         {
           OSD_ITEM_BLINK[moveSelected] = false;
           settings.SetupPPMs(DV_PPMs);
