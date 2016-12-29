@@ -275,7 +275,6 @@ static int16_t yawFilterCut;
 static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
-static int16_t lastAuxVal = 0;
 static boolean dShotEnabled = false;
 static boolean logoDone = false;
 extern void ReadFCSettings(boolean skipValues);
@@ -298,6 +297,7 @@ static uint8_t krSymbol[4] = { 0x9C, 0x9C, 0x9C, 0x9C };
 static unsigned long krTime[4] = { 0, 0, 0, 0 };
 volatile bool timer1sec = false;
 static unsigned long timer1secTime = 0;
+static uint8_t currentDVItem = 0;
 
 static int16_t bufminus1 = 0;
 static int16_t checkCalced = 0;
@@ -415,9 +415,10 @@ void loop(){
       OSD.printInt16(8,-3,versionProto,0,1);
       #endif 
       
-      if(triggerCleanScreen || abs((lastAuxVal+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) > CSettings::DV_PPM_INCREMENT)
+      if(triggerCleanScreen || (abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && (AuxChanVals[settings.m_DVchannel]+1000) < (CSettings::DV_PPM_INCREMENT*(CSettings::DISPLAY_DV_SIZE))))
       {
-        lastAuxVal = AuxChanVals[settings.m_DVchannel];
+        currentDVItem = CSettings::DISPLAY_DV_SIZE-1;
+        while(abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && currentDVItem > 0) currentDVItem--;
         triggerCleanScreen = false;
         cleanScreen();
       }

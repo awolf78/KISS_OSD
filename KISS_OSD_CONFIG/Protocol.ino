@@ -53,7 +53,7 @@ boolean ReadTelemetry()
          if (armed == 0 && current_armed > 0) 
          {
            start_time = millis();
-	   triggerCleanScreen = true;
+	         triggerCleanScreen = true;
            armedOnce = true;
            last_Aux_Val = AuxChanVals[settings.m_DVchannel];
            DV_change_time = 0;

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertToBin", "ConvertToBin\ConvertToBin.csproj", "{0EDAD01F-C720-44F3-A186-B1C7D8E69CB2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompressDecompress", "CompressDecompress\CompressDecompress.csproj", "{E62CBE86-CB3B-4606-8A9D-43C1C58F7AA6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0EDAD01F-C720-44F3-A186-B1C7D8E69CB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0EDAD01F-C720-44F3-A186-B1C7D8E69CB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0EDAD01F-C720-44F3-A186-B1C7D8E69CB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0EDAD01F-C720-44F3-A186-B1C7D8E69CB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E62CBE86-CB3B-4606-8A9D-43C1C58F7AA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E62CBE86-CB3B-4606-8A9D-43C1C58F7AA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E62CBE86-CB3B-4606-8A9D-43C1C58F7AA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E62CBE86-CB3B-4606-8A9D-43C1C58F7AA6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

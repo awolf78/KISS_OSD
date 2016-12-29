@@ -38,7 +38,7 @@ void CSettings::LoadDefaults()
   m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 4;
   m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 6;
   m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 8;
-  strcpy(m_nickname, fixStr("nickname"));
+  strcpy(m_nickname, "nickname");
   m_nickname[8] = 0x00;
   m_OSDItems[ESC1kr][0] = 0;
   m_OSDItems[ESC1kr][1] = 1;
@@ -77,6 +77,30 @@ void CSettings::LoadDefaults()
   m_OSDItems[MAH][0] = COLS - 1;
   m_OSDItems[MAH][1] = ROWS - 1;
   m_goggle = 0; //0 = fatshark, 1 = headplay
+}
+
+void CSettings::fixColBorders()
+{
+  int8_t moveDir = -1;
+  if(m_displaySymbols == 1) moveDir = 1;
+  uint8_t i;
+  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  {
+    if(m_colBorder[i])
+    {
+      if(i== ESC1kr || i== ESC2kr || i== ESC3kr || i== ESC4kr)
+      {
+        m_OSDItems[i][0] += (int8_t)((int8_t)5 * moveDir);
+      }
+      else
+      {
+        if(i >= STOPWp)
+        {
+           m_OSDItems[i][0] += (int8_t)((int8_t)1 * moveDir);
+        }
+      }      
+    }
+  }
 }
 
 int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)

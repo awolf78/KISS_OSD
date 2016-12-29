@@ -270,7 +270,7 @@ void* DisplayMenu()
 {
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
   {
-    bool gogglechanged;
+    bool gogglechanged, symbolChanged;
     switch(activeDisplayMenuItem)
     {
       case 0:
@@ -283,7 +283,13 @@ void* DisplayMenu()
         settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
       break;
       case 3:
-        settingChanged |= checkCode(settings.m_displaySymbols, 1, 0, 1);
+        symbolChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
+        settingChanged |= symbolChanged;
+        if(symbolChanged) 
+        {
+          settings.fixColBorders();
+          correctItemsOnce = false;
+        }
       break;
       case 4:
         gogglechanged = checkCode(settings.m_goggle, 1, 0, 1);
@@ -357,6 +363,7 @@ void* DisplayMenu()
 
 static bool vTxSettingChanged = false;
 
+#ifdef IMPULSERC_VTX
 void* vTxMenu()
 {
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
@@ -405,20 +412,17 @@ void* vTxMenu()
   OSD.print( fixFlashStr(&VTX_POWERS_STR[settings.m_vTxPower]) );
 
   OSD.printFS( startCol, ++startRow, &VTX_BAND_STR, activeVTXMenuItem );
-#ifdef IMPULSERC_VTX
   OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
-#endif
   
   OSD.printIntArrow( startCol, ++startRow, &VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
-#ifdef IMPULSERC_VTX
   uint8_t tempCol = startCol + VTX_CHANNEL_STR.length() + 3;
   OSD.printInt16(tempCol, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
-#endif
   
   OSD.printFS( startCol, ++startRow, &SET_AND_BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;
 }
+#endif
 
 void* ResetMenu()
 {

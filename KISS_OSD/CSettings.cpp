@@ -38,7 +38,7 @@ void CSettings::LoadDefaults()
   m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 4;
   m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 6;
   m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 8;
-  strcpy(m_nickname, fixStr("nickname"));
+  strcpy(m_nickname, "nickname");
   m_nickname[8] = 0x00;
   m_OSDItems[ESC1kr][0] = 0;
   m_OSDItems[ESC1kr][1] = 1;

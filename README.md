@@ -2,7 +2,7 @@
 
 * Flyduino KISS FC: http://flyduino.net/KISS-FC-32bit-Flight-Controller_1
 * Flyduino MinimOSD pre-flashed: http://flyduino.net/KissFC-OSD-FW-preflashed
-
+* Impulse RC Helix vTx: http://impulserc.com/helix-video-transmitter-board
 
 ## How-to upload it to your MinimOSD
 

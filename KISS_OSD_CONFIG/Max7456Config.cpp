@@ -18,8 +18,8 @@ public:
     }
     return r;
   }
-  uint8_t getn(byte n) {
-    uint8_t r = 0;
+  uint16_t getn(byte n) {
+    uint16_t r = 0;
     while (n--) {
       r <<= 1;
       r |= get1();
@@ -51,7 +51,7 @@ void CMax7456Config::updateFont()
   m_offset = 0;    
   m_ledstatus = false; 
   
-  for(uint8_t x = 0; x < 255; x++){
+  for(uint16_t x = 0; x < 256; x++){
     for(uint8_t i = 0; i < 54; i++){
       m_fontData[i] = decompress();
     }
@@ -160,18 +160,18 @@ uint8_t CMax7456Config::decompress()
   uint8_t next;
   if(m_length == 0 && BS.get1() == 0) 
   {
-    next = BS.getn(8);
+    next = (byte)BS.getn(8);
   } 
   else 
   {
     if(m_length == 0)
     {
-      m_offset = BS.getn(O) + 1;
+      m_offset = -BS.getn(O) - 1;
       m_length = BS.getn(L) + M;
     }
     if(m_length--) 
     {
-      next = ringBuf[(ringHead-m_offset)%RING_BUF_SIZE];
+      next = ringBuf[(ringHead+m_offset)%RING_BUF_SIZE];
     }
   }  
   ringBuf[ringHead%RING_BUF_SIZE] = next;
