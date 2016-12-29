@@ -287,8 +287,7 @@ void* DisplayMenu()
         settingChanged |= symbolChanged;
         if(symbolChanged) 
         {
-          settings.fixColBorders();
-          correctItemsOnce = false;
+          symbolOnOffChanged = true;
         }
       break;
       case 4:

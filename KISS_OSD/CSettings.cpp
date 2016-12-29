@@ -8,6 +8,27 @@ CSettings::CSettings()
   LoadDefaults();
 }
 
+bool CSettings::cleanEEPROM()
+{
+  int i;
+  bool cleaned = true;
+  byte check = 0xDD;
+  for(i=(EEPROM.length()-1); i>(EEPROM.length()-5); i--)
+  {
+    byte readB = EEPROM.read(i);    
+    if(readB != check) cleaned = false;
+  }
+  if(!cleaned)
+  {
+    for(i=0; i<EEPROM.length(); i++) EEPROM.update(i,0);
+    for(i=(EEPROM.length()-1); i>(EEPROM.length()-5); i--)
+    {
+      EEPROM.update(i, check);
+    }
+  }
+  return cleaned;
+}
+
 void CSettings::LoadDefaults()
 {
   m_batWarning = 1; //on by default
@@ -79,6 +100,30 @@ void CSettings::LoadDefaults()
   m_goggle = 0; //0 = fatshark, 1 = headplay
 }
 
+void CSettings::fixColBorders()
+{
+  int8_t moveDir = 1;
+  if(m_displaySymbols == 1) moveDir = -1;
+  uint8_t i;
+  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  {
+    if(m_colBorder[i])
+    {
+      if(i== ESC1kr || i== ESC2kr || i== ESC3kr || i== ESC4kr)
+      {
+        m_OSDItems[i][0] += (int8_t)((int8_t)5 * moveDir);
+      }
+      else
+      {
+        if(i >= STOPWp)
+        {
+           m_OSDItems[i][0] += (int8_t)((int8_t)1 * moveDir);
+        }
+      }      
+    }
+  }
+}
+
 int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
 {
   byte msb, lsb;
@@ -98,7 +143,7 @@ void CSettings::ReadSettings()
   //if(true)
   {
     WriteSettings(); //write defaults
-    EEPROM.write(0x01,0x09);
+    EEPROM.update(0x01,0x09);
   }
   else
   {
@@ -164,16 +209,16 @@ void CSettings::WriteInt16_t(byte lsbPos, byte msbPos, int16_t value)
   lsb = (byte)(value & 0x00FF);
   msb = (byte)((value & 0xFF00) >> 8);
   
-  EEPROM.write(lsbPos, lsb); // LSB
-  EEPROM.write(msbPos, msb); // MSB
+  EEPROM.update(lsbPos, lsb); // LSB
+  EEPROM.update(msbPos, msb); // MSB
 }
 
 void CSettings::WriteSettings()
 {
   WriteInt16_t(0x03,0x04,m_batWarningMAH);
-  EEPROM.write(0x05,(byte)m_batWarning);
-  EEPROM.write(0x06,(byte)m_activeBattery);
-  EEPROM.write(0x07,(byte)m_DVchannel);
+  EEPROM.update(0x05,(byte)m_batWarning);
+  EEPROM.update(0x06,(byte)m_activeBattery);
+  EEPROM.update(0x07,(byte)m_DVchannel);
   uint8_t i;
   byte pos = 0x08;
   for(i=0; i < 4; i++)
@@ -181,32 +226,32 @@ void CSettings::WriteSettings()
     WriteInt16_t(pos, pos+1, m_batMAH[i]);
     pos += 2;
   }
-  EEPROM.write(pos, (byte)m_batWarningPercent); 
+  EEPROM.update(pos, (byte)m_batWarningPercent); 
   pos++;
-  EEPROM.write(pos, (byte)m_tempUnit);
+  EEPROM.update(pos, (byte)m_tempUnit);
   pos++;
-  EEPROM.write(pos, (byte)m_fontSize);
+  EEPROM.update(pos, (byte)m_fontSize);
   pos++;
-  EEPROM.write(pos, (byte)m_displaySymbols);
+  EEPROM.update(pos, (byte)m_displaySymbols);
   pos++;
-  EEPROM.write(pos, (byte)m_vTxChannel);
+  EEPROM.update(pos, (byte)m_vTxChannel);
   pos++;
-  EEPROM.write(pos, (byte)m_vTxBand);
+  EEPROM.update(pos, (byte)m_vTxBand);
   pos++;
-  EEPROM.write(pos, (byte)m_vTxPower);
+  EEPROM.update(pos, (byte)m_vTxPower);
   pos++;
-  EEPROM.write(pos, (byte)m_xOffset);
+  EEPROM.update(pos, (byte)m_xOffset);
   pos++;
-  EEPROM.write(pos, (byte)m_yOffset);
+  EEPROM.update(pos, (byte)m_yOffset);
   pos++;
   for(i=0; i<DISPLAY_DV_SIZE; i++)
   {
-    EEPROM.write(pos, (byte)m_DISPLAY_DV[i]);
+    EEPROM.update(pos, (byte)m_DISPLAY_DV[i]);
     pos++;
   }
   for(i=0; i<NICKNAME_STR_SIZE; i++)
   {
-    EEPROM.write(pos, (byte)m_nickname[i]);
+    EEPROM.update(pos, (byte)m_nickname[i]);
     pos++;
   }
   uint8_t j;
@@ -214,11 +259,11 @@ void CSettings::WriteSettings()
   {
     for(j=0; j<2; j++)
     {
-      EEPROM.write(pos, (byte)m_OSDItems[i][j]);
+      EEPROM.update(pos, (byte)m_OSDItems[i][j]);
       pos++;
     }
   }
-  EEPROM.write(pos, (byte)m_goggle);
+  EEPROM.update(pos, (byte)m_goggle);
   pos++;
 }
 

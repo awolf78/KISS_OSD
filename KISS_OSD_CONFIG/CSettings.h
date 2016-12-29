@@ -64,6 +64,7 @@ class CSettings
   void LoadDefaults();
   void SetupPPMs(int16_t *dv_ppms, bool all = false);
   void fixColBorders();
+  bool cleanEEPROM();
   
   volatile uint8_t m_batWarning; // 0 = off, 1 = on
   volatile int16_t m_batMAH[4]; // 300-32000 mAh

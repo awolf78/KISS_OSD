@@ -184,10 +184,12 @@ void resetBlinking()
   }  
 }
 
+
 void setup()
 {
   SPI.begin();
-  SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
+  SPI.setClockDivider( SPI_CLOCK_DIV2 );
+  settings.cleanEEPROM(); 
   settings.ReadSettings();
   setupMAX7456();
   
@@ -326,6 +328,7 @@ static uint8_t charIndex = 1;
 volatile bool timer1sec = false;
 static unsigned long timer1secTime = 0;
 static uint8_t currentDVItem = 0;
+static bool symbolOnOffChanged = false;
 
 #ifdef DEBUG
 static int16_t versionProto = 0;
@@ -387,7 +390,6 @@ void loop(){
 
 #ifdef DEBUG
     while (!OSD.notInVSync());
-    OSD.setCursor(8,8);
     uint8_t debug_col = 8;
     OSD.printInt16(debug_col,8,(int16_t)analogRead(A6),0,0);
 #endif
@@ -396,9 +398,10 @@ void loop(){
     if(!ReadTelemetry()) 
     {
       return;
-    }   
+    }
 
     while (!OSD.notInVSync());
+
 
 #ifdef IMPULSERC_VTX
       /*if(changevTxTime > 0)
@@ -418,7 +421,10 @@ void loop(){
       vtx_flash_led(1);
 #endif
 
-      if(triggerCleanScreen || (abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && (AuxChanVals[settings.m_DVchannel]+1000) < (CSettings::DV_PPM_INCREMENT*(CSettings::DISPLAY_DV_SIZE))))
+      if(triggerCleanScreen || 
+      (abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT 
+      && (AuxChanVals[settings.m_DVchannel]+1000) < (CSettings::DV_PPM_INCREMENT*(CSettings::DISPLAY_DV_SIZE))
+      && !moveItems))
       {
         currentDVItem = CSettings::DISPLAY_DV_SIZE-1;
         while(abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && currentDVItem > 0) currentDVItem--;
@@ -774,7 +780,7 @@ void loop(){
       if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
       {
         if(OSD_ITEM_BLINK[THROTTLE]) OSD.blink1sec();
-        itemLengthOK[THROTTLE] = OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, 1, "%", 2);
+        itemLengthOK[THROTTLE] = OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, 1, "%", 2, THROTTLEp);
         //ESCmarginTop = 1;
       }
         
@@ -959,7 +965,7 @@ void loop(){
           stopWatchStr[0] = 0x00;
         }
         if(OSD_ITEM_BLINK[STOPW]) OSD.blink1sec();
-        OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr);
+        OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
       }
       
       if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel]) 
@@ -978,6 +984,12 @@ void loop(){
           }
         }
         correctItemsOnce = true;
+      }
+
+      if(symbolOnOffChanged)
+      {
+        settings.fixColBorders();
+        symbolOnOffChanged = false;
       }
   }    
 }

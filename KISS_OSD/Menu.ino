@@ -467,6 +467,7 @@ void* DisplayMenu()
 {
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
   {
+    bool symbolChanged;
     switch(activeDisplayMenuItem)
     {
       case 0:
@@ -479,7 +480,12 @@ void* DisplayMenu()
         settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
       break;
       case 3:
-        settingChanged |= checkCode(settings.m_displaySymbols, 1, 0, 1);
+        symbolChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
+        settingChanged |= symbolChanged;
+        if(symbolChanged) 
+        {
+          symbolOnOffChanged = true;
+        }
       break;
       case 4:
         settingChanged |= checkCode(settings.m_goggle, 1, 0, 1);

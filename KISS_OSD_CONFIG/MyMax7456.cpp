@@ -27,7 +27,7 @@ void CMyMax7456::printSpaces(uint8_t printLength)
   }
 }
 
-uint8_t CMyMax7456::checkPrintLength(volatile uint8_t &col, uint8_t row, uint8_t printLength, uint8_t &blanks, _OSDItemPos item)
+uint8_t CMyMax7456::checkPrintLength(volatile uint8_t col, uint8_t row, uint8_t printLength, uint8_t &blanks, _OSDItemPos item)
 {
   uint8_t lengthCorrection = 0;
   if(col+printLength > (COLS-settings.m_goggle))
@@ -37,17 +37,18 @@ uint8_t CMyMax7456::checkPrintLength(volatile uint8_t &col, uint8_t row, uint8_t
     setCursor(lengthCorrection-blanks, row);
     printSpaces(blanks);
     blanks = 0;
+    if(item < CSettings::OSD_ITEMS_POS_SIZE) settings.m_colBorder[item] = true;
   }
   else
   {
     setCursor(col, row);
     if(item < CSettings::OSD_ITEMS_POS_SIZE) settings.m_colBorder[item] = false;
+    if(item < CSettings::OSD_ITEMS_POS_SIZE && ((col+printLength) == (COLS-settings.m_goggle) || (col+printLength) == (COLS-settings.m_goggle-1))) settings.m_colBorder[item] = true;
     if((col+printLength) == (COLS-settings.m_goggle))
     {
       setCursor(col-blanks, row);
       printSpaces(blanks);
-      blanks = 0;
-      if(item < CSettings::OSD_ITEMS_POS_SIZE) settings.m_colBorder[item] = true;
+      blanks = 0;      
     }
   }
   return lengthCorrection;
@@ -55,7 +56,7 @@ uint8_t CMyMax7456::checkPrintLength(volatile uint8_t &col, uint8_t row, uint8_t
 
 static char printBuf2[30];
 
-uint8_t CMyMax7456::printInt16(volatile uint8_t &col, uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks = 0, _OSDItemPos item, const char* prefix)
+uint8_t CMyMax7456::printInt16(volatile uint8_t col, uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks = 0, _OSDItemPos item, const char* prefix)
 {
   print_int16(value, printBuf2, dec, AlignLeft);
   uint8_t printLength = strlen(printBuf2)+strlen(prefix)+strlen(suffix);
@@ -72,12 +73,6 @@ uint8_t CMyMax7456::printInt16(volatile uint8_t &col, uint8_t row, int16_t value
   blinkActive = false;
   return lengthCorrection;
 }
-
-/*void CMyMax7456::printFS(uint8_t col, uint8_t row, _FLASH_STRING *key, uint8_t menuItem = 200)
-{
-  uint8_t col2 = col;
-  printFS(col2, row, key, menuItem);
-}*/
 
 void CMyMax7456::printFS(uint8_t col, uint8_t row, _FLASH_STRING *key, uint8_t menuItem)
 {
@@ -102,19 +97,7 @@ void CMyMax7456::printFS(uint8_t col, uint8_t row, _FLASH_STRING *key, uint8_t m
 
 void CMyMax7456::printInt16(uint8_t col, uint8_t row, _FLASH_STRING *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
 {
-  print_int16(value, printBuf2, dec, AlignLeft);
-  uint8_t printLength = strlen(printBuf2)+strlen(suffix)+key->length()+blanks;
-  checkPrintLength(col, row, printLength, blanks, CSettings::OSD_ITEMS_POS_SIZE);
-  if(blinkActive && timer1sec)
-  {
-    printSpaces(printLength);
-  }
-  else
-  {
-    print(fixFlashStr(key));
-    printInternal(suffix, blanks);
-  }
-  blinkActive = false;
+  printInt16(col, row, fixFlashStr(key), value, dec, AlignLeft, suffix, blanks);
 }
 
 void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
@@ -153,12 +136,12 @@ void CMyMax7456::checkArrow(uint8_t currentRow, uint8_t menuItem)
   }
 }
 
-void CMyMax7456::printTime(volatile uint8_t &col, uint8_t row, unsigned long time, const char* prefix)
+void CMyMax7456::printTime(volatile uint8_t col, uint8_t row, unsigned long time, const char* prefix, _OSDItemPos item)
 {
   print_time(time, printBuf2);
   uint8_t printLength = strlen(printBuf2)+strlen(prefix);
   uint8_t blanks = 0;
-  checkPrintLength(col, row, printLength, blanks, CSettings::OSD_ITEMS_POS_SIZE);
+  checkPrintLength(col, row, printLength, blanks, item);
   if(blinkActive && timer1sec)
   {
     printSpaces(printLength);

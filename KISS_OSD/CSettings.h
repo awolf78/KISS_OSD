@@ -63,6 +63,8 @@ class CSettings
   void WriteLastMAH();
   void LoadDefaults();
   void SetupPPMs(int16_t *dv_ppms, bool all = false);
+  void fixColBorders();
+  bool cleanEEPROM();
   
   volatile uint8_t m_batWarning; // 0 = off, 1 = on
   volatile int16_t m_batMAH[4]; // 300-32000 mAh
@@ -83,6 +85,7 @@ class CSettings
   static const uint8_t OSD_ITEMS_SIZE = 10;
   static const uint8_t OSD_ITEMS_POS_SIZE = 18;
   volatile uint8_t m_OSDItems[OSD_ITEMS_POS_SIZE][2]; // OSD item positions
+  volatile bool m_colBorder[OSD_ITEMS_POS_SIZE];
   static const uint8_t DISPLAY_DV_SIZE = 9;
   volatile uint8_t m_DISPLAY_DV[DISPLAY_DV_SIZE];
   static const int16_t DV_PPM_INCREMENT = 100;
