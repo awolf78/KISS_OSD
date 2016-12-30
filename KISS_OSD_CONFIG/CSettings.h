@@ -88,7 +88,7 @@ class CSettings
   volatile bool m_colBorder[OSD_ITEMS_POS_SIZE];
   static const uint8_t DISPLAY_DV_SIZE = 9;
   volatile uint8_t m_DISPLAY_DV[DISPLAY_DV_SIZE];
-  static const int16_t DV_PPM_INCREMENT = 100;
+  static const int16_t DV_PPM_INCREMENT = 150;
   volatile uint8_t m_goggle;
   
   private:
