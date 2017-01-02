@@ -5,9 +5,6 @@ static uint8_t protoVersion = 0;
 static uint8_t recBytes = 0;
 const uint16_t filterCount = 5;
 const uint16_t filterCount2 = 3;
-CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
-CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
-CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
 
 boolean ReadTelemetry()
 {
@@ -200,39 +197,7 @@ boolean ReadTelemetry()
            }
            MaxTemp = (MaxTemp - 32) * 5 / 9;
          }
-         lastTempUnit = settings.m_tempUnit;
-         if(armedOnce) 
-         {
-           MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
-           MaxRPMs = findMax4(MaxRPMs, motorKERPM, 4);
-           if (MinBat == 0)
-           {
-             MinBat = LipoVoltage;
-           }
-           else if (LipoVoltage < MinBat)
-           {
-             MinBat = LipoVoltage;
-           }
-           MaxAmps = findMax(MaxAmps, current);
-           uint32_t temp = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
-           MaxC = (int16_t) temp;
-           uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
-           MaxWatt = findMax(MaxWatt, (uint16_t) (Watts / 1000));
-           for(i=0; i<4; i++)
-           {
-             maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
-             maxCurrent[i] = findMax(maxCurrent[i], motorCurrent[i]);
-             maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
-             minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
-           }
-         }
-         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
-         current = ampTotalFilter.ProcessValue(current);
-         for(i=0; i<4; i++)
-         {
-           motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
-           motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
-         }
+         lastTempUnit = settings.m_tempUnit;         
       }
       else
       {

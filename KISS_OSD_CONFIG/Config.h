@@ -5,7 +5,7 @@
 
 // vTx config
 //=============================
-#define IMPULSERC_VTX
+//#define IMPULSERC_VTX
 #ifdef IMPULSERC_VTX
 # define MAX7456RESET  9         // RESET
 #endif
@@ -22,5 +22,7 @@ static const uint8_t COLS = MAX7456_COLS_P1;
 static const uint8_t ROWS = MAX7456_ROWS_N0;
 static const uint8_t COLS = MAX7456_COLS_N1;
 #endif
+
+//#define UPDATE_FONT_ONLY
 
 #endif

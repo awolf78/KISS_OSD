@@ -290,7 +290,7 @@ static boolean fcSettingChanged = false;
 static void* activePage = NULL;
 static boolean batterySelect = false;
 static boolean shiftOSDactive = false;
-static boolean triggerCleanScreen = false;
+static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
 static char batterySymbol[] = { 0xE7, 0xEC, 0xEC, 0xED, 0x00 };
@@ -302,6 +302,8 @@ static uint8_t currentDVItem = 0;
 static bool symbolOnOffChanged = false;
 static int16_t bufminus1 = 0;
 static int16_t checkCalced = 0;
+static uint16_t fcNotConnectedCount = 0;
+static bool telemetryReceived = false;
 
 #ifdef DEBUG
 static int16_t versionProto = 0;
@@ -361,6 +363,8 @@ void loop(){
     {
       NewSerial.write(0x30); // request settings
       ReadFCSettings(fcSettingChanged);
+      if(!fcSettingsReceived) fcNotConnectedCount++;
+      else fcNotConnectedCount = 0;
       #ifdef PROTODEBUG
       if(checkCalced != bufminus1)
       {
@@ -368,7 +372,6 @@ void loop(){
         OSD.printInt16(8, -3, bufminus1, 0, 1);
       }
       #endif
-      return;
     }
     else
     {
@@ -376,23 +379,36 @@ void loop(){
       {
         NewSerial.write(0x20); // request telemetry
       }
-      if(!ReadTelemetry()) 
+      telemetryReceived = ReadTelemetry();
+      if(!telemetryReceived) 
       {
         if(fcSettingChanged && !menuActive)
         {
           SendFCSettings();
           fcSettingChanged = false;
         }
+        else fcNotConnectedCount++;
         #ifdef DEBUG
         /*static char Aux1[15];
         OSD.setCursor(8,-3);
         OSD.print(fixStr("tele"));*/
         #endif 
-        return;
       }
-    }    
+      else fcNotConnectedCount = 0;
+    }
+
+    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
 
     while (!OSD.notInVSync());
+
+    if(fcNotConnectedCount > 500)
+    {
+      FLASH_STRING(FC_NOT_CONNECTED_STR, "no connection to kiss fc");
+      OSD.printFS(COLS/2 - FC_NOT_CONNECTED_STR.length()/2, ROWS/2, &FC_NOT_CONNECTED_STR);
+      triggerCleanScreen = true;
+      fcNotConnectedCount = 0;
+      return;
+    }
 
 #ifdef IMPULSERC_VTX
       /*if(changevTxTime > 0)
@@ -507,7 +523,7 @@ void loop(){
         }        
       }
       
-      if(batterySelect || (!menuActive && !armOnYaw && yaw > 1750 && armed == 0))
+      if(batterySelect || (!menuActive && !armOnYaw && (code & inputChecker.YAW_RIGHT) && armed == 0))
       {
         if(!showBat)
         {

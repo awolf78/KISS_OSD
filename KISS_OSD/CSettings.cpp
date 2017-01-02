@@ -50,17 +50,20 @@ void CSettings::LoadDefaults()
   m_xOffset = 0; // Center OSD offsets
   m_yOffset = 0;
   m_stats = 1;
-  m_DISPLAY_DV[DISPLAY_NICKNAME] = 3;
+  m_DISPLAY_DV[DISPLAY_NICKNAME] = 8;
   m_DISPLAY_DV[DISPLAY_TIMER] = 2;
   m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 7;
-  m_DISPLAY_DV[DISPLAY_COMB_CURRENT] = 5;
+  m_DISPLAY_DV[DISPLAY_COMB_CURRENT] = 4;
   m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE] = 0;
   m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION] = 1;
-  m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 4;
-  m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 6;
-  m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 8;
-  strcpy(m_nickname, "nickname");
-  m_nickname[8] = 0x00;
+  m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 3;
+  m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 5;
+  m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 6;
+  uint8_t i;
+  for(i=0; i < NICKNAME_STR_SIZE; i++)
+  {
+    m_nickname[i] = 0x00;
+  }
   m_OSDItems[ESC1kr][0] = 0;
   m_OSDItems[ESC1kr][1] = 1;
   m_OSDItems[ESC1voltage][0] = 0;
