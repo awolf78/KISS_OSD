@@ -523,7 +523,7 @@ void loop(){
         }        
       }
       
-      if(batterySelect || (!menuActive && !armOnYaw && (code & inputChecker.YAW_RIGHT) && armed == 0))
+      if(batterySelect || (!menuActive && !armOnYaw && yaw > 1900 && armed == 0))
       {
         if(!showBat)
         {
