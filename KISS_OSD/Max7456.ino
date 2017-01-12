@@ -4,12 +4,6 @@
 #endif
 # define MAX7456SELECT 10        // ss     
 
-#ifdef PAL
-const uint8_t videoSignalType = 1;
-#else
-const uint8_t videoSignalType = 0;
-#endif
-
 
 #define DATAOUT 11              // MOSI
 #define DATAIN  12              // MISO
@@ -58,6 +52,7 @@ const uint8_t videoSignalType = 0;
 #define MAX7456ADD_CMDI         0x0b
 #define MAX7456ADD_OSDM         0x0c
 #define MAX7456ADD_RB0          0x10
+#define MAX7456ADD_STAT         0xA0
 
 
 //////////////////////////////////////////////////////////////
@@ -74,7 +69,6 @@ uint8_t spi_transfer(uint8_t data)
 void MAX7456Setup(void)
 {
   uint8_t MAX7456_reset=0x02;
-  uint8_t MAX_screen_rows;
 
   pinMode(MAX7456RESET,OUTPUT);
   digitalWrite(MAX7456RESET,LOW); //force reset
@@ -99,7 +93,7 @@ void MAX7456Setup(void)
   uint8_t spi_junk;
   spi_junk=SPSR;
   spi_junk=SPDR;
-  delay(100);
+  //delay(100);
 
   // force soft reset on Max7456
   digitalWrite(MAX7456SELECT,LOW);
@@ -108,14 +102,14 @@ void MAX7456Setup(void)
 
   // set all rows to same charactor black/white level
   uint8_t x;
-  for(x = 0; x < MAX_screen_rows; x++) {
+  for(x = 0; x < settings.ROWS; x++) {
     MAX7456_Send(MAX7456ADD_RB0+x, BWBRIGHTNESS);
   }
 
   // make sure the Max7456 is enabled
   spi_transfer(VM0_reg);
 
-  if (videoSignalType){
+  if (settings.m_videoMode == 1){
     spi_transfer(OSD_ENABLE|VIDEO_MODE_PAL);
   }
   else{
@@ -130,4 +124,5 @@ void MAX7456_Send(uint8_t add, uint8_t data)
   spi_transfer(add);
   spi_transfer(data);
 }
+
 #endif

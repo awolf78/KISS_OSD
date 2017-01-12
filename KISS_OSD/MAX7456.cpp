@@ -221,7 +221,7 @@
   // columns and rows to display. Use like so:
   //   uint8_t rows = OSD.safeVideoRows[encoding][safety];
   //   uint8_t cols = OSD.safeVideoCols[encoding][safety];
-  /*const uint8_t MAX7456::safeVideoCols[2][4] = { { MAX7456_COLS_N0, 
+  const uint8_t MAX7456::safeVideoCols[2][4] = { { MAX7456_COLS_N0, 
                                                    MAX7456_COLS_N1,  
                                                    MAX7456_COLS_N2,  
                                                    MAX7456_COLS_N3  },
@@ -236,7 +236,7 @@
                                                  { MAX7456_ROWS_P0, 
                                                    MAX7456_ROWS_P1,  
                                                    MAX7456_ROWS_P2,  
-                                                   MAX7456_ROWS_P3  } };*/
+                                                   MAX7456_ROWS_P3  } };
   
   // This is code page remapping array for converting ASCII encoded
   // characters to the Maxim default character map.

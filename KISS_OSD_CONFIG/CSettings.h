@@ -89,7 +89,9 @@ class CSettings
   static const uint8_t DISPLAY_DV_SIZE = 9;
   volatile uint8_t m_DISPLAY_DV[DISPLAY_DV_SIZE];
   static const int16_t DV_PPM_INCREMENT = 150;
-  volatile uint8_t m_goggle;
+  volatile uint8_t m_goggle; //0 = fatshark, 1 = headplay
+  volatile uint8_t m_videoMode; //2 = NTSC, 1 = PAL
+  volatile uint8_t ROWS, COLS;
   
   private:
   int16_t ReadInt16_t(byte lsbPos, byte msbPos);

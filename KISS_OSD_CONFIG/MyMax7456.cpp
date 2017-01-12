@@ -30,10 +30,10 @@ void CMyMax7456::printSpaces(uint8_t printLength)
 uint8_t CMyMax7456::checkPrintLength(volatile uint8_t col, uint8_t row, uint8_t printLength, uint8_t &blanks, _OSDItemPos item)
 {
   uint8_t lengthCorrection = 0;
-  if(col+printLength > (COLS-settings.m_goggle))
+  if(col+printLength > (settings.COLS-settings.m_goggle))
   {
-    //col = COLS-printLength;
-    lengthCorrection = COLS-printLength-settings.m_goggle;
+    //col = settings.COLS-printLength;
+    lengthCorrection = settings.COLS-printLength-settings.m_goggle;
     setCursor(lengthCorrection-blanks, row);
     printSpaces(blanks);
     blanks = 0;
@@ -43,8 +43,8 @@ uint8_t CMyMax7456::checkPrintLength(volatile uint8_t col, uint8_t row, uint8_t 
   {
     setCursor(col, row);
     if(item < CSettings::OSD_ITEMS_POS_SIZE) settings.m_colBorder[item] = false;
-    if(item < CSettings::OSD_ITEMS_POS_SIZE && ((col+printLength) == (COLS-settings.m_goggle) || (col+printLength) == (COLS-settings.m_goggle-1))) settings.m_colBorder[item] = true;
-    if((col+printLength) == (COLS-settings.m_goggle))
+    if(item < CSettings::OSD_ITEMS_POS_SIZE && ((col+printLength) == (settings.COLS-settings.m_goggle) || (col+printLength) == (settings.COLS-settings.m_goggle-1))) settings.m_colBorder[item] = true;
+    if((col+printLength) == (settings.COLS-settings.m_goggle))
     {
       setCursor(col-blanks, row);
       printSpaces(blanks);

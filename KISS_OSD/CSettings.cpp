@@ -5,6 +5,7 @@
 
 CSettings::CSettings()
 {
+  COLS = 28;
   LoadDefaults();
 }
 
@@ -100,7 +101,7 @@ void CSettings::LoadDefaults()
   m_OSDItems[NICKNAME][1] = ROWS - 1;
   m_OSDItems[MAH][0] = COLS - 1;
   m_OSDItems[MAH][1] = ROWS - 1;
-  m_goggle = 0; //0 = fatshark, 1 = headplay
+  m_goggle = 0; //0 = fatshark, 1 = headplay  
 }
 
 void CSettings::fixColBorders()

@@ -32,10 +32,6 @@
 
 // CONFIGURATION
 
-// MAX7456 Charset
-//=============================
-#define USE_MAX7456_ASCII
-
 // motors magnepole count (to display the right RPMs)
 //=============================
 #define MAGNETPOLECOUNT 14 // 2 for ERPMs
@@ -69,7 +65,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define PROTODEBUG
 #define KISS_OSD_CONFIG
 
-const char KISS_OSD_VER[] = "kiss osd config v2.2";
+const char KISS_OSD_VER[] = "kiss osd config v2.2.1";
 
 #include "Flash.h"
 #include <SPI.h>
@@ -134,45 +130,23 @@ static uint8_t lastTempUnit;
 
 void setupMAX7456()
 {
-#if defined(PAL)
-  OSD.begin(COLS, ROWS, 0);
-  OSD.setDefaultSystem(MAX7456_PAL);
-#endif
-#if defined(NTSC)
-  OSD.begin(COLS, ROWS);
-  OSD.setDefaultSystem(MAX7456_NTSC);
-#endif
-  OSD.setSwitchingTime( 5 );
-#if defined(USE_MAX7456_ASCII)
-  OSD.setCharEncoding( MAX7456_ASCII );
-#endif
-#if defined(USE_MAX7456_MAXIM)
-  OSD.setCharEncoding( MAX7456_MAXIM );
-#endif
-#ifndef IMPULSERC_VTX
-  SPCR = (1 << SPE) | (1 << MSTR);
-  SPSR = (1 << SPI2X);
-  uint8_t spi_junk;
-  spi_junk = SPSR;
-  spi_junk = SPDR;
+  OSD.begin(settings.COLS,13);
   delay(100);
-#endif
+  settings.m_videoMode = OSD.videoSystem();
+  if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
+  else settings.ROWS = 13;
+  OSD.setTextArea(settings.COLS, settings.ROWS);  
+  OSD.setDefaultSystem(settings.m_videoMode);
+  OSD.setSwitchingTime( 5 );   
+  OSD.setCharEncoding( MAX7456_ASCII );  
   OSD.display();
 #ifdef IMPULSERC_VTX
   delay(100);
   MAX7456Setup();
 #endif
+  delay(100);
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
 }
-
-/*extern boolean ReadTelemetry();
-  #ifdef IMPULSERC_VTX
-  extern void vtx_init();
-  extern void vtx_set_power(uint8_t power);
-  extern void vtx_set_frequency(uint8_t band, uint8_t channel);
-  extern void vtx_flash_led(uint8_t count);
-  extern void vtx_process_state(uint32_t currentMillis, uint8_t band, uint8_t channel);
-  #endif*/
 
 void resetBlinking()
 {
@@ -187,10 +161,11 @@ void resetBlinking()
 void setup()
 {
   SPI.begin();
-  SPI.setClockDivider( SPI_CLOCK_DIV2 );
+  SPI.setClockDivider( SPI_CLOCK_DIV2 );  
+  setupMAX7456();
   settings.cleanEEPROM();
   settings.ReadSettings();
-  setupMAX7456();
+  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
 
   //clean used area
   while (!OSD.notInVSync());
@@ -412,7 +387,7 @@ void loop() {
     if (fcNotConnectedCount > 500)
     {
       FLASH_STRING(FC_NOT_CONNECTED_STR, "no connection to kiss fc");
-      OSD.printFS(COLS / 2 - FC_NOT_CONNECTED_STR.length() / 2, ROWS / 2, &FC_NOT_CONNECTED_STR);
+      OSD.printFS(settings.COLS / 2 - FC_NOT_CONNECTED_STR.length() / 2, settings.ROWS / 2, &FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;
       return;
@@ -422,11 +397,11 @@ void loop() {
     /*if(changevTxTime > 0)
       {
       FLASH_STRING(CHANGE_CHANNELS_STR, "changing vtx to ");
-      OSD.printFS(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
-      OSD.printInt16(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
-      OSD.printInt16(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
+      OSD.printFS(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
+      OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
+      OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
       uint8_t timeLeft = (uint8_t)((6000 - (millis() - changevTxTime))/1000);
-      OSD.printInt16(COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
+      OSD.printInt16(settings.COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
       if(timeLeft < 1)
       {
         changevTxTime = 0;
@@ -467,8 +442,8 @@ void loop() {
     {
       FLASH_STRING(ROLL_UP_DOWN_CHAR_STR, "use pitch/roll to set name");
       FLASH_STRING(YAW_LEFT_EXIT_STR, "yaw left to exit");
-      OSD.printFS(COLS / 2 - ROLL_UP_DOWN_CHAR_STR.length() / 2, ROWS / 2 - 2, &ROLL_UP_DOWN_CHAR_STR);
-      OSD.printFS(COLS / 2 - YAW_LEFT_EXIT_STR.length() / 2, ROWS / 2 - 1, &YAW_LEFT_EXIT_STR);
+      OSD.printFS(settings.COLS / 2 - ROLL_UP_DOWN_CHAR_STR.length() / 2, settings.ROWS / 2 - 2, &ROLL_UP_DOWN_CHAR_STR);
+      OSD.printFS(settings.COLS / 2 - YAW_LEFT_EXIT_STR.length() / 2, settings.ROWS / 2 - 1, &YAW_LEFT_EXIT_STR);
       if (code & inputChecker.PITCH_UP)
       {
         if (charIndex == 0)
@@ -504,7 +479,7 @@ void loop() {
         charIndex = findCharPos(settings.m_nickname[charSelected]);
       }
       settings.m_nickname[charSelected] = charTable[charIndex];
-      OSD.setCursor(COLS / 2 - CSettings::NICKNAME_STR_SIZE / 2, ROWS / 2);
+      OSD.setCursor(settings.COLS / 2 - CSettings::NICKNAME_STR_SIZE / 2, settings.ROWS / 2);
       for (i = 0; i < CSettings::NICKNAME_STR_SIZE - 1; i++)
       {
         if (i == charSelected && timer1sec)
@@ -545,9 +520,9 @@ void loop() {
       FLASH_STRING(YAW_LONG_LEFT_EXIT_STR, "yaw long left to exit");
       if (millis() - startMoveTime < 5000)
       {
-        OSD.printFS(COLS / 2 - ROLL_UP_DOWN_MOVE_STR.length() / 2, ROWS / 2 - 1, &ROLL_UP_DOWN_MOVE_STR);
-        OSD.printFS(COLS / 2 - YAW_LEFT_SELECT_STR.length() / 2, ROWS / 2, &YAW_LEFT_SELECT_STR);
-        OSD.printFS(COLS / 2 - YAW_LONG_LEFT_EXIT_STR.length() / 2, ROWS / 2 + 1, &YAW_LONG_LEFT_EXIT_STR);
+        OSD.printFS(settings.COLS / 2 - ROLL_UP_DOWN_MOVE_STR.length() / 2, settings.ROWS / 2 - 1, &ROLL_UP_DOWN_MOVE_STR);
+        OSD.printFS(settings.COLS / 2 - YAW_LEFT_SELECT_STR.length() / 2, settings.ROWS / 2, &YAW_LEFT_SELECT_STR);
+        OSD.printFS(settings.COLS / 2 - YAW_LONG_LEFT_EXIT_STR.length() / 2, settings.ROWS / 2 + 1, &YAW_LONG_LEFT_EXIT_STR);
       }
       if (code & inputChecker.YAW_LEFT)
       {
@@ -581,7 +556,7 @@ void loop() {
         }
         if (code & inputChecker.PITCH_DOWN)
         {
-          if (settings.m_OSDItems[moveSelected][1] < ROWS - 1)
+          if (settings.m_OSDItems[moveSelected][1] < settings.ROWS - 1)
           {
             settings.m_OSDItems[moveSelected][1]++;
             cleanScreen();
@@ -599,7 +574,7 @@ void loop() {
         }
         if (code & inputChecker.ROLL_RIGHT)
         {
-          if (settings.m_OSDItems[moveSelected][0] < COLS - 1 - settings.m_goggle && itemLengthOK[moveSelected] == 0)
+          if (settings.m_OSDItems[moveSelected][0] < settings.COLS - 1 - settings.m_goggle && itemLengthOK[moveSelected] == 0)
           {
             settings.m_OSDItems[moveSelected][0]++;
             cleanScreen();
@@ -643,7 +618,7 @@ void loop() {
       setupMAX7456();
       cleanScreen();
       FLASH_STRING(FONT_COMPLETE_STR, "font updated");
-      OSD.printFS(COLS / 2 - (FONT_COMPLETE_STR.length()) / 2, ROWS / 2, &FONT_COMPLETE_STR);
+      OSD.printFS(settings.COLS / 2 - (FONT_COMPLETE_STR.length()) / 2, settings.ROWS / 2, &FONT_COMPLETE_STR);
       updateFontComplete = true;
       return;
     }
@@ -651,9 +626,9 @@ void loop() {
     if (shiftOSDactive && armed == 0)
     {
       FLASH_STRING(OSD_SHIFT_STR, "roll/pitch to center osd");
-      OSD.printFS(COLS / 2 - (OSD_SHIFT_STR.length()) / 2, ROWS / 2 - 1, &OSD_SHIFT_STR);
+      OSD.printFS(settings.COLS / 2 - (OSD_SHIFT_STR.length()) / 2, settings.ROWS / 2 - 1, &OSD_SHIFT_STR);
       FLASH_STRING(OSD_SHIFT_EXIT_STR, "yaw left to exit");
-      OSD.printFS(COLS / 2 - OSD_SHIFT_EXIT_STR.length() / 2, ROWS / 2, &OSD_SHIFT_EXIT_STR);
+      OSD.printFS(settings.COLS / 2 - OSD_SHIFT_EXIT_STR.length() / 2, settings.ROWS / 2, &OSD_SHIFT_EXIT_STR);
 
       boolean changedOffset = false;
       if (code & inputChecker.ROLL_RIGHT)
@@ -722,19 +697,19 @@ void loop() {
         settingChanged = true;
       }
       FLASH_STRING(BATTERY_STR, "battery ");
-      uint8_t batCol = COLS / 2 - (BATTERY_STR.length() + 1) / 2;
-      OSD.printInt16(batCol, ROWS / 2 - 1, &BATTERY_STR, settings.m_activeBattery + 1, 0, 1);
-      batCol = COLS / 2 - 3;
-      OSD.printInt16(batCol, ROWS / 2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
+      uint8_t batCol = settings.COLS / 2 - (BATTERY_STR.length() + 1) / 2;
+      OSD.printInt16(batCol, settings.ROWS / 2 - 1, &BATTERY_STR, settings.m_activeBattery + 1, 0, 1);
+      batCol = settings.COLS / 2 - 3;
+      OSD.printInt16(batCol, settings.ROWS / 2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
 
       FLASH_STRING(WARN_STR, "warn at ");
-      batCol = COLS / 2 - (WARN_STR.length() + 6) / 2;
-      OSD.printInt16(batCol, ROWS / 2 + 1, &WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
+      batCol = settings.COLS / 2 - (WARN_STR.length() + 6) / 2;
+      OSD.printInt16(batCol, settings.ROWS / 2 + 1, &WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
 
       if (batterySelect)
       {
         FLASH_STRING(YAW_LEFT_STR, "yaw left to go back");
-        OSD.printFS(COLS / 2 - YAW_LEFT_STR.length() / 2, ROWS / 2 + 2, &YAW_LEFT_STR);
+        OSD.printFS(settings.COLS / 2 - YAW_LEFT_STR.length() / 2, settings.ROWS / 2 + 2, &YAW_LEFT_STR);
       }
       if (batterySelect && yaw < 250)
       {
@@ -757,7 +732,7 @@ void loop() {
       settingChanged = false;
       saveSettings = false;
       FLASH_STRING(SETTINGS_SAVED_STR, "settings saved");
-      OSD.printFS(COLS / 2 - SETTINGS_SAVED_STR.length() / 2, ROWS / 2, &SETTINGS_SAVED_STR);
+      OSD.printFS(settings.COLS / 2 - SETTINGS_SAVED_STR.length() / 2, settings.ROWS / 2, &SETTINGS_SAVED_STR);
       delay(1500);
       cleanScreen();
     }

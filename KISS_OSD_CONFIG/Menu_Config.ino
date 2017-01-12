@@ -195,9 +195,9 @@ void* ChangeOrder()
   orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE]] = &ESC_TEMP_ORDER_STR;
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - ESC_VOLTAGE_ORDER_STR.length()/2;
+  uint8_t startCol = settings.COLS/2 - ESC_VOLTAGE_ORDER_STR.length()/2;
   FLASH_STRING(ORDER_TITLE_STR, "order menu");
-  OSD.printFS(COLS/2 - ORDER_TITLE_STR.length()/2, ++startRow, &ORDER_TITLE_STR);
+  OSD.printFS(settings.COLS/2 - ORDER_TITLE_STR.length()/2, ++startRow, &ORDER_TITLE_STR);
   for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
   {
     if(i == activeOrderMenuSelectedItem) OSD.blink1sec(); 
@@ -249,9 +249,9 @@ void* BatteryMenu()
 //FLASH_STRING(BACK_STR,            "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
+  uint8_t startCol = settings.COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
   FLASH_STRING(BATTERY_TITLE_STR, "battery menu");
-  OSD.printFS(COLS/2 - BATTERY_TITLE_STR.length()/2, ++startRow, &BATTERY_TITLE_STR);
+  OSD.printFS(settings.COLS/2 - BATTERY_TITLE_STR.length()/2, ++startRow, &BATTERY_TITLE_STR);
   
   OSD.printFS( startCol, ++startRow, &SELECT_BATTERY_STR, activeBatteryMenuItem );
   OSD.printFS( startCol, ++startRow, &BATTERY_WARNING_STR, activeBatteryMenuItem );
@@ -326,9 +326,9 @@ void* DisplayMenu()
 //FLASH_STRING(BACK_STR,            "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - (DV_CHANNEL_STR.length()+6)/2;
+  uint8_t startCol = settings.COLS/2 - (DV_CHANNEL_STR.length()+6)/2;
   FLASH_STRING(DISPLAY_TITLE_STR, "display menu");
-  OSD.printFS( COLS/2 - DISPLAY_TITLE_STR.length()/2, ++startRow, &DISPLAY_TITLE_STR );
+  OSD.printFS( settings.COLS/2 - DISPLAY_TITLE_STR.length()/2, ++startRow, &DISPLAY_TITLE_STR );
   
   OSD.printFS( startCol, ++startRow, &DV_CHANNEL_STR, activeDisplayMenuItem );
   OSD.print( fixStr("aux") );
@@ -399,9 +399,9 @@ void* vTxMenu()
   FLASH_STRING(SET_AND_BACK_STR,   "set+back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - (VTX_POWER_STR.length()+6)/2;
+  uint8_t startCol = settings.COLS/2 - (VTX_POWER_STR.length()+6)/2;
   FLASH_STRING(VTX_TITLE_STR, "vtx menu");
-  OSD.printFS( COLS/2 - VTX_TITLE_STR.length()/2, ++startRow, &VTX_TITLE_STR );
+  OSD.printFS( settings.COLS/2 - VTX_TITLE_STR.length()/2, ++startRow, &VTX_TITLE_STR );
 
   FLASH_STRING(_25MW_STR,   "25mw ");
   FLASH_STRING(_200MW_STR,  "200mw");
@@ -465,9 +465,9 @@ void* ResetMenu()
 //FLASH_STRING(BACK_STR,           "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = COLS/2 - (RESTORE_SAVE_STR.length()+6)/2;
+  uint8_t startCol = settings.COLS/2 - (RESTORE_SAVE_STR.length()+6)/2;
   FLASH_STRING(RESET_TITLE_STR, "reset menu");
-  OSD.printFS( COLS/2 - RESET_TITLE_STR.length()/2, ++startRow, &RESET_TITLE_STR );
+  OSD.printFS( settings.COLS/2 - RESET_TITLE_STR.length()/2, ++startRow, &RESET_TITLE_STR );
 
   if(activeResetMenuItem == 0 && confirmIndex == 1)
   {
@@ -502,8 +502,8 @@ void* MainMenu()
     {
       case 0:
         cleanScreen();
-        OSD.printFS(COLS/2 - FONT_UPDATE_STR.length()/2, ROWS/2-1, &FONT_UPDATE_STR);
-        OSD.printFS(COLS/2 - POWER_WARNING_STR.length()/2, ROWS/2, &POWER_WARNING_STR);
+        OSD.printFS(settings.COLS/2 - FONT_UPDATE_STR.length()/2, settings.ROWS/2-1, &FONT_UPDATE_STR);
+        OSD.printFS(settings.COLS/2 - POWER_WARNING_STR.length()/2, settings.ROWS/2, &POWER_WARNING_STR);
         updateFont = true;
         return (void*)MainMenu;
       break;
@@ -576,11 +576,11 @@ void* MainMenu()
   FLASH_STRING(RESET_STR,           "reset");
   
   uint8_t startRow = 0;
-  uint8_t startCol = COLS/2 - CHANGE_ORDER_STR.length()/2;
-  OSD.setCursor( COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
+  uint8_t startCol = settings.COLS/2 - CHANGE_ORDER_STR.length()/2;
+  OSD.setCursor( settings.COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
   OSD.print( fixStr(KISS_OSD_VER) );
   FLASH_STRING(MAIN_TITLE_STR, "main menu");
-  OSD.printFS( COLS/2 - MAIN_TITLE_STR.length()/2, ++startRow, &MAIN_TITLE_STR );
+  OSD.printFS( settings.COLS/2 - MAIN_TITLE_STR.length()/2, ++startRow, &MAIN_TITLE_STR );
   
   OSD.printFS( startCol, ++startRow, &UPDATE_FONT_STR, activeMenuItem );
   OSD.printFS( startCol, ++startRow, &DISPLAY_PAGE_STR, activeMenuItem );

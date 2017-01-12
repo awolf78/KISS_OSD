@@ -36,10 +36,6 @@ For more information, please refer to <http://unlicense.org>
 
 // CONFIGURATION
 
-// MAX7456 Charset
-//=============================
-#define USE_MAX7456_ASCII
-
 // motors magnepole count (to display the right RPMs)
 //=============================
 #define MAGNETPOLECOUNT 14 // 2 for ERPMs
@@ -72,7 +68,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define DEBUG
 //#define PROTODEBUG
 
-const char KISS_OSD_VER[] = "kiss osd v2.2";
+const char KISS_OSD_VER[] = "kiss osd v2.2.1";
 
 #include "Flash.h"
 #include <SPI.h>
@@ -136,26 +132,21 @@ static uint8_t lastTempUnit;
 
 void setupMAX7456()
 {
-  #if defined(PAL)
-    OSD.begin(COLS,ROWS,0);
-    OSD.setDefaultSystem(MAX7456_PAL);
-  #endif
-  #if defined(NTSC)
-    OSD.begin(COLS,ROWS);
-    OSD.setDefaultSystem(MAX7456_NTSC);
-  #endif
+  OSD.begin(settings.COLS,13);
+  delay(100);
+  settings.m_videoMode = OSD.videoSystem();
+  if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
+  else settings.ROWS = 13;
+  OSD.setTextArea(settings.COLS, settings.ROWS);  
+  OSD.setDefaultSystem(settings.m_videoMode);
   OSD.setSwitchingTime( 5 );   
-  #if defined(USE_MAX7456_ASCII)
-    OSD.setCharEncoding( MAX7456_ASCII );  
-  #endif 
-  #if defined(USE_MAX7456_MAXIM)
-    OSD.setCharEncoding( MAX7456_MAXIM );  
-  #endif
+  OSD.setCharEncoding( MAX7456_ASCII );  
   OSD.display();
 #ifdef IMPULSERC_VTX
   delay(100);
   MAX7456Setup();
 #endif
+  delay(100);
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
 }
 
@@ -164,9 +155,10 @@ void setup()
   uint8_t i = 0;
   SPI.begin();
   SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
-  settings.cleanEEPROM();
-  settings.ReadSettings();
   setupMAX7456();
+  settings.cleanEEPROM();
+  settings.ReadSettings(); 
+  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
   
   //clean used area
   while (!OSD.notInVSync());
@@ -289,7 +281,6 @@ static boolean menuWasActive = false;
 static boolean fcSettingChanged = false;
 static void* activePage = NULL;
 static boolean batterySelect = false;
-static boolean shiftOSDactive = false;
 static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
@@ -404,7 +395,7 @@ void loop(){
     if(fcNotConnectedCount > 500)
     {
       FLASH_STRING(FC_NOT_CONNECTED_STR, "no connection to kiss fc");
-      OSD.printFS(COLS/2 - FC_NOT_CONNECTED_STR.length()/2, ROWS/2, &FC_NOT_CONNECTED_STR);
+      OSD.printFS(settings.COLS/2 - FC_NOT_CONNECTED_STR.length()/2, settings.ROWS/2, &FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;
       return;
@@ -414,11 +405,11 @@ void loop(){
       /*if(changevTxTime > 0)
       {
         FLASH_STRING(CHANGE_CHANNELS_STR, "changing vtx to ");
-        OSD.printFS(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
-        OSD.printInt16(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
-        OSD.printInt16(COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
+        OSD.printFS(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
+        OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
+        OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
         uint8_t timeLeft = (uint8_t)((6000 - (millis() - changevTxTime))/1000);   
-        OSD.printInt16(COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
+        OSD.printInt16(settings.COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
         if(timeLeft < 1)
         {
           changevTxTime = 0;
@@ -459,12 +450,12 @@ void loop(){
       if(armed == 0 && settings.m_lastMAH > 0)
       {
         FLASH_STRING(LAST_BATTERY_STR, "continue last battery?");
-        OSD.printFS(COLS/2 - (LAST_BATTERY_STR.length())/2, ROWS/2 - 1, &LAST_BATTERY_STR);
+        OSD.printFS(settings.COLS/2 - (LAST_BATTERY_STR.length())/2, settings.ROWS/2 - 1, &LAST_BATTERY_STR);
         
         FLASH_STRING(ROLL_RIGHT_STR, "roll right to confirm");
-        OSD.printFS(COLS/2 - ROLL_RIGHT_STR.length()/2, ROWS/2, &ROLL_RIGHT_STR);
+        OSD.printFS(settings.COLS/2 - ROLL_RIGHT_STR.length()/2, settings.ROWS/2, &ROLL_RIGHT_STR);
         FLASH_STRING(ARM_CANCEL_STR, "roll left to cancel");
-        OSD.printFS(COLS/2 - ARM_CANCEL_STR.length()/2, ROWS/2 + 1, &ARM_CANCEL_STR);
+        OSD.printFS(settings.COLS/2 - ARM_CANCEL_STR.length()/2, settings.ROWS/2 + 1, &ARM_CANCEL_STR);
                 
         if(code & inputChecker.ROLL_RIGHT)
         {
@@ -479,48 +470,6 @@ void loop(){
           cleanScreen();
         }  
         return;
-      }
-
-      if(shiftOSDactive && armed == 0)
-      {
-        FLASH_STRING(OSD_SHIFT_STR, "roll/pitch to center osd");
-        OSD.printFS(COLS/2 - (OSD_SHIFT_STR.length())/2, ROWS/2 - 1, &OSD_SHIFT_STR);       
-        FLASH_STRING(OSD_SHIFT_EXIT_STR, "yaw left to exit");
-        OSD.printFS(COLS/2 - OSD_SHIFT_EXIT_STR.length()/2, ROWS/2, &OSD_SHIFT_EXIT_STR);
-
-        boolean changedOffset = false;
-        if(code & inputChecker.ROLL_RIGHT)
-        {
-          settings.m_xOffset++;
-          changedOffset = true;
-        }
-        if(code & inputChecker.ROLL_LEFT)
-        {
-          settings.m_xOffset--;
-          changedOffset = true;
-        }
-        if(code & inputChecker.PITCH_UP)
-        {
-          settings.m_yOffset--;
-          changedOffset = true;
-        }
-        if(code & inputChecker.PITCH_DOWN)
-        {
-          settings.m_yOffset++;
-          changedOffset = true;
-        }
-        settingChanged |= changedOffset;
-        if(changedOffset)
-        {
-          cleanScreen();
-          OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
-        }
-        if(code & inputChecker.YAW_LEFT)
-        {
-          shiftOSDactive = false;
-          menuActive = true;
-          cleanScreen();
-        }        
       }
       
       if(batterySelect || (!menuActive && !armOnYaw && yaw > 1900 && armed == 0))
@@ -555,18 +504,18 @@ void loop(){
           settingChanged = true;
         }
         FLASH_STRING(BATTERY_STR, "battery ");
-        uint8_t batCol = COLS/2 - (BATTERY_STR.length()+1)/2;
-        OSD.printInt16(batCol, ROWS/2 - 1, &BATTERY_STR, settings.m_activeBattery+1, 0,1);        
-        batCol = COLS/2 - 3;
-        OSD.printInt16(batCol, ROWS/2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
+        uint8_t batCol = settings.COLS/2 - (BATTERY_STR.length()+1)/2;
+        OSD.printInt16(batCol, settings.ROWS/2 - 1, &BATTERY_STR, settings.m_activeBattery+1, 0,1);        
+        batCol = settings.COLS/2 - 3;
+        OSD.printInt16(batCol, settings.ROWS/2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
 
         FLASH_STRING(WARN_STR, "warn at ");
-        OSD.printInt16(COLS/2 - (WARN_STR.length() + 6)/2, ROWS/2 + 1, &WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
+        OSD.printInt16(settings.COLS/2 - (WARN_STR.length() + 6)/2, settings.ROWS/2 + 1, &WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
 
         if(batterySelect)
         {
           FLASH_STRING(YAW_LEFT_STR, "yaw left to go back");
-          OSD.printFS(COLS/2 - YAW_LEFT_STR.length()/2,ROWS/2 + 2, &YAW_LEFT_STR);
+          OSD.printFS(settings.COLS/2 - YAW_LEFT_STR.length()/2,settings.ROWS/2 + 2, &YAW_LEFT_STR);
         }
         if(batterySelect && yaw < 250)
         {
@@ -605,7 +554,7 @@ void loop(){
         }        
       }
       
-      if(settingChanged && !shiftOSDactive)
+      if(settingChanged)
       {
         settings.WriteSettings();
         settingChanged = false;
@@ -631,7 +580,7 @@ void loop(){
         }
         uint8_t middle_infos_y     = 2;    
         FLASH_STRING(STATS_STR, "stats ");
-        OSD.printInt16( COLS/2 - (STATS_STR.length()+4)/2, middle_infos_y, &STATS_STR, statPage+1, 0, 1);
+        OSD.printInt16( settings.COLS/2 - (STATS_STR.length()+4)/2, middle_infos_y, &STATS_STR, statPage+1, 0, 1);
         OSD.print( fixStr("/5") );
         middle_infos_y++;
         
@@ -646,7 +595,7 @@ void loop(){
           FLASH_STRING(MAX_TEMP_STR, "max temp : ");
           FLASH_STRING(MIN_V_STR,    "min v    : ");
 
-          uint8_t statCol = COLS/2 - (TIME_STR.length()+7)/2;
+          uint8_t statCol = settings.COLS/2 - (TIME_STR.length()+7)/2;
           OSD.printFS(statCol, ++middle_infos_y, &TIME_STR);
           OSD.printTime( statCol+TIME_STR.length(), middle_infos_y, total_time);  
           OSD.printInt16( statCol, ++middle_infos_y, &MAX_AMP_STR, MaxAmps, 1, 1, "a" );           
@@ -671,7 +620,7 @@ void loop(){
           FLASH_STRING(ESC_MINV_STR," min v   : ");
           FLASH_STRING(ESC_MAH_STR, " mah     : ");
           
-          uint8_t startCol = COLS/2 - (ESC_RPM_STR.length()+strlen(ESC_STAT_STR)+7)/2;
+          uint8_t startCol = settings.COLS/2 - (ESC_RPM_STR.length()+strlen(ESC_STAT_STR)+7)/2;
           OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
           OSD.printInt16( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, &ESC_RPM_STR, maxKERPM[statPage-1], 1, 1, "kr");
           
@@ -862,17 +811,17 @@ void loop(){
           {
             if(settings.m_displaySymbols == 1)
             {
-              OSD.setCursor(COLS/2 - 3, ROWS/2 + 3);
+              OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 3);
               OSD.print(batterySymbol);
             }
             else
             {
-              OSD.printFS(COLS/2 - BATTERY_LOW.length()/2, ROWS/2 +3, &BATTERY_LOW);
+              OSD.printFS(settings.COLS/2 - BATTERY_LOW.length()/2, settings.ROWS/2 +3, &BATTERY_LOW);
             }
           }
           else 
           {              
-            OSD.printFS(COLS/2 - BATTERY_LOW.length()/2, ROWS/2 +3, &BATTERY_EMPTY);
+            OSD.printFS(settings.COLS/2 - BATTERY_LOW.length()/2, settings.ROWS/2 +3, &BATTERY_EMPTY);
           }
         }
         else
@@ -893,7 +842,7 @@ void loop(){
         }
 
         
-        if(!logoDone && armed == 0 && !menuActive && !armedOnce && !shiftOSDactive)
+        if(!logoDone && armed == 0 && !menuActive && !armedOnce)
         {
           uint8_t logoCol = 11;
           uint8_t logoRow = 5;
