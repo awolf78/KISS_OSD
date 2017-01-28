@@ -65,6 +65,7 @@ class CSettings
   void SetupPPMs(int16_t *dv_ppms, bool all = false);
   void fixColBorders();
   bool cleanEEPROM();
+  void UpdateMaxWatt(int16_t maxWatt);
   
   volatile uint8_t m_batWarning; // 0 = off, 1 = on
   volatile int16_t m_batMAH[4]; // 300-32000 mAh
@@ -92,8 +93,13 @@ class CSettings
   volatile uint8_t m_goggle; //0 = fatshark, 1 = headplay
   volatile uint8_t m_videoMode; //2 = NTSC, 1 = PAL
   volatile uint8_t ROWS, COLS;
+  volatile uint8_t m_beerMug, m_Moustache;
+  volatile int16_t m_maxWatts;
+  volatile uint8_t m_voltWarning, m_minVolts;
   
   private:
+  void UpgradeFromPreviousVersion(uint8_t ver);
+  void ReadSettingsInternal();
   int16_t ReadInt16_t(byte lsbPos, byte msbPos);
   void WriteInt16_t(byte lsbPos, byte msbPos, int16_t value);
 };

@@ -68,7 +68,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define DEBUG
 //#define PROTODEBUG
 
-const char KISS_OSD_VER[] = "kiss osd v2.2.1";
+const char KISS_OSD_VER[] = "kiss osd v2.3";
 
 #include "Flash.h"
 #include <SPI.h>
@@ -99,13 +99,14 @@ CStickInput inputChecker;
 CSettings settings;
 static int16_t DV_PPMs[CSettings::DISPLAY_DV_SIZE];
 
-#ifdef IMPULSERC_VTX
-static volatile uint8_t vTxChannel, vTxBand, vTxPower, oldvTxChannel, oldvTxBand;
+static volatile uint8_t vTxType = 0;
+static volatile uint8_t vTxChannel = 0; 
+static volatile uint8_t oldvTxChannel = 0;
+static volatile uint8_t oldvTxBand = 0;
+static volatile uint8_t vTxBand = 0;
+static volatile int16_t vTxLowPower, vTxHighPower, oldvTxLowPower, oldvTxHighPower;
 const uint8_t VTX_BAND_COUNT = 5;
 const uint8_t VTX_CHANNEL_COUNT = 8;
-//static unsigned long changevTxTime = 0;
-static const char bandSymbols[][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
-
 const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
     { 5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725 }, //A
     { 5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866 }, //B
@@ -113,6 +114,11 @@ const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
     { 5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880 }, //F
     { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }  //R
   };
+static const char bandSymbols[][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
+
+#ifdef IMPULSERC_VTX
+static volatile uint8_t vTxPower;
+//static unsigned long changevTxTime = 0;
 
 void setvTxSettings()
 {
@@ -150,6 +156,8 @@ void setupMAX7456()
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
 }
 
+static int8_t moustacheRow, moustacheCol;
+
 void setup()
 {
   uint8_t i = 0;
@@ -158,7 +166,9 @@ void setup()
   setupMAX7456();
   settings.cleanEEPROM();
   settings.ReadSettings(); 
-  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
+  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+  moustacheCol = settings.COLS;
+  moustacheRow = settings.ROWS-3; 
   
   //clean used area
   while (!OSD.notInVSync());
@@ -182,6 +192,8 @@ static int16_t  throttle = 0;
 static int16_t  roll = 0;
 static int16_t  pitch = 0;
 static int16_t  yaw = 0;
+static int16_t angleX = 0;
+static int16_t angleY = 0;
 static uint16_t current = 0;
 static int8_t armed = 0;
 static int8_t idleTime = 0;
@@ -270,6 +282,7 @@ static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
 static boolean dShotEnabled = false;
 static boolean logoDone = false;
+static uint8_t protoVersion = 0;
 extern void ReadFCSettings(boolean skipValues);
 
 typedef void* (*fptr)();
@@ -285,10 +298,17 @@ static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
 static char batterySymbol[] = { 0xE7, 0xEC, 0xEC, 0xED, 0x00 };
+static char beerMugSymbol[] = { 0x01, 0x02, 0x00 };
+static char moustacheSymbol[] = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
+static uint8_t moustacheStarted = 0;
+static bool angleXpositive = true;
+static bool angleYpositive = true;
 static uint8_t krSymbol[4] = { 0x9C, 0x9C, 0x9C, 0x9C };
 static unsigned long krTime[4] = { 0, 0, 0, 0 };
 volatile bool timer1sec = false;
+volatile bool timer40Hz = false;
 static unsigned long timer1secTime = 0;
+static unsigned long timer40HzTime = 0;
 static uint8_t currentDVItem = 0;
 static bool symbolOnOffChanged = false;
 static int16_t bufminus1 = 0;
@@ -296,9 +316,6 @@ static int16_t checkCalced = 0;
 static uint16_t fcNotConnectedCount = 0;
 static bool telemetryReceived = false;
 
-#ifdef DEBUG
-static int16_t versionProto = 0;
-#endif
 
 static unsigned long _StartupTime = 0;
 extern void* MainMenu();
@@ -337,6 +354,12 @@ void loop(){
   {
     timer1secTime = millis();
     timer1sec = !timer1sec;
+  }
+
+  if((millis()-timer40HzTime) > 20)
+  {
+    timer40HzTime = millis();
+    timer40Hz = !timer40Hz;
   }
   
   if(micros()-LastLoopTime > 10000)
@@ -379,11 +402,6 @@ void loop(){
           fcSettingChanged = false;
         }
         else fcNotConnectedCount++;
-        #ifdef DEBUG
-        /*static char Aux1[15];
-        OSD.setCursor(8,-3);
-        OSD.print(fixStr("tele"));*/
-        #endif 
       }
       else fcNotConnectedCount = 0;
     }
@@ -420,7 +438,8 @@ void loop(){
 #endif
 
       #ifdef DEBUG
-      OSD.printInt16(8,-3,versionProto,0,1);
+      vTxType = 2;
+      OSD.printInt16(0,8,protoVersion,0,1);
       #endif 
       
       if(triggerCleanScreen || (abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && (AuxChanVals[settings.m_DVchannel]+1000) < (CSettings::DV_PPM_INCREMENT*(CSettings::DISPLAY_DV_SIZE))))
@@ -660,8 +679,49 @@ void loop(){
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
-        {          
-          OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
+        {
+          if(settings.m_displaySymbols == 1 && settings.m_beerMug == 1)
+          {
+            uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);            
+            int16_t tempWatt = (int16_t)(Watts/1000);
+            int16_t wattSlice = (settings.m_maxWatts - settings.m_maxWatts/50) / 5; //98%
+            uint8_t wattStatus = 0x01;
+            while((tempWatt-wattSlice) > 0 && wattStatus < 0x07) 
+            {
+              tempWatt -= wattSlice;
+              wattStatus += 2;                    
+            }
+            beerMugSymbol[0] = wattStatus;
+            beerMugSymbol[1] = wattStatus+1;
+            uint8_t ampBlanks = 0;
+            int8_t beerRow = settings.m_OSDItems[AMPS][1]-1;
+            if(beerRow < 0) beerRow = 0;
+            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow, 2, ampBlanks, AMPSp);
+            OSD.print(beerMugSymbol);
+            wattStatus = 0x09;
+            while((tempWatt-wattSlice) > 0 && wattStatus < 0x0D) 
+            {
+              tempWatt -= wattSlice;
+              wattStatus += 2;                    
+            }
+            if(wattStatus == 0x0D)
+            {
+              wattSlice /= 2;
+              while((tempWatt-wattSlice) > 0 && wattStatus < 0x11) 
+              {
+                tempWatt -= wattSlice;
+                wattStatus += 2;                    
+              }
+            }
+            beerMugSymbol[0] = wattStatus;
+            beerMugSymbol[1] = wattStatus+1;
+            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow+1, 2, ampBlanks, AMPSp);
+            OSD.print(beerMugSymbol);
+          }
+          else
+          {
+            OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
+          }
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
@@ -835,6 +895,20 @@ void loop(){
             totalMAH = 0;
           }
         }
+
+        if(settings.m_voltWarning > 0 && settings.m_minVolts > (LipoVoltage / 10))
+        {
+          if(timer1sec) 
+          {
+            OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, 1, "v", 1);                      
+          }
+          else
+          {
+            OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
+            OSD.printSpaces(5);
+          }
+        }
+        
         if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel]) 
         {
           DV_change_time = 0;
@@ -886,6 +960,36 @@ void loop(){
             cleanScreen();
           }
         }
+
+#ifdef MUSTACHE
+        if(settings.m_displaySymbols == 1 && settings.m_Moustache == 1)
+        {
+          OSD.printInt16(0,settings.ROWS/2,angleX,0,1,"",1);
+          OSD.printInt16(0,settings.ROWS/2+1,angleY,0,1,"",1);
+          if((angleX < -100 || angleY < -100) && moustacheStarted < 1) moustacheStarted++;         
+          if(moustacheStarted)
+          {
+            if(timer40Hz)
+            {
+              OSD.setCursor(moustacheCol, moustacheRow);
+              OSD.printSpaces(4);
+              moustacheCol--;
+            }
+            if(moustacheCol >= 0)
+            {
+              OSD.setCursor(moustacheCol, moustacheRow);
+              OSD.print(moustacheSymbol);
+            }
+            else 
+            {
+              OSD.setCursor(0, moustacheRow);
+              OSD.printSpaces(4);
+              moustacheCol = settings.COLS-1; 
+              moustacheStarted--;
+            }            
+          }          
+        }
+#endif
 
         if(symbolOnOffChanged)
         {

@@ -6,6 +6,7 @@
 CSettings::CSettings()
 {
   COLS = 28;
+  m_maxWatts = 2500;
   LoadDefaults();
 }
 
@@ -101,7 +102,11 @@ void CSettings::LoadDefaults()
   m_OSDItems[NICKNAME][1] = ROWS - 1;
   m_OSDItems[MAH][0] = COLS - 1;
   m_OSDItems[MAH][1] = ROWS - 1;
-  m_goggle = 0; //0 = fatshark, 1 = headplay  
+  m_goggle = 0; //0 = fatshark, 1 = headplay
+  m_beerMug = 1;
+  m_Moustache = 1;
+  m_voltWarning = 0;
+  m_minVolts = 148;
 }
 
 void CSettings::fixColBorders()
@@ -141,68 +146,103 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
   return value;
 }
 
+void CSettings::ReadSettingsInternal()
+{
+  m_batWarningMAH = ReadInt16_t(0x03,0x04);
+  m_batWarning = EEPROM.read(0x05);
+  m_activeBattery = EEPROM.read(0x06);
+  m_DVchannel = EEPROM.read(0x07);
+  uint8_t i;
+  byte pos = 0x08;
+  for(i=0; i < 4; i++)
+  {
+    m_batMAH[i] = ReadInt16_t(pos, pos+1);
+    pos += 2;
+  }
+  m_batWarningPercent = EEPROM.read(pos);
+  pos++;
+  m_tempUnit = EEPROM.read(pos);
+  pos++;
+  m_fontSize = EEPROM.read(pos);
+  pos++;
+  m_displaySymbols = EEPROM.read(pos);
+  pos++;
+  m_vTxChannel = EEPROM.read(pos);
+  pos++;
+  m_vTxBand = EEPROM.read(pos);
+  pos++;
+  m_vTxPower = EEPROM.read(pos);
+  pos++;
+  m_xOffset = EEPROM.read(pos);
+  pos++;
+  m_yOffset = EEPROM.read(pos);
+  pos++;
+  for(i=0; i<DISPLAY_DV_SIZE; i++)
+  {
+    m_DISPLAY_DV[i] = EEPROM.read(pos);
+    pos++;
+  }
+  for(i=0; i<NICKNAME_STR_SIZE; i++)
+  {
+    m_nickname[i] = EEPROM.read(pos);
+    pos++;
+  }
+  uint8_t j;
+  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  {
+    for(j=0; j<2; j++)
+    {
+      m_OSDItems[i][j] = EEPROM.read(pos);
+      pos++;
+    }
+  }
+  m_goggle = EEPROM.read(pos);
+  pos++;
+  m_beerMug =  EEPROM.read(pos);
+  pos++;
+  m_Moustache = EEPROM.read(pos);
+  pos++;
+  m_maxWatts = ReadInt16_t(pos, pos+1);
+  pos += 2;
+  m_voltWarning = EEPROM.read(pos);
+  pos++;
+  m_minVolts = EEPROM.read(pos);
+  pos++;
+  
+  m_lastMAH = ReadInt16_t(200, 201);
+}
+
+void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
+{
+  if(ver >= 0x09)
+  {
+    ReadSettingsInternal();
+    if(ver < 0x0A)
+    {
+      m_beerMug = 1;
+      m_Moustache = 1;
+      m_maxWatts = 2500;
+    }
+    if(ver < 0x0B)
+    {
+      m_voltWarning = 0;
+      m_minVolts = 148;
+    } 
+  }
+}
+
 void CSettings::ReadSettings()
 {
-  if(EEPROM.read(0x01) < 0x09) //first start of OSD
-  //if(true)
+  uint8_t settingsVer = EEPROM.read(0x01);
+  if(settingsVer < 0x0B) //first start of OSD - or older version
   {
+    UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x09);
+    EEPROM.update(0x01,0x0B);
   }
   else
   {
-    m_batWarningMAH = ReadInt16_t(0x03,0x04);
-    m_batWarning = EEPROM.read(0x05);
-    m_activeBattery = EEPROM.read(0x06);
-    m_DVchannel = EEPROM.read(0x07);
-    uint8_t i;
-    byte pos = 0x08;
-    for(i=0; i < 4; i++)
-    {
-      m_batMAH[i] = ReadInt16_t(pos, pos+1);
-      pos += 2;
-    }
-    m_batWarningPercent = EEPROM.read(pos);
-    pos++;
-    m_tempUnit = EEPROM.read(pos);
-    pos++;
-    m_fontSize = EEPROM.read(pos);
-    pos++;
-    m_displaySymbols = EEPROM.read(pos);
-    pos++;
-    m_vTxChannel = EEPROM.read(pos);
-    pos++;
-    m_vTxBand = EEPROM.read(pos);
-    pos++;
-    m_vTxPower = EEPROM.read(pos);
-    pos++;
-    m_xOffset = EEPROM.read(pos);
-    pos++;
-    m_yOffset = EEPROM.read(pos);
-    pos++;
-    for(i=0; i<DISPLAY_DV_SIZE; i++)
-    {
-      m_DISPLAY_DV[i] = EEPROM.read(pos);
-      pos++;
-    }
-    for(i=0; i<NICKNAME_STR_SIZE; i++)
-    {
-      m_nickname[i] = EEPROM.read(pos);
-      pos++;
-    }
-    uint8_t j;
-    for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
-    {
-      for(j=0; j<2; j++)
-      {
-        m_OSDItems[i][j] = EEPROM.read(pos);
-        pos++;
-      }
-    }
-    m_goggle = EEPROM.read(pos);
-    pos++;
-   
-    m_lastMAH = ReadInt16_t(200, 201);
+    ReadSettingsInternal();
   }
   FixBatWarning();
 }
@@ -269,6 +309,16 @@ void CSettings::WriteSettings()
   }
   EEPROM.update(pos, (byte)m_goggle);
   pos++;
+  EEPROM.update(pos, (byte)m_beerMug);
+  pos++;
+  EEPROM.update(pos, (byte)m_Moustache);
+  pos++;
+  WriteInt16_t(pos, pos+1, m_maxWatts);
+  pos += 2;
+  EEPROM.update(pos, (byte)m_voltWarning);
+  pos++;
+  EEPROM.update(pos, (byte)m_minVolts);
+  pos++;
 }
 
 void CSettings::FixBatWarning()
@@ -300,5 +350,11 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
       dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
     }
   }
+}
+
+void CSettings::UpdateMaxWatt(int16_t maxWatt)
+{
+  m_maxWatts = maxWatt;
+  WriteInt16_t(202, 203, m_maxWatts);
 }
 

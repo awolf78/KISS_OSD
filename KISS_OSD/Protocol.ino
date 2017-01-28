@@ -1,7 +1,6 @@
 static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
-static uint8_t protoVersion = 0;
 static uint8_t recBytes = 0;
 const uint16_t filterCount = 5;
 const uint16_t filterCount2 = 3;
@@ -44,7 +43,10 @@ boolean ReadTelemetry()
          roll = 1000 + ((serialBuf[2+STARTCOUNT]<<8) | serialBuf[3+STARTCOUNT]);
          pitch = 1000 + ((serialBuf[4+STARTCOUNT]<<8) | serialBuf[5+STARTCOUNT]);
          yaw = 1000 + ((serialBuf[6+STARTCOUNT]<<8) | serialBuf[7+STARTCOUNT]);
-         LipoVoltage =   ((serialBuf[17+STARTCOUNT]<<8) | serialBuf[18+STARTCOUNT]);
+         LipoVoltage = ((serialBuf[17+STARTCOUNT]<<8) | serialBuf[18+STARTCOUNT]);
+         angleX = ((serialBuf[31+STARTCOUNT]<<8) | serialBuf[32+STARTCOUNT])/100;
+         angleY = ((serialBuf[33+STARTCOUNT]<<8) | serialBuf[34+STARTCOUNT])/100;
+
 
          int8_t current_armed = serialBuf[16+STARTCOUNT];
          if(current_armed < 0) return false;
@@ -53,7 +55,7 @@ boolean ReadTelemetry()
          if (armed == 0 && current_armed > 0) 
          {
            start_time = millis();
-	   triggerCleanScreen = true;
+           triggerCleanScreen = true;
            armedOnce = true;
            last_Aux_Val = AuxChanVals[settings.m_DVchannel];
            DV_change_time = 0;
@@ -77,6 +79,7 @@ boolean ReadTelemetry()
                settings.m_lastMAH = 0;
                settings.WriteLastMAH();
              }
+             if(MaxWatt > settings.m_maxWatts) settings.UpdateMaxWatt(MaxWatt);
            } 
            else if (armed > 0) 
            {
@@ -367,7 +370,7 @@ void ReadFCSettings(boolean skipValues = false)
              notchFilterCut = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
              index += 2;
              uint8_t yawFilterCut2 = serialBuf2[index+STARTCOUNT];
-             yawFilterCut = (int16_t)yawFilterCut2;
+             yawFilterCut = (int16_t)yawFilterCut2;             
            }
            
            index = 79;
@@ -379,9 +382,26 @@ void ReadFCSettings(boolean skipValues = false)
            i_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
            index += 2;
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
-           #ifdef DEBUG
-           versionProto = protoVersion;
-           #endif
+
+           if(protoVersion >= 106)
+           {
+             index = 120;
+             vTxChannel = serialBuf2[index+STARTCOUNT];            
+             vTxBand = vTxChannel / 8;
+             oldvTxBand = vTxBand;
+             vTxChannel %= 8;
+             oldvTxChannel = vTxChannel;
+             index = 144;
+             vTxType = serialBuf2[index+STARTCOUNT];
+             index++;             
+             vTxLowPower = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             oldvTxLowPower = vTxLowPower;
+             index += 2;
+             vTxHighPower = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             oldvTxHighPower = vTxHighPower;
+           }
+
+           //TODO: Shift after obj.lipoConnected = data.getUint8(154, 0); (for newer version)
            shiftedSettings = false; 
          }
        }
@@ -389,7 +409,77 @@ void ReadFCSettings(boolean skipValues = false)
   }
 }
 
-static const uint8_t maxVersionAllowed = 106;
+#ifdef NEW_SEND_FC_SETTINGS
+
+static uint8_t serialBuf3[100];
+
+boolean SendFCSettings()
+{
+  if(fcSettingsReceived)
+  {
+    uint8_t index = 0;
+        
+    serialBuf3[index++] = (byte)((p_roll & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(p_roll & 0x00FF);
+    serialBuf3[index++] = (byte)((p_pitch & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(p_pitch & 0x00FF);
+    serialBuf3[index++] = (byte)((p_yaw & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(p_yaw & 0x00FF);
+    serialBuf3[index++] = (byte)((i_roll & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(i_roll & 0x00FF);
+    serialBuf3[index++] = (byte)((i_pitch & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(i_pitch & 0x00FF);
+    serialBuf3[index++] = (byte)((i_yaw & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(i_yaw & 0x00FF);
+    serialBuf3[index++] = (byte)((d_roll & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(d_roll & 0x00FF);
+    serialBuf3[index++] = (byte)((d_pitch & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(d_pitch & 0x00FF);
+    serialBuf3[index++] = (byte)((d_yaw & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(d_yaw & 0x00FF);
+    serialBuf3[index++] = (byte)((rcrate_roll & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rcrate_roll & 0x00FF);
+    serialBuf3[index++] = (byte)((rcrate_pitch & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rcrate_pitch & 0x00FF);
+    serialBuf3[index++] = (byte)((rcrate_yaw & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rcrate_yaw & 0x00FF);
+    serialBuf3[index++] = (byte)((rate_roll & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rate_roll & 0x00FF);
+    serialBuf3[index++] = (byte)((rate_pitch & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rate_pitch & 0x00FF);
+    serialBuf3[index++] = (byte)((rate_yaw & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rate_yaw & 0x00FF);
+    serialBuf3[index++] = (byte)((rccurve_roll & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rccurve_roll & 0x00FF);
+    serialBuf3[index++] = (byte)((rccurve_pitch & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rccurve_pitch & 0x00FF);
+    serialBuf3[index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
+    serialBuf3[index++] = (byte)(rccurve_yaw & 0x00FF);
+    
+    double checksum = 0.0;
+    double dataCount = 0.0;
+    uint16_t i;
+    for(i=0;i<index;i++)
+    {
+     checksum += serialBuf3[i];
+     dataCount++;
+    }
+    checksum = checksum/dataCount;
+    
+    NewSerial.write(0x12); //Set PIDs and Rates only
+    NewSerial.write(index); //Packet size
+    for(i=0;i<index;i++)
+    {
+      NewSerial.write(serialBuf3[i]);
+    }
+    NewSerial.write(floor(checksum));
+    return true;
+  }
+  return false;
+}
+
+#else
+static const uint8_t maxVersionAllowed = 107;
 
 boolean SendFCSettings()
 {
@@ -486,6 +576,17 @@ boolean SendFCSettings()
       serialBuf2[STARTCOUNT+index++] = (byte) yawFilterCut;
     }
     
+    if(protoVersion > 106)
+    {
+      index = 110;
+      serialBuf2[STARTCOUNT+index++] = (byte)((vTxBand*8) + vTxChannel);
+      index = 135;
+      serialBuf2[STARTCOUNT+index++] = (byte)((vTxLowPower & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(vTxLowPower & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte)((vTxHighPower & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(vTxHighPower & 0x00FF);
+    }
+    
     double checksum = 0.0;
     double dataCount = 0.0;
     for(i=2;i<minBytesSettings;i++)
@@ -505,4 +606,5 @@ boolean SendFCSettings()
   }
   return false;
 }
+#endif
 #endif

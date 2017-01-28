@@ -65,7 +65,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define PROTODEBUG
 #define KISS_OSD_CONFIG
 
-const char KISS_OSD_VER[] = "kiss osd config v2.2.1";
+const char KISS_OSD_VER[] = "kiss osd config v2.3";
 
 #include "Flash.h"
 #include <SPI.h>
@@ -503,6 +503,9 @@ void loop() {
         uint8_t nickEnd = 7;
         while ((settings.m_nickname[nickEnd] == 0x00 || settings.m_nickname[nickEnd] == 0x20) && nickEnd > 0) nickEnd--;
         settings.m_nickname[nickEnd + 1] = 0x00;
+        const char mustache[] = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
+        const char secret[] = { 0x35, 0x37, 0x33, 0x33, 0x31, 0x33, 0x00 }; //573313
+        if(strcmp(settings.m_nickname, secret) == 0) strcpy(settings.m_nickname, mustache);
         setupNickname = false;
         cleanScreen();
       }
@@ -790,8 +793,32 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
-      if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
-      itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
+      if(settings.m_beerMug == 0)
+      {
+        if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
+        itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
+      }
+      else
+      {
+        static const char beerMug1[] = { 0x01, 0x02, 0x00 }; 
+        static const char beerMug2[] = { 0x09, 0x0A, 0x00 };
+        int8_t beerRow = settings.m_OSDItems[AMPS][1]-1;
+        if(beerRow < 0) beerRow = 0;
+        uint8_t ampBlanks = 0;
+        itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow, (uint8_t)strlen(beerMug1), ampBlanks, AMPSp);
+        if (OSD_ITEM_BLINK[AMPS] && timer1sec)
+        {
+          OSD.printSpaces(2);
+          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow+1, (uint8_t)strlen(beerMug1), ampBlanks, AMPSp);
+          OSD.printSpaces(2);
+        }
+        else
+        {
+          OSD.print(beerMug1);
+          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow+1, (uint8_t)strlen(beerMug1), ampBlanks, AMPSp);
+          OSD.print(beerMug2);
+        }
+      }
     }
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])

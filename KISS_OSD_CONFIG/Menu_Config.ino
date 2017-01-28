@@ -83,6 +83,14 @@ boolean checkCode(int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxV
   return changed;
 }
 
+boolean checkCode(volatile int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+{
+  int16_t value2 = value;
+  boolean changed = checkCode(value2, STEP, minVal, maxVal);
+  value = value2;
+  return changed;
+}
+
 boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
   int16_t tempValue = value;
@@ -232,32 +240,53 @@ void* BatteryMenu()
       }
     break;
     case 3:
+      settingChanged |= checkCode(settings.m_voltWarning, 1, 0, 1);
+    break;
+    case 4:
+      settingChanged |= checkCode(settings.m_minVolts, 1, 90, 250);
+    break;
+    case 5:
+      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+    break;
+    case 6:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
         activeBatteryMenuItem = 0;
+        settings.UpdateMaxWatt(settings.m_maxWatts);
         return (void*)MainMenu;
       }
     break;
   }
-  static const uint8_t BATTERY_MENU_ITEMS = 4;
+  static const uint8_t BATTERY_MENU_ITEMS = 7;
   activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
   
   FLASH_STRING(SELECT_BATTERY_STR,  "select battery ");
   FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
   FLASH_STRING(BATTERY_PERCENT_STR, "batt. % alarm: ");
+  FLASH_STRING(VOLTAGE_WARN_STR,    "volt. warning: ");
+  FLASH_STRING(MIN_VOLT_STR,        "min voltage  : ");
+  FLASH_STRING(MAX_BEER_WATT_STR,   "max beer watt: ");
 //FLASH_STRING(BACK_STR,            "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (BATTERY_WARNING_STR.length()+4)/2;
+  uint8_t startCol = settings.COLS/2 - (BATTERY_WARNING_STR.length()+6)/2;
   FLASH_STRING(BATTERY_TITLE_STR, "battery menu");
   OSD.printFS(settings.COLS/2 - BATTERY_TITLE_STR.length()/2, ++startRow, &BATTERY_TITLE_STR);
   
   OSD.printFS( startCol, ++startRow, &SELECT_BATTERY_STR, activeBatteryMenuItem );
+  
   OSD.printFS( startCol, ++startRow, &BATTERY_WARNING_STR, activeBatteryMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
   
-  OSD.printIntArrow( startCol, ++startRow, &BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );  
+  OSD.printIntArrow( startCol, ++startRow, &BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
+
+  OSD.printFS( startCol, ++startRow, &VOLTAGE_WARN_STR, activeBatteryMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
+
+  OSD.printIntArrow( startCol, ++startRow, &MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
+
+  OSD.printIntArrow( startCol, ++startRow, &MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
   
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeBatteryMenuItem );
   
@@ -296,14 +325,11 @@ void* DisplayMenu()
         settingChanged |= gogglechanged;
       break;
       case 5:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          cleanScreen();
-          menuActive = false;
-          shiftOSDactive = true;
-          return (void*)DisplayMenu;
-        }
+        settingChanged |= checkCode(settings.m_beerMug, 1, 0, 1);
       break;
+      /*case 6:
+        settingChanged |= checkCode(settings.m_Moustache, 1, 0, 1);
+      break;*/
       case 6:
         if(code &  inputChecker.ROLL_RIGHT)
         {
@@ -322,7 +348,8 @@ void* DisplayMenu()
   FLASH_STRING(FONT_SIZE_STR,       "font size  : ");
   FLASH_STRING(SYMBOLS_SIZE_STR,    "symbols    : ");
   FLASH_STRING(GOGGLE_STR,          "goggle     : ");
-  FLASH_STRING(CENTER_OSD_STR,      "center osd");
+  FLASH_STRING(BEERMUG_STR,         "beermug    : ");
+//FLASH_STRING(MUSTACHE_STR,        "mustache   : ");
 //FLASH_STRING(BACK_STR,            "back");
   
   uint8_t startRow = 1;
@@ -354,7 +381,12 @@ void* DisplayMenu()
   OSD.printFS( startCol, ++startRow, &GOGGLE_STR, activeDisplayMenuItem );
   OSD.print( fixFlashStr(&GOGGLES_STR[settings.m_goggle]) );
 
-  OSD.printFS( startCol, ++startRow, &CENTER_OSD_STR, activeDisplayMenuItem );
+  OSD.printFS( startCol, ++startRow, &BEERMUG_STR, activeDisplayMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_beerMug]) );
+
+  /*OSD.printFS( startCol, ++startRow, &MUSTACHE_STR, activeDisplayMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_Moustache]) );*/
+  
   OSD.printFS( startCol, ++startRow, &BACK_STR, activeDisplayMenuItem );
   
   return (void*)DisplayMenu;
