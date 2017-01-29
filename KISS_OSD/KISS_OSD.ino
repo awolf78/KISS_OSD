@@ -896,17 +896,14 @@ void loop(){
           }
         }
 
-        if(settings.m_voltWarning > 0 && settings.m_minVolts > (LipoVoltage / 10))
+        if(settings.m_voltWarning > 0 && settings.m_minVolts > (LipoVoltage / 10) && !timer1sec)
         {
-          if(timer1sec) 
-          {
-            OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, 1, "v", 1);                      
-          }
-          else
-          {
-            OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
-            OSD.printSpaces(5);
-          }
+          OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, 1, "v", 1);                      
+        }
+        else
+        {
+          OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
+          OSD.printSpaces(5);
         }
         
         if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel]) 
