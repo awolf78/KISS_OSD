@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include "Flash.h"
 
 #ifndef CSettingsh
 #define CSettingsh

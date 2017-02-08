@@ -67,12 +67,12 @@ char* fixStr(const char* str)
   return fixedString;
 }
 
-char* fixFlashStr(_FLASH_STRING* str)
+char* fixPStr(const char *str)
 {
   uint8_t i;
-  for(i=0; i<str->length() && i<MAX_FIX_STR-1; i++)
+  for(i=0; i<strlen_P(str) && i<MAX_FIX_STR-1; i++)
   {
-    fixedString[i] = fixChar((*str)[i]);
+    fixedString[i] = fixChar(static_cast<char>(pgm_read_byte(str + i)));
   }
   if(i < MAX_FIX_STR)
   {

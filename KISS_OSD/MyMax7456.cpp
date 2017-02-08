@@ -74,9 +74,9 @@ uint8_t CMyMax7456::printInt16(volatile uint8_t col, uint8_t row, int16_t value,
   return lengthCorrection;
 }
 
-void CMyMax7456::printFS(uint8_t col, uint8_t row, _FLASH_STRING *key, uint8_t menuItem)
+void CMyMax7456::printP(uint8_t col, uint8_t row, const char *key, uint8_t menuItem)
 {
-  uint8_t printLength = key->length();
+  uint8_t printLength = strlen_P(key);
   uint8_t blanks = 0;
   checkPrintLength(col, row, printLength, blanks, CSettings::OSD_ITEMS_POS_SIZE);
   if(blinkActive && timer1sec)
@@ -90,14 +90,9 @@ void CMyMax7456::printFS(uint8_t col, uint8_t row, _FLASH_STRING *key, uint8_t m
     {
       checkArrow(row, menuItem);
     }
-    print(fixFlashStr(key));
+    print(fixPStr(key));
   }
   blinkActive = false;
-}
-
-void CMyMax7456::printInt16(uint8_t col, uint8_t row, _FLASH_STRING *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
-{
-  printInt16(col, row, fixFlashStr(key), value, dec, AlignLeft, suffix, blanks);
 }
 
 void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
@@ -117,11 +112,16 @@ void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, 
   blinkActive = false;
 }
 
-void CMyMax7456::printIntArrow(uint8_t col, uint8_t row, _FLASH_STRING *key, int16_t value, uint8_t dec, uint8_t AlignLeft, uint8_t menuItem, const char* suffix, uint8_t blanks)
+void CMyMax7456::printInt16P(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
+{
+  printInt16(col, row, fixPStr(key), value, dec, AlignLeft, suffix, blanks);
+}
+
+void CMyMax7456::printIntArrow(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, uint8_t menuItem, const char* suffix, uint8_t blanks)
 {
   setCursor(col, row);
   checkArrow(row, menuItem); 
-  printInt16(col+1, row, key, value, dec, AlignLeft, suffix, blanks);
+  printInt16(col+1, row, fixPStr(key), value, dec, AlignLeft, suffix, blanks);
 }
 
 void CMyMax7456::checkArrow(uint8_t currentRow, uint8_t menuItem)

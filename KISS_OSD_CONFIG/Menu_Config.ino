@@ -8,7 +8,7 @@ static uint8_t activeOrderMenuSelectedItem = 199;
 static uint8_t confirmIndex = 0;
 
 
-FLASH_STRING(BACK_STR,      "back");
+static const char BACK_STR[] PROGMEM =     "back";
 static char ON_OFF_STR[][4] = { "off", "on " };
 
 extern void* MainMenu();
@@ -180,39 +180,39 @@ void* ChangeOrder()
   static const uint8_t ORDER_MENU_ITEMS = CSettings::DISPLAY_DV_SIZE+1;
   activeOrderMenuItem = checkMenuItem(activeOrderMenuItem, ORDER_MENU_ITEMS);
   
-  FLASH_STRING(TIMER_ORDER_STR,         "timer      ");
-  FLASH_STRING(VOLTAGE_ORDER_STR,       "voltage    ");
-  FLASH_STRING(THROTTLE_ORDER_STR,      "throttle   ");
-  FLASH_STRING(MAH_ORDER_STR,           "mah        ");
-  FLASH_STRING(NICKNAME_ORDER_STR,      "nickname   ");
-  FLASH_STRING(AMPS_ORDER_STR,          "amps       ");
-  FLASH_STRING(ESC_TEMP_ORDER_STR,      "esc temp   ");
-  FLASH_STRING(ESC_VOLTAGE_ORDER_STR,   "esc voltage");
-  FLASH_STRING(ESC_RPM_ORDER_STR,       "esc rpm    ");
-//FLASH_STRING(BACK_STR,                "back");
+  static const char TIMER_ORDER_STR[] PROGMEM =         "timer      ";
+  static const char VOLTAGE_ORDER_STR[] PROGMEM =       "voltage    ";
+  static const char THROTTLE_ORDER_STR[] PROGMEM =      "throttle   ";
+  static const char MAH_ORDER_STR[] PROGMEM =           "mah        ";
+  static const char NICKNAME_ORDER_STR[] PROGMEM =      "nickname   ";
+  static const char AMPS_ORDER_STR[] PROGMEM =          "amps       ";
+  static const char ESC_TEMP_ORDER_STR[] PROGMEM =      "esc temp   ";
+  static const char ESC_VOLTAGE_ORDER_STR[] PROGMEM =   "esc voltage";
+  static const char ESC_RPM_ORDER_STR[] PROGMEM =       "esc rpm    ";
+//static const char BACK_STR[] PROGMEM =                "back";
 
-  _FLASH_STRING *orderItems[CSettings::DISPLAY_DV_SIZE];
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_NICKNAME]] = &NICKNAME_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_TIMER]] = &TIMER_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_RC_THROTTLE]] = &THROTTLE_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = &AMPS_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE]] = &VOLTAGE_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION]] = &MAH_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_KRPM]] = &ESC_RPM_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_CURRENT]] = &ESC_VOLTAGE_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE]] = &ESC_TEMP_ORDER_STR;
+  char *orderItems[CSettings::DISPLAY_DV_SIZE];
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_NICKNAME]] = NICKNAME_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_TIMER]] = TIMER_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_RC_THROTTLE]] = THROTTLE_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = AMPS_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE]] = VOLTAGE_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION]] = MAH_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_KRPM]] = ESC_RPM_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_CURRENT]] = ESC_VOLTAGE_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE]] = ESC_TEMP_ORDER_STR;
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - ESC_VOLTAGE_ORDER_STR.length()/2;
-  FLASH_STRING(ORDER_TITLE_STR, "order menu");
-  OSD.printFS(settings.COLS/2 - ORDER_TITLE_STR.length()/2, ++startRow, &ORDER_TITLE_STR);
+  uint8_t startCol = settings.COLS/2 - strlen_P(ESC_VOLTAGE_ORDER_STR)/2;
+  static const char ORDER_TITLE_STR[] PROGMEM = "order menu";
+  OSD.printP(settings.COLS/2 - strlen_P(ORDER_TITLE_STR)/2, ++startRow, ORDER_TITLE_STR);
   for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
   {
     if(i == activeOrderMenuSelectedItem) OSD.blink1sec(); 
-    OSD.printFS( startCol, ++startRow, orderItems[i], activeOrderMenuItem );
+    OSD.printP( startCol, ++startRow, orderItems[i], activeOrderMenuItem );
     OSD.noBlink();
   }  
-  OSD.printFS( startCol, ++startRow, &BACK_STR, activeOrderMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeOrderMenuItem );
   
   return (void*)ChangeOrder;
 }
@@ -261,34 +261,34 @@ void* BatteryMenu()
   static const uint8_t BATTERY_MENU_ITEMS = 7;
   activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
   
-  FLASH_STRING(SELECT_BATTERY_STR,  "select battery ");
-  FLASH_STRING(BATTERY_WARNING_STR, "batt. warning: ");
-  FLASH_STRING(BATTERY_PERCENT_STR, "batt. % alarm: ");
-  FLASH_STRING(VOLTAGE_WARN_STR,    "volt. warning: ");
-  FLASH_STRING(MIN_VOLT_STR,        "min voltage  : ");
-  FLASH_STRING(MAX_BEER_WATT_STR,   "max beer watt: ");
-//FLASH_STRING(BACK_STR,            "back");
+  static const char SELECT_BATTERY_STR[]  PROGMEM = "select battery ";
+  static const char BATTERY_WARNING_STR[] PROGMEM = "batt. warning: ";
+  static const char BATTERY_PERCENT_STR[] PROGMEM = "batt. % alarm: ";
+  static const char VOLTAGE_WARN_STR[] PROGMEM =    "volt. warning: ";
+  static const char MIN_VOLT_STR[] PROGMEM =        "min voltage  : ";
+  static const char MAX_BEER_WATT_STR[] PROGMEM =   "max beer watt: ";
+//static const char BACK_STR[] PROGMEM =            "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (BATTERY_WARNING_STR.length()+6)/2;
-  FLASH_STRING(BATTERY_TITLE_STR, "battery menu");
-  OSD.printFS(settings.COLS/2 - BATTERY_TITLE_STR.length()/2, ++startRow, &BATTERY_TITLE_STR);
+  uint8_t startCol = settings.COLS/2 - (strlen_P(BATTERY_WARNING_STR)+6)/2;
+  static const char BATTERY_TITLE_STR[] PROGMEM = "battery menu";
+  OSD.printP(settings.COLS/2 - strlen_P(BATTERY_TITLE_STR)/2, ++startRow, BATTERY_TITLE_STR);
   
-  OSD.printFS( startCol, ++startRow, &SELECT_BATTERY_STR, activeBatteryMenuItem );
+  OSD.printP( startCol, ++startRow, SELECT_BATTERY_STR, activeBatteryMenuItem );
   
-  OSD.printFS( startCol, ++startRow, &BATTERY_WARNING_STR, activeBatteryMenuItem );
+  OSD.printP( startCol, ++startRow, BATTERY_WARNING_STR, activeBatteryMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
   
-  OSD.printIntArrow( startCol, ++startRow, &BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
+  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
 
-  OSD.printFS( startCol, ++startRow, &VOLTAGE_WARN_STR, activeBatteryMenuItem );
+  OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
 
-  OSD.printIntArrow( startCol, ++startRow, &MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, &MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
   
-  OSD.printFS( startCol, ++startRow, &BACK_STR, activeBatteryMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeBatteryMenuItem );
   
   return (void*)BatteryMenu;
 }
@@ -343,51 +343,51 @@ void* DisplayMenu()
   static const uint8_t DISPLAY_MENU_ITEMS = 7;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
-  FLASH_STRING(DV_CHANNEL_STR,      "dv channel : ");
-  FLASH_STRING(TEMP_UNIT_STR,       "temp. unit : ");
-  FLASH_STRING(FONT_SIZE_STR,       "font size  : ");
-  FLASH_STRING(SYMBOLS_SIZE_STR,    "symbols    : ");
-  FLASH_STRING(GOGGLE_STR,          "goggle     : ");
-  FLASH_STRING(BEERMUG_STR,         "beermug    : ");
-//FLASH_STRING(MUSTACHE_STR,        "mustache   : ");
-//FLASH_STRING(BACK_STR,            "back");
+  static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
+  static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit : ";
+  static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols    : ";
+  static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
+  static const char BEERMUG_STR[] PROGMEM =         "beermug    : ";
+//static const char MUSTACHE_STR[] PROGMEM =        "mustache   : ";
+//static const char BACK_STR[] PROGMEM =            "back";
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (DV_CHANNEL_STR.length()+6)/2;
-  FLASH_STRING(DISPLAY_TITLE_STR, "display menu");
-  OSD.printFS( settings.COLS/2 - DISPLAY_TITLE_STR.length()/2, ++startRow, &DISPLAY_TITLE_STR );
+  uint8_t startCol = settings.COLS/2 - (strlen_P(DV_CHANNEL_STR)+6)/2;
+  static const char DISPLAY_TITLE_STR[] PROGMEM = "display menu";
+  OSD.printP( settings.COLS/2 - strlen_P(DISPLAY_TITLE_STR)/2, ++startRow, DISPLAY_TITLE_STR );
   
-  OSD.printFS( startCol, ++startRow, &DV_CHANNEL_STR, activeDisplayMenuItem );
+  OSD.printP( startCol, ++startRow, DV_CHANNEL_STR, activeDisplayMenuItem );
   OSD.print( fixStr("aux") );
-  uint8_t tempCol = startCol + DV_CHANNEL_STR.length() + 4;
+  uint8_t tempCol = startCol + strlen_P(DV_CHANNEL_STR) + 4;
   OSD.printInt16(tempCol, startRow, settings.m_DVchannel+1, 0, 1 );
   
-  OSD.printFS( startCol, ++startRow, &TEMP_UNIT_STR, activeDisplayMenuItem);
+  OSD.printP( startCol, ++startRow, TEMP_UNIT_STR, activeDisplayMenuItem);
   static const char tempSymbols[][2] = { {0xB0,0x00} , {0xB1, 0x00}};
   OSD.print( fixStr(tempSymbols[settings.m_tempUnit]) );
   
-  FLASH_STRING(NORMAL_FONT_STR, "normal");
-  FLASH_STRING(LARGE_FONT_STR,  "large ");
-  static _FLASH_STRING FONT_SIZES_STR[] = { NORMAL_FONT_STR, LARGE_FONT_STR };
-  OSD.printFS( startCol, ++startRow, &FONT_SIZE_STR, activeDisplayMenuItem );
-  OSD.print( fixFlashStr(&FONT_SIZES_STR[settings.m_fontSize]) );
+  static const char NORMAL_FONT_STR[] PROGMEM = "normal";
+  static const char LARGE_FONT_STR[] PROGMEM =  "large ";
+  static const char* FONT_SIZES_STR[] = { NORMAL_FONT_STR, LARGE_FONT_STR };
+  OSD.printP( startCol, ++startRow, FONT_SIZE_STR, activeDisplayMenuItem );
+  OSD.print( fixPStr(FONT_SIZES_STR[settings.m_fontSize]) );
   
-  OSD.printFS( startCol, ++startRow, &SYMBOLS_SIZE_STR, activeDisplayMenuItem );
+  OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeDisplayMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
 
-  FLASH_STRING(FATSHARK_STR,  "fshark");
-  FLASH_STRING(HEADPLAY_STR,  "hplay ");
-  static _FLASH_STRING GOGGLES_STR[] = { FATSHARK_STR, HEADPLAY_STR };
-  OSD.printFS( startCol, ++startRow, &GOGGLE_STR, activeDisplayMenuItem );
-  OSD.print( fixFlashStr(&GOGGLES_STR[settings.m_goggle]) );
+  static const char FATSHARK_STR[] PROGMEM =   "fshark";
+  static const char HEADPLAY_STR[] PROGMEM =   "hplay ";
+  static const char* GOGGLES_STR[] = { FATSHARK_STR, HEADPLAY_STR };
+  OSD.printP( startCol, ++startRow, GOGGLE_STR, activeDisplayMenuItem );
+  OSD.print( fixPStr(GOGGLES_STR[settings.m_goggle]) );
 
-  OSD.printFS( startCol, ++startRow, &BEERMUG_STR, activeDisplayMenuItem );
+  OSD.printP( startCol, ++startRow, BEERMUG_STR, activeDisplayMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_beerMug]) );
 
-  /*OSD.printFS( startCol, ++startRow, &MUSTACHE_STR, activeDisplayMenuItem );
+  /*OSD.printP( startCol, ++startRow, MUSTACHE_STR, activeDisplayMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_Moustache]) );*/
   
-  OSD.printFS( startCol, ++startRow, &BACK_STR, activeDisplayMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeDisplayMenuItem );
   
   return (void*)DisplayMenu;
 }
@@ -411,45 +411,64 @@ void* vTxMenu()
         vTxSettingChanged |= checkCode(settings.m_vTxChannel, 1, 0, 7);
       break;
       case 3:
-        vTxPower = settings.m_vTxPower;
-        vTxBand = settings.m_vTxBand;
-        vTxChannel = settings.m_vTxChannel;
-        settingChanged |= vTxSettingChanged;
-        menuWasActive = true;
-        cleanScreen();
-        vtx_set_frequency(vTxBand, vTxChannel);
-        return (void*)MainMenu;
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          vTxPower = settings.m_vTxPower;
+          vTxBand = settings.m_vTxBand;
+          vTxChannel = settings.m_vTxChannel;
+          settingChanged |= vTxSettingChanged;
+          menuActive = false;
+          menuWasActive = true;
+          vtx_set_frequency(vTxBand, vTxChannel);
+          return (void*)MainMenu;
+        }
+      break;
+      case 4:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          activeVTXMenuItem = 0;
+          if(!vTxSettingChanged)
+          {
+            settings.m_vTxPower = vTxPower;
+            settings.m_vTxBand = vTxBand;
+            settings.m_vTxChannel = vTxChannel;
+          }
+          vTxSettingChanged = false;
+          cleanScreen();
+          return (void*)MainMenu;
+        }
       break;
     }
   }
-  static const uint8_t VTX_MENU_ITEMS = 4;
+  static const uint8_t VTX_MENU_ITEMS = 5;
   activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
   
-  FLASH_STRING(VTX_POWER_STR,      "power   : ");
-  FLASH_STRING(VTX_BAND_STR,       "band    : ");
-  FLASH_STRING(VTX_CHANNEL_STR,    "channel : ");
-  FLASH_STRING(SET_AND_BACK_STR,   "set+back");
+  static const char VTX_POWER_STR[] PROGMEM =      "power   : ";
+  static const char VTX_BAND_STR[] PROGMEM =       "band    : ";
+  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel : ";
+//static const char SAVE_EXIT_STR[] PROGMEM =      "save+exit";
+//static const char BACK_STR[] PROGMEM =           "back";
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (VTX_POWER_STR.length()+6)/2;
-  FLASH_STRING(VTX_TITLE_STR, "vtx menu");
-  OSD.printFS( settings.COLS/2 - VTX_TITLE_STR.length()/2, ++startRow, &VTX_TITLE_STR );
+  uint8_t startCol = settings.COLS/2 - (strlen_P(VTX_POWER_STR)+6)/2;
+  static const char VTX_TITLE_STR[] PROGMEM = "vtx menu";
+  OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
-  FLASH_STRING(_25MW_STR,   "25mw ");
-  FLASH_STRING(_200MW_STR,  "200mw");
-  FLASH_STRING(_500MW_STR,  "500mw");
-  static _FLASH_STRING VTX_POWERS_STR[] = { _25MW_STR, _200MW_STR, _500MW_STR };
-  OSD.printFS( startCol, ++startRow, &VTX_POWER_STR, activeVTXMenuItem );
-  OSD.print( fixFlashStr(&VTX_POWERS_STR[settings.m_vTxPower]) );
+  static const char _25MW_STR[] PROGMEM =   "25mw ";
+  static const char _200MW_STR[] PROGMEM =  "200mw";
+  static const char _500MW_STR[] PROGMEM =  "500mw";
+  static const char* VTX_POWERS_STR[] = { _25MW_STR, _200MW_STR, _500MW_STR };
+  OSD.printP( startCol, ++startRow, VTX_POWER_STR, activeVTXMenuItem );
+  OSD.print( fixPStr(VTX_POWERS_STR[settings.m_vTxPower]) );
 
-  OSD.printFS( startCol, ++startRow, &VTX_BAND_STR, activeVTXMenuItem );
+  OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
   OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
   
-  OSD.printIntArrow( startCol, ++startRow, &VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
-  uint8_t tempCol = startCol + VTX_CHANNEL_STR.length() + 3;
-  OSD.printInt16(tempCol, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
+  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
+  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
   
-  OSD.printFS( startCol, ++startRow, &SET_AND_BACK_STR, activeVTXMenuItem );
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeVTXMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;
 }
@@ -491,51 +510,51 @@ void* ResetMenu()
     confirmIndex = 0; 
   }
   
-  FLASH_STRING(RESTORE_SAVE_STR,   "restore last save");
-  FLASH_STRING(RESTORE_DEF_STR,    "restore defaults ");
-  FLASH_STRING(CONFIRM_RESET_STR,  "confirm          ");
-//FLASH_STRING(BACK_STR,           "back");
+  static const char RESTORE_SAVE_STR[] PROGMEM =   "restore last save";
+  static const char RESTORE_DEF_STR[] PROGMEM =    "restore defaults ";
+  static const char CONFIRM_RESET_STR[] PROGMEM =  "confirm          ";
+//static const char BACK_STR[] PROGMEM =           "back");
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (RESTORE_SAVE_STR.length()+6)/2;
-  FLASH_STRING(RESET_TITLE_STR, "reset menu");
-  OSD.printFS( settings.COLS/2 - RESET_TITLE_STR.length()/2, ++startRow, &RESET_TITLE_STR );
+  uint8_t startCol = settings.COLS/2 - (strlen_P(RESTORE_SAVE_STR)+6)/2;
+  static const char RESET_TITLE_STR[] PROGMEM = "reset menu";
+  OSD.printP( settings.COLS/2 - strlen_P(RESET_TITLE_STR)/2, ++startRow, RESET_TITLE_STR );
 
   if(activeResetMenuItem == 0 && confirmIndex == 1)
   {
-    OSD.printFS( startCol, ++startRow, &CONFIRM_RESET_STR, activeResetMenuItem );    
+    OSD.printP( startCol, ++startRow, CONFIRM_RESET_STR, activeResetMenuItem );    
   }
   else
   {
-    OSD.printFS( startCol, ++startRow, &RESTORE_SAVE_STR, activeResetMenuItem );
+    OSD.printP( startCol, ++startRow, RESTORE_SAVE_STR, activeResetMenuItem );
   }
 
   if(activeResetMenuItem == 1 && confirmIndex == 1)
   {
-    OSD.printFS( startCol, ++startRow, &CONFIRM_RESET_STR, activeResetMenuItem );    
+    OSD.printP( startCol, ++startRow, CONFIRM_RESET_STR, activeResetMenuItem );    
   }
   else
   {
-    OSD.printFS( startCol, ++startRow, &RESTORE_DEF_STR, activeResetMenuItem );
+    OSD.printP( startCol, ++startRow, RESTORE_DEF_STR, activeResetMenuItem );
   }
   
-  OSD.printFS( startCol, ++startRow, &BACK_STR, activeResetMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeResetMenuItem );
   
   return (void*)ResetMenu;
 }
 
 void* MainMenu()
 {
-  FLASH_STRING(FONT_UPDATE_STR,"font will be updated");
-  FLASH_STRING(POWER_WARNING_STR,"do not power off!!!");
+  static const char FONT_UPDATE_STR[] PROGMEM =   "font will be updated";
+  static const char POWER_WARNING_STR[] PROGMEM = "do not power off!!!";
   if(code &  inputChecker.ROLL_RIGHT)
   {
     switch(activeMenuItem)
     {
       case 0:
         cleanScreen();
-        OSD.printFS(settings.COLS/2 - FONT_UPDATE_STR.length()/2, settings.ROWS/2-1, &FONT_UPDATE_STR);
-        OSD.printFS(settings.COLS/2 - POWER_WARNING_STR.length()/2, settings.ROWS/2, &POWER_WARNING_STR);
+        OSD.printP(settings.COLS/2 - strlen_P(FONT_UPDATE_STR)/2, settings.ROWS/2-1, FONT_UPDATE_STR);
+        OSD.printP(settings.COLS/2 - strlen_P(POWER_WARNING_STR)/2, settings.ROWS/2, POWER_WARNING_STR);
         updateFont = true;
         return (void*)MainMenu;
       break;
@@ -596,34 +615,34 @@ void* MainMenu()
   static const uint8_t MAIN_MENU_ITEMS = 10;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
-  FLASH_STRING(UPDATE_FONT_STR,     "update font");
-  FLASH_STRING(DISPLAY_PAGE_STR,    "display");
-  FLASH_STRING(MOVE_ITEMS_STR,      "move items");
-  FLASH_STRING(CENTER_OSD_STR,      "center osd");
-  FLASH_STRING(CHANGE_ORDER_STR,    "change order");
-  FLASH_STRING(NICKNAME_STR,        "nickname");
-  FLASH_STRING(BATTERY_PAGE_STR,    "battery");
-  FLASH_STRING(VTX_PAGE_STR,        "vtx");
-  FLASH_STRING(SAVE_STR,            "save");
-  FLASH_STRING(RESET_STR,           "reset");
+  static const char UPDATE_FONT_STR[] PROGMEM =     "update font";
+  static const char DISPLAY_PAGE_STR[] PROGMEM =    "display";
+  static const char MOVE_ITEMS_STR[] PROGMEM =      "move items";
+  static const char CENTER_OSD_STR[] PROGMEM =      "center osd";
+  static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";
+  static const char NICKNAME_STR[] PROGMEM =        "nickname";
+  static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
+  static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
+  static const char SAVE_STR[] PROGMEM =            "save";
+  static const char RESET_STR[] PROGMEM =           "reset";
   
   uint8_t startRow = 0;
-  uint8_t startCol = settings.COLS/2 - CHANGE_ORDER_STR.length()/2;
+  uint8_t startCol = settings.COLS/2 - strlen_P(CHANGE_ORDER_STR)/2;
   OSD.setCursor( settings.COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
   OSD.print( fixStr(KISS_OSD_VER) );
-  FLASH_STRING(MAIN_TITLE_STR, "main menu");
-  OSD.printFS( settings.COLS/2 - MAIN_TITLE_STR.length()/2, ++startRow, &MAIN_TITLE_STR );
+  static const char MAIN_TITLE_STR[] PROGMEM = "main menu";
+  OSD.printP( settings.COLS/2 - strlen_P(MAIN_TITLE_STR)/2, ++startRow, MAIN_TITLE_STR );
   
-  OSD.printFS( startCol, ++startRow, &UPDATE_FONT_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &DISPLAY_PAGE_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &MOVE_ITEMS_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &CENTER_OSD_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &CHANGE_ORDER_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &NICKNAME_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &BATTERY_PAGE_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &VTX_PAGE_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &SAVE_STR, activeMenuItem );
-  OSD.printFS( startCol, ++startRow, &RESET_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, UPDATE_FONT_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, DISPLAY_PAGE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, MOVE_ITEMS_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, CENTER_OSD_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, NICKNAME_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, SAVE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, RESET_STR, activeMenuItem );
   
   return (void*)MainMenu;
 }

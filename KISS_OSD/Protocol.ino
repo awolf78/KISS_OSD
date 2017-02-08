@@ -550,7 +550,7 @@ boolean SendFCSettings()
         serialBuf2[STARTCOUNT+88+i] = 0; //controller activation
       }
       serialBuf2[STARTCOUNT+92] = serialBuf2[STARTCOUNT+101]; // data.setUint8(92, obj.BoardRotation, 0); obj.BoardRotation = data.getUint8(101);
-      for(i=103; i < 256; i++)
+      for(i=103; i < (256-STARTCOUNT); i++)
       {
         serialBuf2[STARTCOUNT+i-10] = serialBuf2[STARTCOUNT+i]; // skipped obj.isActive = data.getUint8(102);
       }

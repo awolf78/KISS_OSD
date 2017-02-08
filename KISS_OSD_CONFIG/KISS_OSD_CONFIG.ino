@@ -67,7 +67,6 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 
 const char KISS_OSD_VER[] = "kiss osd config v2.3";
 
-#include "Flash.h"
 #include <SPI.h>
 #include "MAX7456.h"
 #include "Max7456Config.h"
@@ -386,8 +385,8 @@ void loop() {
 
     if (fcNotConnectedCount > 500)
     {
-      FLASH_STRING(FC_NOT_CONNECTED_STR, "no connection to kiss fc");
-      OSD.printFS(settings.COLS / 2 - FC_NOT_CONNECTED_STR.length() / 2, settings.ROWS / 2, &FC_NOT_CONNECTED_STR);
+      static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
+      OSD.printP(settings.COLS / 2 - strlen_P(FC_NOT_CONNECTED_STR) / 2, settings.ROWS / 2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;
       return;
@@ -396,10 +395,10 @@ void loop() {
 #ifdef IMPULSERC_VTX
     /*if(changevTxTime > 0)
       {
-      FLASH_STRING(CHANGE_CHANNELS_STR, "changing vtx to ");
-      OSD.printFS(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
-      OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
-      OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
+      static const char CHANGE_CHANNELS_STR[] PROGMEM = "changing vtx to ";
+      OSD.printP(settings.COLS/2 - (strlen_P(CHANGE_CHANNELS_STR)/2 + 5), 8, CHANGE_CHANNELS_STR);
+      OSD.printInt16(settings.COLS/2 - (strlen_P(CHANGE_CHANNELS_STR)/2 + 5) + strlen_P(CHANGE_CHANNELS_STR) + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
+      OSD.printInt16(settings.COLS/2 - (strlen_P(CHANGE_CHANNELS_STR)/2 + 5) + strlen_P(CHANGE_CHANNELS_STR) + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
       uint8_t timeLeft = (uint8_t)((6000 - (millis() - changevTxTime))/1000);
       OSD.printInt16(settings.COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
       if(timeLeft < 1)
@@ -440,10 +439,10 @@ void loop() {
 
     if (armed == 0 && setupNickname)
     {
-      FLASH_STRING(ROLL_UP_DOWN_CHAR_STR, "use pitch/roll to set name");
-      FLASH_STRING(YAW_LEFT_EXIT_STR, "yaw left to exit");
-      OSD.printFS(settings.COLS / 2 - ROLL_UP_DOWN_CHAR_STR.length() / 2, settings.ROWS / 2 - 2, &ROLL_UP_DOWN_CHAR_STR);
-      OSD.printFS(settings.COLS / 2 - YAW_LEFT_EXIT_STR.length() / 2, settings.ROWS / 2 - 1, &YAW_LEFT_EXIT_STR);
+      static const char ROLL_UP_DOWN_CHAR_STR[] PROGMEM = "use pitch/roll to set name";
+      static const char YAW_LEFT_EXIT_STR[] PROGMEM = "yaw left to exit";
+      OSD.printP(settings.COLS / 2 - strlen_P(ROLL_UP_DOWN_CHAR_STR) / 2, settings.ROWS / 2 - 2, ROLL_UP_DOWN_CHAR_STR);
+      OSD.printP(settings.COLS / 2 - strlen_P(YAW_LEFT_EXIT_STR) / 2, settings.ROWS / 2 - 1, YAW_LEFT_EXIT_STR);
       if (code & inputChecker.PITCH_UP)
       {
         if (charIndex == 0)
@@ -518,14 +517,14 @@ void loop() {
     if (armed == 0 && moveItems)
     {
       if (startMoveTime == 0) startMoveTime = millis();
-      FLASH_STRING(ROLL_UP_DOWN_MOVE_STR, "use pitch/roll to move");
-      FLASH_STRING(YAW_LEFT_SELECT_STR, "yaw left for next item");
-      FLASH_STRING(YAW_LONG_LEFT_EXIT_STR, "yaw long left to exit");
+      static const char ROLL_UP_DOWN_MOVE_STR[] PROGMEM = "use pitch/roll to move";
+      static const char YAW_LEFT_SELECT_STR[] PROGMEM = "yaw left for next item";
+      static const char YAW_LONG_LEFT_EXIT_STR[] PROGMEM = "yaw long left to exit";
       if (millis() - startMoveTime < 5000)
       {
-        OSD.printFS(settings.COLS / 2 - ROLL_UP_DOWN_MOVE_STR.length() / 2, settings.ROWS / 2 - 1, &ROLL_UP_DOWN_MOVE_STR);
-        OSD.printFS(settings.COLS / 2 - YAW_LEFT_SELECT_STR.length() / 2, settings.ROWS / 2, &YAW_LEFT_SELECT_STR);
-        OSD.printFS(settings.COLS / 2 - YAW_LONG_LEFT_EXIT_STR.length() / 2, settings.ROWS / 2 + 1, &YAW_LONG_LEFT_EXIT_STR);
+        OSD.printP(settings.COLS / 2 - strlen_P(ROLL_UP_DOWN_MOVE_STR) / 2, settings.ROWS / 2 - 1, ROLL_UP_DOWN_MOVE_STR);
+        OSD.printP(settings.COLS / 2 - strlen_P(YAW_LEFT_SELECT_STR) / 2, settings.ROWS / 2, YAW_LEFT_SELECT_STR);
+        OSD.printP(settings.COLS / 2 - strlen_P(YAW_LONG_LEFT_EXIT_STR) / 2, settings.ROWS / 2 + 1, YAW_LONG_LEFT_EXIT_STR);
       }
       if (code & inputChecker.YAW_LEFT)
       {
@@ -620,18 +619,18 @@ void loop() {
       updateFont = false;
       setupMAX7456();
       cleanScreen();
-      FLASH_STRING(FONT_COMPLETE_STR, "font updated");
-      OSD.printFS(settings.COLS / 2 - (FONT_COMPLETE_STR.length()) / 2, settings.ROWS / 2, &FONT_COMPLETE_STR);
+      static const char FONT_COMPLETE_STR[] PROGMEM = "font updated";
+      OSD.printP(settings.COLS / 2 - strlen_P(FONT_COMPLETE_STR) / 2, settings.ROWS / 2, FONT_COMPLETE_STR);
       updateFontComplete = true;
       return;
     }
 
     if (shiftOSDactive && armed == 0)
     {
-      FLASH_STRING(OSD_SHIFT_STR, "roll/pitch to center osd");
-      OSD.printFS(settings.COLS / 2 - (OSD_SHIFT_STR.length()) / 2, settings.ROWS / 2 - 1, &OSD_SHIFT_STR);
-      FLASH_STRING(OSD_SHIFT_EXIT_STR, "yaw left to exit");
-      OSD.printFS(settings.COLS / 2 - OSD_SHIFT_EXIT_STR.length() / 2, settings.ROWS / 2, &OSD_SHIFT_EXIT_STR);
+      static const char OSD_SHIFT_STR[] PROGMEM = "roll/pitch to center osd";
+      OSD.printP(settings.COLS / 2 - strlen_P(OSD_SHIFT_STR) / 2, settings.ROWS / 2 - 1, OSD_SHIFT_STR);
+      static const char OSD_SHIFT_EXIT_STR[] PROGMEM = "yaw left to exit";
+      OSD.printP(settings.COLS / 2 - strlen_P(OSD_SHIFT_EXIT_STR) / 2, settings.ROWS / 2, OSD_SHIFT_EXIT_STR);
 
       boolean changedOffset = false;
       if (code & inputChecker.ROLL_RIGHT)
@@ -699,20 +698,20 @@ void loop() {
         settings.FixBatWarning();
         settingChanged = true;
       }
-      FLASH_STRING(BATTERY_STR, "battery ");
-      uint8_t batCol = settings.COLS / 2 - (BATTERY_STR.length() + 1) / 2;
-      OSD.printInt16(batCol, settings.ROWS / 2 - 1, &BATTERY_STR, settings.m_activeBattery + 1, 0, 1);
+      static const char BATTERY_STR[] PROGMEM = "battery ";
+      uint8_t batCol = settings.COLS / 2 - (strlen_P(BATTERY_STR) + 1) / 2;
+      OSD.printInt16P(batCol, settings.ROWS / 2 - 1, BATTERY_STR, settings.m_activeBattery + 1, 0, 1);
       batCol = settings.COLS / 2 - 3;
       OSD.printInt16(batCol, settings.ROWS / 2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
 
-      FLASH_STRING(WARN_STR, "warn at ");
-      batCol = settings.COLS / 2 - (WARN_STR.length() + 6) / 2;
-      OSD.printInt16(batCol, settings.ROWS / 2 + 1, &WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
+      static const char WARN_STR[] PROGMEM = "warn at ";
+      batCol = settings.COLS / 2 - (strlen_P(WARN_STR) + 6) / 2;
+      OSD.printInt16P(batCol, settings.ROWS / 2 + 1, WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
 
       if (batterySelect)
       {
-        FLASH_STRING(YAW_LEFT_STR, "yaw left to go back");
-        OSD.printFS(settings.COLS / 2 - YAW_LEFT_STR.length() / 2, settings.ROWS / 2 + 2, &YAW_LEFT_STR);
+        static const char YAW_LEFT_STR[] PROGMEM = "yaw left to go back";
+        OSD.printP(settings.COLS / 2 - strlen_P(YAW_LEFT_STR) / 2, settings.ROWS / 2 + 2, YAW_LEFT_STR);
       }
       if (batterySelect && yaw < 250)
       {
@@ -734,8 +733,8 @@ void loop() {
       settings.WriteSettings();
       settingChanged = false;
       saveSettings = false;
-      FLASH_STRING(SETTINGS_SAVED_STR, "settings saved");
-      OSD.printFS(settings.COLS / 2 - SETTINGS_SAVED_STR.length() / 2, settings.ROWS / 2, &SETTINGS_SAVED_STR);
+      static const char SETTINGS_SAVED_STR[] PROGMEM = "settings saved";
+      OSD.printP(settings.COLS / 2 - strlen_P(SETTINGS_SAVED_STR) / 2, settings.ROWS / 2, SETTINGS_SAVED_STR);
       delay(1500);
       cleanScreen();
     }
