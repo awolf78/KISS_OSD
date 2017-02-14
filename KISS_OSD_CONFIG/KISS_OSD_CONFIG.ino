@@ -282,7 +282,7 @@ static boolean shiftOSDactive = false;
 static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
-static char batterySymbol[] = { 0xE7, 0xEC, 0xEC, 0xED, 0x00 };
+static char batterySymbol[] = { 0x83, 0x88, 0x88, 0x89, 0x00 };
 static uint8_t krSymbol[4] = { 0x9C, 0x9C, 0x9C, 0x9C };
 static unsigned long krTime[4] = { 0, 0, 0, 0 };
 static boolean saveSettings = false;
@@ -607,6 +607,8 @@ void loop() {
 
     if (updateFontComplete)
     {
+      static const char FONT_COMPLETE_STR[] PROGMEM = "font updated";
+      OSD.printP(settings.COLS / 2 - strlen_P(FONT_COMPLETE_STR) / 2, settings.ROWS / 2, FONT_COMPLETE_STR);
       delay(3000);
       updateFontComplete = false;
       cleanScreen();
@@ -615,12 +617,10 @@ void loop() {
     if (updateFont)
     {
       delay(3000);
+      cleanScreen();
       OSD.updateFont();
       updateFont = false;
-      setupMAX7456();
-      cleanScreen();
-      static const char FONT_COMPLETE_STR[] PROGMEM = "font updated";
-      OSD.printP(settings.COLS / 2 - strlen_P(FONT_COMPLETE_STR) / 2, settings.ROWS / 2, FONT_COMPLETE_STR);
+      setupMAX7456();      
       updateFontComplete = true;
       return;
     }
@@ -792,30 +792,37 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
-      if(settings.m_beerMug == 0)
+      if(settings.m_wattMeter == 0)
       {
         if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
         itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
       }
       else
       {
-        static const char beerMug1[] = { 0x01, 0x02, 0x00 }; 
-        static const char beerMug2[] = { 0x09, 0x0A, 0x00 };
-        int8_t beerRow = settings.m_OSDItems[AMPS][1]-1;
-        if(beerRow < 0) beerRow = 0;
+        char finalMeter1[] = { 0xEB, 0xEC, 0x00 }; 
+        char finalMeter2[] = { 0xE1, 0xE2, 0x00 };
+        if(settings.m_wattMeter == 2)
+        {
+          finalMeter1[0] = 0x01;
+          finalMeter1[1] = 0x02;
+          finalMeter2[0] = 0x09;
+          finalMeter2[1] = 0x0A;
+        }
+        int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
+        if(wattRow < 0) wattRow = 0;
         uint8_t ampBlanks = 0;
-        itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow, (uint8_t)strlen(beerMug1), ampBlanks, AMPSp);
+        itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
         if (OSD_ITEM_BLINK[AMPS] && timer1sec)
         {
           OSD.printSpaces(2);
-          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow+1, (uint8_t)strlen(beerMug1), ampBlanks, AMPSp);
+          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
           OSD.printSpaces(2);
         }
         else
         {
-          OSD.print(beerMug1);
-          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow+1, (uint8_t)strlen(beerMug1), ampBlanks, AMPSp);
-          OSD.print(beerMug2);
+          OSD.print(finalMeter1);
+          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+          OSD.print(finalMeter2);
         }
       }
     }
@@ -831,14 +838,14 @@ void loop() {
       if (settings.m_displaySymbols == 1)
       {
         uint8_t batCount = (LipoMAH + previousMAH) / settings.m_batSlice;
-        uint8_t batStatus = 0xEC;
+        uint8_t batStatus = 0x88;
         while (batCount > 4)
         {
           batStatus--;
           batCount--;
         }
         batterySymbol[2] = (char)batStatus;
-        batStatus = 0xEC;
+        batStatus = 0x88;
         while (batCount > 0)
         {
           batStatus--;
@@ -875,7 +882,7 @@ void loop() {
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
     {
       static char KR[4];
-      if (settings.m_displaySymbols == 1)
+      if (settings.m_displaySymbols == 1 && settings.m_props == 1)
       {
         for (i = 0; i < 4; i++)
         {

@@ -464,7 +464,7 @@ void* BatteryMenu()
   static const char BATTERY_PERCENT_STR[] PROGMEM = "batt. % alarm: ";
   static const char VOLTAGE_WARN_STR[] PROGMEM =    "volt. warning: ";
   static const char MIN_VOLT_STR[] PROGMEM =        "min voltage  : ";
-  static const char MAX_BEER_WATT_STR[] PROGMEM =   "max beer watt: ";
+  static const char MAX_BEER_WATT_STR[] PROGMEM =   "wattmeter max: ";
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
 //static const char BACK_STR[] PROGMEM =            "back";
   

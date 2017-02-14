@@ -103,10 +103,11 @@ void CSettings::LoadDefaults()
   m_OSDItems[MAH][0] = COLS - 1;
   m_OSDItems[MAH][1] = ROWS - 1;
   m_goggle = 0; //0 = fatshark, 1 = headplay
-  m_beerMug = 1;
+  m_wattMeter = 1;
   m_Moustache = 1;
   m_voltWarning = 0;
   m_minVolts = 148;
+  m_props = 1;
 }
 
 void CSettings::fixColBorders()
@@ -198,7 +199,7 @@ void CSettings::ReadSettingsInternal()
   }
   m_goggle = EEPROM.read(pos);
   pos++;
-  m_beerMug =  EEPROM.read(pos);
+  m_wattMeter =  EEPROM.read(pos);
   pos++;
   m_Moustache = EEPROM.read(pos);
   pos++;
@@ -219,7 +220,7 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     ReadSettingsInternal();
     if(ver < 0x0A)
     {
-      m_beerMug = 1;
+      m_wattMeter = 1;
       m_Moustache = 1;
       m_maxWatts = 2500;
     }
@@ -228,17 +229,21 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_voltWarning = 0;
       m_minVolts = 148;
     } 
+    if(ver < 0x0C)
+    {
+      m_props = 1;
+    } 
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x0B) //first start of OSD - or older version
+  if(settingsVer < 0x0C) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x0B);
+    EEPROM.update(0x01,0x0C);
   }
   else
   {
@@ -309,7 +314,7 @@ void CSettings::WriteSettings()
   }
   EEPROM.update(pos, (byte)m_goggle);
   pos++;
-  EEPROM.update(pos, (byte)m_beerMug);
+  EEPROM.update(pos, (byte)m_wattMeter);
   pos++;
   EEPROM.update(pos, (byte)m_Moustache);
   pos++;

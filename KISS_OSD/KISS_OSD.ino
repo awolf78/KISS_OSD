@@ -194,9 +194,11 @@ static int16_t  yaw = 0;
 static int16_t angleX = 0;
 static int16_t angleY = 0;
 static uint16_t current = 0;
+static uint16_t currentRT = 0;
 static int8_t armed = 0;
 static int8_t idleTime = 0;
 static int16_t LipoVoltage = 0;
+static int16_t LipoVoltageRT = 0;
 static int16_t LipoMAH = 0;
 static int16_t  previousMAH = 0;
 static int16_t totalMAH = 0;
@@ -207,6 +209,7 @@ static int16_t MaxWatt = 0;
 static int16_t MaxTemp = 0;
 static int16_t MinBat = 0;
 static int16_t motorKERPM[4] = {0,0,0,0};
+static int16_t motorKERPMRT[4] = {0,0,0,0};
 static int16_t maxKERPM[4] = {0,0,0,0};
 static int16_t motorCurrent[4] = {0,0,0,0};
 static int16_t maxCurrent[4] = {0,0,0,0};
@@ -297,8 +300,8 @@ static boolean batterySelect = false;
 static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
-static char batterySymbol[] = { 0xE7, 0xEC, 0xEC, 0xED, 0x00 };
-static char beerMugSymbol[] = { 0x01, 0x02, 0x00 };
+static char batterySymbol[] = { 0x83, 0x88, 0x88, 0x89, 0x00 };
+static char wattMeterSymbol[] = { 0xD7, 0xD8, 0x00 };
 static char moustacheSymbol[] = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
 static uint8_t moustacheStarted = 0;
 static bool angleXpositive = true;
@@ -635,26 +638,26 @@ void loop(){
           {
             ESC_STAT_STR = ESCSymbol;
           }
-          static const char ESC_RPM_STR[] PROGMEM =    " max rpm : ";
+          static const char ESC_RPM_STR[] PROGMEM =  " max rpm : ";
           static const char ESC_A_STR[] PROGMEM =    " max a   : ";
           static const char ESC_TEMP_STR[] PROGMEM = " max temp: ";
           static const char ESC_MINV_STR[] PROGMEM = " min v   : ";
           static const char ESC_MAH_STR[] PROGMEM =  " mah     : ";
           
           uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;
-          OSD.printInt16P( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[statPage-1], 1, 1, "kr");
           
-          OSD.printInt16P( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[statPage-1], 2, 1, "a"); 
           
-          OSD.printInt16P( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[statPage-1], 0, 1, tempSymbol);
           
-          OSD.printInt16P( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[statPage-1], 2, 1, "v");
           
-          OSD.printInt16P( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[statPage-1], 0, 1, "mah"); 
         }
      }
@@ -682,43 +685,78 @@ void loop(){
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
         {
-          if(settings.m_displaySymbols == 1 && settings.m_beerMug == 1)
+          if(settings.m_displaySymbols == 1)
           {
-            uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);            
+            const int16_t wattPercentage = 20; //95% of max
+            uint32_t Watts = (uint32_t)LipoVoltageRT * (uint32_t)(currentRT * 10);            
             int16_t tempWatt = (int16_t)(Watts/1000);
-            int16_t wattSlice = (settings.m_maxWatts - settings.m_maxWatts/50) / 5; //98%
-            uint8_t wattStatus = 0x01;
-            while((tempWatt-wattSlice) > 0 && wattStatus < 0x07) 
-            {
-              tempWatt -= wattSlice;
-              wattStatus += 2;                    
-            }
-            beerMugSymbol[0] = wattStatus;
-            beerMugSymbol[1] = wattStatus+1;
             uint8_t ampBlanks = 0;
-            int8_t beerRow = settings.m_OSDItems[AMPS][1]-1;
-            if(beerRow < 0) beerRow = 0;
-            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow, 2, ampBlanks, AMPSp);
-            OSD.print(beerMugSymbol);
-            wattStatus = 0x09;
-            while((tempWatt-wattSlice) > 0 && wattStatus < 0x0D) 
-            {
-              tempWatt -= wattSlice;
-              wattStatus += 2;                    
-            }
-            if(wattStatus == 0x0D)
-            {
-              wattSlice /= 2;
-              while((tempWatt-wattSlice) > 0 && wattStatus < 0x11) 
-              {
-                tempWatt -= wattSlice;
-                wattStatus += 2;                    
-              }
-            }
-            beerMugSymbol[0] = wattStatus;
-            beerMugSymbol[1] = wattStatus+1;
-            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], beerRow+1, 2, ampBlanks, AMPSp);
-            OSD.print(beerMugSymbol);
+            int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
+            if(wattRow < 0) wattRow = 0;
+            int16_t wattSlice;
+            uint8_t wattStatus;
+            switch(settings.m_wattMeter)
+            {              
+              case 1:
+                wattSlice = (settings.m_maxWatts - settings.m_maxWatts/wattPercentage) / 8;
+                wattStatus = 0xD7;
+                while((tempWatt-wattSlice) > 0 && wattStatus < 0xE1) 
+                {
+                  tempWatt -= wattSlice;
+                  wattStatus += 2;                    
+                }
+                if(wattStatus == 0xD7 && armed > 0) wattStatus += 2;
+                wattMeterSymbol[0] = wattStatus;
+                wattMeterSymbol[1] = wattStatus+1;                                
+                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, 2, ampBlanks, AMPSp);
+                OSD.print(wattMeterSymbol);
+                if(wattStatus == 0xE1) wattStatus = 0xE5;
+                else wattStatus = 0xE3;
+                while((tempWatt-wattSlice) > 0 && wattStatus < 0xEB) 
+                {
+                  tempWatt -= wattSlice;
+                  wattStatus += 2;                    
+                }                
+                wattMeterSymbol[0] = wattStatus;
+                wattMeterSymbol[1] = wattStatus+1;
+                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, 2, ampBlanks, AMPSp);
+                OSD.print(wattMeterSymbol);
+              break;
+              case 2:                
+                wattSlice = (settings.m_maxWatts - settings.m_maxWatts/wattPercentage) / 5;
+                //wattSlice = settings.m_maxWatts / 5;
+                wattStatus = 0x01;
+                while((tempWatt-wattSlice) > 0 && wattStatus < 0x07) 
+                {
+                  tempWatt -= wattSlice;
+                  wattStatus += 2;                    
+                }
+                wattMeterSymbol[0] = wattStatus;
+                wattMeterSymbol[1] = wattStatus+1;
+                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, 2, ampBlanks, AMPSp);
+                OSD.print(wattMeterSymbol);
+                if(wattStatus == 0x07) wattStatus = 0x0B;
+                else wattStatus = 0x09;
+                while((tempWatt-wattSlice) > 0 && wattStatus < 0x0D) 
+                {
+                  tempWatt -= wattSlice;
+                  wattStatus += 2;                    
+                }      
+                if(wattStatus == 0x0D)
+                {
+                  wattSlice /= 2;
+                  while((tempWatt-wattSlice) > 0 && wattStatus < 0x11) 
+                  {
+                    tempWatt -= wattSlice;
+                    wattStatus += 2;                    
+                  }
+                }
+                wattMeterSymbol[0] = wattStatus;
+                wattMeterSymbol[1] = wattStatus+1;
+                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, 2, ampBlanks, AMPSp);
+                OSD.print(wattMeterSymbol);
+              break;
+            }            
           }
           else
           {
@@ -736,14 +774,14 @@ void loop(){
           if(settings.m_displaySymbols == 1)
           {
             uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
-            uint8_t batStatus = 0xEC;
+            uint8_t batStatus = 0x88;
             while(batCount > 4)
             {
               batStatus--;
               batCount--;
             }
             batterySymbol[2] = (char)batStatus;
-            batStatus = 0xEC;
+            batStatus = 0x88;
             while(batCount > 0)
             {
               batStatus--;
@@ -772,11 +810,11 @@ void loop(){
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
         {
           static char KR[4];
-          if(settings.m_displaySymbols == 1)
+          if(settings.m_displaySymbols == 1 && settings.m_props == 1)
           {
             for(i=0; i<4; i++)
             {
-              if(millis() - krTime[i] > (10000/motorKERPM[i]))
+              if(millis() - krTime[i] > (10000/motorKERPMRT[i]))
               {
                 krTime[i] = millis();
                 if((i+1)%2 == 0)

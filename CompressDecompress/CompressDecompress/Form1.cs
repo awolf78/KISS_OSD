@@ -131,54 +131,76 @@ namespace CompressDecompress
                 {
                     if ((myStream = openFileDialog1.OpenFile()) != null)
                     {
-                        StreamReader reader = new StreamReader(myStream);
-#if DEBUG
-                        FileStream writer = new FileStream(Path.ChangeExtension(openFileDialog1.FileName, ".bin"), FileMode.Create);
-#endif
-                        reader.ReadLine();
-                        byte count = 0;
-                        bool skip = false;
-                        byteBuf2 = new List<byte>();
-                        while (!reader.EndOfStream)
+                        if (radioButton1.Checked)
                         {
-                            string s = reader.ReadLine();
-                            if (count % 54 == 0)
-                            {
-                                skip = true;
-                            }
-                            if (count % 64 == 0)
-                            {
-                                skip = false;
-                                count = 0;
-                            }
-                            count++;
-                            byte b = Convert.ToByte(s, 2);
-                            if (!skip)
-                            {
-                                byteBuf2.Add(b);
+                            StreamReader reader = new StreamReader(myStream);
 #if DEBUG
-                                writer.WriteByte(b);
+                            FileStream writer = new FileStream(Path.ChangeExtension(openFileDialog1.FileName, ".bin"), FileMode.Create);
 #endif
+                            reader.ReadLine();
+                            byte count = 0;
+                            bool skip = false;
+                            byteBuf2 = new List<byte>();
+                            while (!reader.EndOfStream)
+                            {
+                                string s = reader.ReadLine();
+                                if (count % 54 == 0)
+                                {
+                                    skip = true;
+                                }
+                                if (count % 64 == 0)
+                                {
+                                    skip = false;
+                                    count = 0;
+                                }
+                                count++;
+                                byte b = Convert.ToByte(s, 2);
+                                if (!skip)
+                                {
+                                    byteBuf2.Add(b);
+#if DEBUG
+                                    writer.WriteByte(b);
+#endif
+                                }
+                            }
+                        }
+                        else
+                        {
+                            FileStream reader = new FileStream(openFileDialog1.FileName, FileMode.Open, FileAccess.Read);
+                            int newByte = reader.ReadByte();
+                            byteBuf2 = new List<byte>();
+                            while (newByte > 0)
+                            {
+                                byteBuf2.Add((byte)newByte);
+                                newByte = reader.ReadByte();
                             }
                         }
                         compress((byte)OffsetUpDown.Value, (byte)LengthUpDown.Value);
-                        string fname = Path.GetDirectoryName(openFileDialog1.FileName) + "\\fontCompressed.h";
-                        StreamWriter writer2 = new StreamWriter(fname);
-                        writer2.WriteLine("PROGMEM const byte fontCompressed[" + compressed.Count.ToString() + "] = {");
-                        count = 0;
-                        foreach (byte item in compressed)
+                        if (radioButton1.Checked)
                         {
-                            string temp = "0x" + item.ToString("X2") + ", ";
-                            writer2.Write(temp);
-                            count++;
-                            if (count % 16 == 0) writer2.WriteLine();
+                            string fname = Path.GetDirectoryName(openFileDialog1.FileName) + "\\fontCompressed.h";
+                            StreamWriter writer2 = new StreamWriter(fname);
+                            writer2.WriteLine("PROGMEM const byte fontCompressed[" + compressed.Count.ToString() + "] = {");
+                            byte count = 0;
+                            foreach (byte item in compressed)
+                            {
+                                string temp = "0x" + item.ToString("X2") + ", ";
+                                writer2.Write(temp);
+                                count++;
+                                if (count % 16 == 0) writer2.WriteLine();
+                            }
+                            writer2.WriteLine("};");
+                            writer2.Close();
                         }
-                        writer2.WriteLine("};");
-#if DEBUG
-                        writer.Close();
-#endif
-                        writer2.Close();
-                        reader.Close();
+                        else
+                        {
+                            FileStream writer = new FileStream(Path.ChangeExtension(openFileDialog1.FileName, ".bin"), FileMode.Create);
+                            foreach (byte item in compressed)
+                            {
+                                writer.WriteByte(item);                          
+                            }
+                            writer.Close();
+                        }
                     }
                 }
                 catch (Exception ex)

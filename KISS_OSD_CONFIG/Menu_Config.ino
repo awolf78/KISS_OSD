@@ -7,8 +7,8 @@ static bool selectedOrder = false;
 static uint8_t activeOrderMenuSelectedItem = 199;
 static uint8_t confirmIndex = 0;
 
-
-static const char BACK_STR[] PROGMEM =     "back";
+static const char SAVE_EXIT_STR[] PROGMEM = "save+exit";
+static const char BACK_STR[] PROGMEM =      "back";
 static char ON_OFF_STR[][4] = { "off", "on " };
 
 extern void* MainMenu();
@@ -266,7 +266,7 @@ void* BatteryMenu()
   static const char BATTERY_PERCENT_STR[] PROGMEM = "batt. % alarm: ";
   static const char VOLTAGE_WARN_STR[] PROGMEM =    "volt. warning: ";
   static const char MIN_VOLT_STR[] PROGMEM =        "min voltage  : ";
-  static const char MAX_BEER_WATT_STR[] PROGMEM =   "max beer watt: ";
+  static const char MAX_BEER_WATT_STR[] PROGMEM =   "wattmeter max: ";
 //static const char BACK_STR[] PROGMEM =            "back");
   
   uint8_t startRow = 1;
@@ -281,7 +281,7 @@ void* BatteryMenu()
   
   OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
 
-  OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
+  OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );  
   OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
 
   OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
@@ -325,12 +325,15 @@ void* DisplayMenu()
         settingChanged |= gogglechanged;
       break;
       case 5:
-        settingChanged |= checkCode(settings.m_beerMug, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_wattMeter, 1, 0, 2);
+      break;
+      case 6:
+        settingChanged |= checkCode(settings.m_props, 1, 0, 1);
       break;
       /*case 6:
         settingChanged |= checkCode(settings.m_Moustache, 1, 0, 1);
       break;*/
-      case 6:
+      case 7:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeDisplayMenuItem = 0;
@@ -340,7 +343,7 @@ void* DisplayMenu()
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 7;
+  static const uint8_t DISPLAY_MENU_ITEMS = 8;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
@@ -348,7 +351,8 @@ void* DisplayMenu()
   static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols    : ";
   static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
-  static const char BEERMUG_STR[] PROGMEM =         "beermug    : ";
+  static const char BEERMUG_STR[] PROGMEM =         "watt meter : ";
+  static const char PROPS_STR[] PROGMEM =           "props      : ";
 //static const char MUSTACHE_STR[] PROGMEM =        "mustache   : ";
 //static const char BACK_STR[] PROGMEM =            "back";
   
@@ -382,7 +386,11 @@ void* DisplayMenu()
   OSD.print( fixPStr(GOGGLES_STR[settings.m_goggle]) );
 
   OSD.printP( startCol, ++startRow, BEERMUG_STR, activeDisplayMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_beerMug]) );
+  static char ON_OFF_BEER_STR[][8] = { "off    ", "on     ", "beermug" };
+  OSD.print( fixStr(ON_OFF_BEER_STR[settings.m_wattMeter]) );
+
+  OSD.printP( startCol, ++startRow, PROPS_STR, activeDisplayMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_props]) );
 
   /*OSD.printP( startCol, ++startRow, MUSTACHE_STR, activeDisplayMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_Moustache]) );*/

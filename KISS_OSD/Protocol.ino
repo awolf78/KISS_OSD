@@ -79,7 +79,7 @@ boolean ReadTelemetry()
                settings.m_lastMAH = 0;
                settings.WriteLastMAH();
              }
-             if(MaxWatt > settings.m_maxWatts) settings.UpdateMaxWatt(MaxWatt);
+             settings.UpdateMaxWatt(settings.m_maxWatts);
            } 
            else if (armed > 0) 
            {
@@ -221,6 +221,7 @@ boolean ReadTelemetry()
            MaxC = (int16_t) temp;
            uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
            MaxWatt = findMax(MaxWatt, (uint16_t) (Watts / 1000));
+           if(MaxWatt > settings.m_maxWatts) settings.m_maxWatts = MaxWatt;
            for(i=0; i<4; i++)
            {
              maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
@@ -229,10 +230,13 @@ boolean ReadTelemetry()
              minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
            }
          }
+         LipoVoltageRT = LipoVoltage;
          LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
+         currentRT = current;
          current = ampTotalFilter.ProcessValue(current);
          for(i=0; i<4; i++)
          {
+           motorKERPMRT[i] = motorKERPM[i];
            motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
            motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
          }

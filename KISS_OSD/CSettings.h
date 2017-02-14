@@ -92,9 +92,10 @@ class CSettings
   volatile uint8_t m_goggle; //0 = fatshark, 1 = headplay
   volatile uint8_t m_videoMode; //2 = NTSC, 1 = PAL
   volatile uint8_t ROWS, COLS;
-  volatile uint8_t m_beerMug, m_Moustache;
+  volatile uint8_t m_wattMeter, m_Moustache;
   volatile int16_t m_maxWatts;
   volatile uint8_t m_voltWarning, m_minVolts;
+  volatile uint8_t m_props;
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);
