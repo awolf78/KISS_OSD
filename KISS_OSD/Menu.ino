@@ -436,9 +436,12 @@ void* BatteryMenu()
       settingChanged |= checkCode(settings.m_minVolts, 1, 90, 250);
     break;
     case 5:
-      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+      settingChanged |= checkCode(settings.m_voltCorrect, 1, -10, 10);
     break;
     case 6:
+      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+    break;
+    case 7:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         menuActive = false;
@@ -446,7 +449,7 @@ void* BatteryMenu()
         settings.UpdateMaxWatt(settings.m_maxWatts);
       }
     break;
-    case 7:
+    case 8:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -456,7 +459,7 @@ void* BatteryMenu()
       }
     break;
   }
-  static const uint8_t BATTERY_MENU_ITEMS = 8;
+  static const uint8_t BATTERY_MENU_ITEMS = 9;
   activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
   
   static const char SELECT_BATTERY_STR[] PROGMEM =  "select battery ";
@@ -464,6 +467,7 @@ void* BatteryMenu()
   static const char BATTERY_PERCENT_STR[] PROGMEM = "batt. % alarm: ";
   static const char VOLTAGE_WARN_STR[] PROGMEM =    "volt. warning: ";
   static const char MIN_VOLT_STR[] PROGMEM =        "min voltage  : ";
+  static const char VOLT_CORRECT_STR[] PROGMEM =    "voltage corr : ";
   static const char MAX_BEER_WATT_STR[] PROGMEM =   "wattmeter max: ";
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
 //static const char BACK_STR[] PROGMEM =            "back";
@@ -484,6 +488,8 @@ void* BatteryMenu()
   OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
 
   OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
+
+  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, 1, activeBatteryMenuItem, "v", 1 );
 
   OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
   
@@ -657,7 +663,6 @@ void* MainMenu()
 {
   if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
   {
-    bool symbolChanged;
     switch(activeMenuItem)
     {
       case 0:
@@ -673,23 +678,15 @@ void* MainMenu()
           cleanScreen();
           return (void*)RatesMenu;
         }
-      break;
+      break;      
       case 2:
-        symbolChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
-        settingChanged |= symbolChanged;
-        if(symbolChanged) 
-        {
-          symbolOnOffChanged = true;
-        }
-      break;
-      case 3:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           cleanScreen();
           return (void*)BatteryMenu;
         }
       break;
-      case 4:
+      case 3:
 #ifdef IMPULSERC_VTX
         if(code &  inputChecker.ROLL_RIGHT)
         {
@@ -704,14 +701,21 @@ void* MainMenu()
         }
 #endif
       break;
+      case 4:
+        symbolOnOffChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
+        settingChanged |= symbolOnOffChanged;
+      break;
       case 5:
+        settingChanged |= checkCode(settings.m_airTimer, 1, 0, 1);        
+      break;
+      case 6:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           menuActive = false;
           menuWasActive = true;
         }
       break;
-      case 6:
+      case 7:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           menuActive = false;
@@ -724,14 +728,15 @@ void* MainMenu()
       break;
     }
   }
-  static const uint8_t MAIN_MENU_ITEMS = 7;
+  static const uint8_t MAIN_MENU_ITEMS = 8;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
   static const char PID_STR[] PROGMEM =             "tune";
   static const char RATES_STR[] PROGMEM =           "rates";
-  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols  : ";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols  : ";
+  static const char AIR_TIMER_STR[] PROGMEM =       "air timer: ";
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
   static const char CANCEL_STR[] PROGMEM =          "cancel";
   
@@ -743,11 +748,13 @@ void* MainMenu()
   OSD.printP( settings.COLS/2 - strlen_P(MAIN_TITLE_STR)/2, ++startRow, MAIN_TITLE_STR );
   
   OSD.printP( startCol, ++startRow, PID_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, RATES_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  OSD.printP( startCol, ++startRow, RATES_STR, activeMenuItem );  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  OSD.printP( startCol, ++startRow, AIR_TIMER_STR, activeMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_airTimer]) );
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CANCEL_STR, activeMenuItem );
   

@@ -108,6 +108,8 @@ void CSettings::LoadDefaults()
   m_voltWarning = 0;
   m_minVolts = 148;
   m_props = 1;
+  m_airTimer = 1;
+  m_voltCorrect = 0;
 }
 
 void CSettings::fixColBorders()
@@ -209,6 +211,12 @@ void CSettings::ReadSettingsInternal()
   pos++;
   m_minVolts = EEPROM.read(pos);
   pos++;
+  m_props = EEPROM.read(pos);
+  pos++;
+  m_airTimer = EEPROM.read(pos);
+  pos++;
+  m_voltCorrect = EEPROM.read(pos);
+  pos++;
   
   m_lastMAH = ReadInt16_t(200, 201);
 }
@@ -229,21 +237,23 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_voltWarning = 0;
       m_minVolts = 148;
     } 
-    if(ver < 0x0C)
+    if(ver < 0x0D)
     {
       m_props = 1;
-    } 
+      m_airTimer = 1;
+      m_voltCorrect = 0;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x0C) //first start of OSD - or older version
+  if(settingsVer < 0x0D) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x0C);
+    EEPROM.update(0x01,0x0D);
   }
   else
   {
@@ -323,6 +333,12 @@ void CSettings::WriteSettings()
   EEPROM.update(pos, (byte)m_voltWarning);
   pos++;
   EEPROM.update(pos, (byte)m_minVolts);
+  pos++;
+  EEPROM.update(pos, (byte)m_props);
+  pos++;
+  EEPROM.update(pos, (byte)m_airTimer);
+  pos++;
+  EEPROM.update(pos, (byte)m_voltCorrect);
   pos++;
 }
 

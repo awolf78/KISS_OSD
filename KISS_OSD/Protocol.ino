@@ -54,7 +54,10 @@ boolean ReadTelemetry()
          // switch disarmed => armed
          if (armed == 0 && current_armed > 0) 
          {
-           start_time = millis();
+           if(settings.m_airTimer == 0)
+           {
+              start_time = millis();
+           }
            triggerCleanScreen = true;
            armedOnce = true;
            last_Aux_Val = AuxChanVals[settings.m_DVchannel];
@@ -66,7 +69,7 @@ boolean ReadTelemetry()
            if (armed > 0 && current_armed == 0) 
            {
              total_time = total_time + (millis() - start_time);
-             start_time = 0;
+             start_time = 0;             
              triggerCleanScreen = true;
              if(settings.m_batWarning > 0)
              {
@@ -83,7 +86,15 @@ boolean ReadTelemetry()
            } 
            else if (armed > 0) 
            {
-             time = millis() - start_time;
+             if(throttle < 5 && settings.m_airTimer == 1 && start_time == 0) 
+             {
+              time = 0;
+             }
+             else
+             {
+              if(settings.m_airTimer == 1 && start_time == 0) start_time = millis();
+              time = millis() - start_time;
+             }             
            }
          }
          armed = current_armed;
@@ -111,7 +122,8 @@ boolean ReadTelemetry()
            voltDev++;
          }
          
-         if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;           
+         if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;  
+         LipoVoltage += settings.m_voltCorrect * 10;
          
          LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]); 
          

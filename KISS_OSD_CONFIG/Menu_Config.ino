@@ -246,9 +246,12 @@ void* BatteryMenu()
       settingChanged |= checkCode(settings.m_minVolts, 1, 90, 250);
     break;
     case 5:
-      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+      settingChanged |= checkCode(settings.m_voltCorrect, 1, -10, 10);
     break;
     case 6:
+      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+    break;
+    case 7:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -258,7 +261,7 @@ void* BatteryMenu()
       }
     break;
   }
-  static const uint8_t BATTERY_MENU_ITEMS = 7;
+  static const uint8_t BATTERY_MENU_ITEMS = 8;
   activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
   
   static const char SELECT_BATTERY_STR[]  PROGMEM = "select battery ";
@@ -266,6 +269,7 @@ void* BatteryMenu()
   static const char BATTERY_PERCENT_STR[] PROGMEM = "batt. % alarm: ";
   static const char VOLTAGE_WARN_STR[] PROGMEM =    "volt. warning: ";
   static const char MIN_VOLT_STR[] PROGMEM =        "min voltage  : ";
+  static const char VOLT_CORRECT_STR[] PROGMEM =    "voltage corr : ";
   static const char MAX_BEER_WATT_STR[] PROGMEM =   "wattmeter max: ";
 //static const char BACK_STR[] PROGMEM =            "back");
   
@@ -285,6 +289,8 @@ void* BatteryMenu()
   OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
 
   OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
+
+  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, 1, activeBatteryMenuItem, "v", 1 );
 
   OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
   

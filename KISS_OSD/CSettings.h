@@ -96,6 +96,8 @@ class CSettings
   volatile int16_t m_maxWatts;
   volatile uint8_t m_voltWarning, m_minVolts;
   volatile uint8_t m_props;
+  volatile uint8_t m_airTimer;
+  volatile int16_t m_voltCorrect;
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);

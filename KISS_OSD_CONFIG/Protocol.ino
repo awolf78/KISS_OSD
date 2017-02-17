@@ -105,7 +105,8 @@ boolean ReadTelemetry()
            voltDev++;
          }
          
-         if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;           
+         if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;
+         LipoVoltage += settings.m_voltCorrect * 10;           
          
          LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]); 
          

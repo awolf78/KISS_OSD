@@ -185,7 +185,7 @@ uint8_t CMyMax7456::print_int16(int16_t p_int, char *str, uint8_t dec, uint8_t A
   {
     if(i == 5-dec && dec > 0)
     {
-      if(CharPos == 0)
+      if(CharPos == 0 || (CharPos == 1 && p_int < 0))
       {
         str[CharPos] = fixChar('0');
         CharPos++;
