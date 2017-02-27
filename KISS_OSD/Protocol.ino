@@ -305,10 +305,9 @@ void ReadFCSettings(boolean skipValues = false)
        #endif
        
        if(checksum2 == serialBuf2[recBytes-1])// || (checksum-1) == serialBuf2[recBytes-1])
-       //if(minBytes > 140)
+       if(minBytes > 119)
        {
-         minBytesSettings = minBytes;
-         fcSettingsReceived = true;
+         minBytesSettings = minBytes;         
          if(!skipValues)
          {
            uint8_t index = 0;
@@ -399,6 +398,17 @@ void ReadFCSettings(boolean skipValues = false)
            index += 2;
            d_tpa = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
 
+           if(p_roll < 0 || i_roll < 0 || d_roll < 0 || 
+              p_pitch < 0 || i_pitch < 0 || d_pitch < 0 ||
+              p_yaw < 0 || i_yaw < 0 || d_yaw < 0 ||
+              rcrate_roll < 0 || rcrate_pitch < 0 || rcrate_yaw < 0 ||
+              rate_roll < 0 || rate_pitch < 0 || rate_yaw < 0 ||
+              p_tpa < 0 || i_tpa < 0 || d_tpa < 0)
+           {
+              fcSettingsReceived = false;
+              return;
+           }
+            
            if(protoVersion >= 106)
            {
              index = 120;
@@ -420,7 +430,8 @@ void ReadFCSettings(boolean skipValues = false)
            //TODO: Shift after obj.lipoConnected = data.getUint8(154, 0); (for newer version)
            shiftedSettings = false; 
          }
-       }
+         fcSettingsReceived = true;
+       }       
     }
   }
 }
