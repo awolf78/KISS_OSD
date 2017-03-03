@@ -378,11 +378,17 @@ void ReadFCSettings(boolean skipValues = false)
                armOnYaw = false;
              }
              index = 138;
-             notchFilterEnabled = serialBuf2[index+STARTCOUNT];
+             notchFilterEnabledR = serialBuf2[index+STARTCOUNT];
              index++;
-             notchFilterCenter = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             notchFilterCenterR = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
              index += 2;
-             notchFilterCut = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             notchFilterCutR = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             index += 2;
+             notchFilterEnabledP = serialBuf2[index+STARTCOUNT];
+             index++;
+             notchFilterCenterP = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
+             index += 2;
+             notchFilterCutP = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
              index += 2;
              uint8_t yawFilterCut2 = serialBuf2[index+STARTCOUNT];
              yawFilterCut = (int16_t)yawFilterCut2;             
@@ -417,7 +423,7 @@ void ReadFCSettings(boolean skipValues = false)
              oldvTxBand = vTxBand;
              vTxChannel %= 8;
              oldvTxChannel = vTxChannel;
-             index = 144;
+             index = 149;
              vTxType = serialBuf2[index+STARTCOUNT];
              index++;             
              vTxLowPower = ((serialBuf2[index+STARTCOUNT]<<8) | serialBuf2[index+1+STARTCOUNT]);
@@ -436,81 +442,12 @@ void ReadFCSettings(boolean skipValues = false)
   }
 }
 
-#ifdef NEW_SEND_FC_SETTINGS
-
-static uint8_t serialBuf3[100];
-
-boolean SendFCSettings()
-{
-  if(fcSettingsReceived)
-  {
-    uint8_t index = 0;
-        
-    serialBuf3[index++] = (byte)((p_roll & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(p_roll & 0x00FF);
-    serialBuf3[index++] = (byte)((p_pitch & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(p_pitch & 0x00FF);
-    serialBuf3[index++] = (byte)((p_yaw & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(p_yaw & 0x00FF);
-    serialBuf3[index++] = (byte)((i_roll & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(i_roll & 0x00FF);
-    serialBuf3[index++] = (byte)((i_pitch & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(i_pitch & 0x00FF);
-    serialBuf3[index++] = (byte)((i_yaw & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(i_yaw & 0x00FF);
-    serialBuf3[index++] = (byte)((d_roll & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(d_roll & 0x00FF);
-    serialBuf3[index++] = (byte)((d_pitch & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(d_pitch & 0x00FF);
-    serialBuf3[index++] = (byte)((d_yaw & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(d_yaw & 0x00FF);
-    serialBuf3[index++] = (byte)((rcrate_roll & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rcrate_roll & 0x00FF);
-    serialBuf3[index++] = (byte)((rcrate_pitch & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rcrate_pitch & 0x00FF);
-    serialBuf3[index++] = (byte)((rcrate_yaw & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rcrate_yaw & 0x00FF);
-    serialBuf3[index++] = (byte)((rate_roll & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rate_roll & 0x00FF);
-    serialBuf3[index++] = (byte)((rate_pitch & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rate_pitch & 0x00FF);
-    serialBuf3[index++] = (byte)((rate_yaw & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rate_yaw & 0x00FF);
-    serialBuf3[index++] = (byte)((rccurve_roll & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rccurve_roll & 0x00FF);
-    serialBuf3[index++] = (byte)((rccurve_pitch & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rccurve_pitch & 0x00FF);
-    serialBuf3[index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
-    serialBuf3[index++] = (byte)(rccurve_yaw & 0x00FF);
-    
-    double checksum = 0.0;
-    double dataCount = 0.0;
-    uint16_t i;
-    for(i=0;i<index;i++)
-    {
-     checksum += serialBuf3[i];
-     dataCount++;
-    }
-    checksum = checksum/dataCount;
-    
-    NewSerial.write(0x12); //Set PIDs and Rates only
-    NewSerial.write(index); //Packet size
-    for(i=0;i<index;i++)
-    {
-      NewSerial.write(serialBuf3[i]);
-    }
-    NewSerial.write(floor(checksum));
-    return true;
-  }
-  return false;
-}
-
-#else
-static const uint8_t maxVersionAllowed = 107;
+static const uint8_t minVersionAllowed = 108;
+static const uint8_t maxVersionAllowed = 108;
 
 boolean SendFCSettings()
 {
-  if(fcSettingsReceived && protoVersion <= maxVersionAllowed)
+  if(fcSettingsReceived && protoVersion >= minVersionAllowed && protoVersion <= maxVersionAllowed)
   {
     #define STARTCOUNT 2
     uint8_t index = 0;
@@ -595,11 +532,16 @@ boolean SendFCSettings()
     if(protoVersion > 104)
     {
       index = 128;
-      serialBuf2[STARTCOUNT+index++] = (byte) notchFilterEnabled;
-      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCenter & 0xFF00) >> 8);
-      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCenter & 0x00FF);
-      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCut & 0xFF00) >> 8);
-      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCut & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte) notchFilterEnabledR;
+      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCenterR & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCenterR & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCutR & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCutR & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte) notchFilterEnabledP;
+      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCenterP & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCenterP & 0x00FF);
+      serialBuf2[STARTCOUNT+index++] = (byte)((notchFilterCutP & 0xFF00) >> 8);
+      serialBuf2[STARTCOUNT+index++] = (byte)(notchFilterCutP & 0x00FF);
       serialBuf2[STARTCOUNT+index++] = (byte) yawFilterCut;
     }
     
@@ -607,7 +549,7 @@ boolean SendFCSettings()
     {
       index = 110;
       serialBuf2[STARTCOUNT+index++] = (byte)((vTxBand*8) + vTxChannel);
-      index = 135;
+      index = 140;
       serialBuf2[STARTCOUNT+index++] = (byte)((vTxLowPower & 0xFF00) >> 8);
       serialBuf2[STARTCOUNT+index++] = (byte)(vTxLowPower & 0x00FF);
       serialBuf2[STARTCOUNT+index++] = (byte)((vTxHighPower & 0xFF00) >> 8);
@@ -633,5 +575,4 @@ boolean SendFCSettings()
   }
   return false;
 }
-#endif
 #endif

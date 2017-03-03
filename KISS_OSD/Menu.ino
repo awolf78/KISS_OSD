@@ -12,6 +12,7 @@ static uint8_t activeBatteryMenuItem = 0;
 static uint8_t activeDisplayMenuItem = 0;
 static uint8_t activeNotchMenuItem = 0;
 static uint8_t activeVTXMenuItem = 0;
+static uint8_t activeFilterMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
@@ -288,13 +289,85 @@ void* TPAMenu()
   return ThreeItemPlusBackMenu(activeTPAMenuItem,  p_tpa, i_tpa, d_tpa, TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
 }
 
-void* NotchFilterMenu()
+void* FilterMenu()
 {
-  static const char NOTCH_DESC_STR1[] PROGMEM = "center freq  : "; 
-  static const char NOTCH_DESC_STR2[] PROGMEM = "cutoff freq  : "; 
-  static const char NOTCH_DESC_STR3[] PROGMEM = "yaw strength : ";
-  static char suffix[][3] = { "hz", "hz", "" };
-  return ThreeItemPlusBackMenu(activeNotchMenuItem,  notchFilterCenter, notchFilterCut, yawFilterCut, I_STEP, I_STEP, I_STEP, "notch filter", (void*)TuneMenu, (void*) NotchFilterMenu, NOTCH_DESC_STR1, NOTCH_DESC_STR2, NOTCH_DESC_STR3, suffix, 0);
+  switch(activeFilterMenuItem)
+  {
+    case 0:
+      fcSettingChanged |= checkCode(lpf_frq, 1, 0, 6);
+    break;
+    case 1:
+      fcSettingChanged |= checkCode(yawFilterCut, 1, 0, 97);
+    break;
+    case 2:
+      fcSettingChanged |= checkCode(notchFilterEnabledR, 1, 0, 1);
+    break;
+    case 3:
+      fcSettingChanged |= checkCode(notchFilterCenterR, 1, 0, 490);
+    break;
+    case 4:
+      fcSettingChanged |= checkCode(notchFilterCutR, 1, 0, 490);
+    break;
+    case 5:
+      fcSettingChanged |= checkCode(notchFilterEnabledP, 1, 0, 1);
+    break;
+    case 6:
+      fcSettingChanged |= checkCode(notchFilterCenterP, 1, 0, 490);
+    break;
+    case 7:
+      fcSettingChanged |= checkCode(notchFilterCutP, 1, 0, 490);
+    break;        
+    case 8:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activeFilterMenuItem = 0;
+        return (void*)MainMenu;
+      }
+    break;
+  }
+
+  static const uint8_t FILTER_MENU_ITEMS = 9;
+  activeFilterMenuItem = checkMenuItem(activeFilterMenuItem, FILTER_MENU_ITEMS);
+  
+  static const char LPF_STR[] PROGMEM =                 "lpf      : ";
+  static const char YAW_FLTR_STR[] PROGMEM =            "yaw fltr strength:";
+  static const char NOTCH_ROLL_STR[] PROGMEM =          "notch roll fltr  :";
+  static const char NOTCH_ROLL_CENTER_STR[] PROGMEM =   "roll center freq :";
+  static const char NOTCH_ROLL_CUTOFF_STR[] PROGMEM =   "roll cutoff freq :";
+  static const char NOTCH_PITCH_STR[] PROGMEM =         "notch pitch fltr :";
+  static const char NOTCH_PITCH_CENTER_STR[] PROGMEM =  "pitch center freq:";
+  static const char NOTCH_PITCH_CUTOFF_STR[] PROGMEM =  "pitch cutoff freq:";
+//static const char BACK_STR[] PROGMEM =     "back";
+  
+  static const char LPF1_STR[] PROGMEM = "off ";
+  static const char LPF2_STR[] PROGMEM = "high    ";
+  static const char LPF3_STR[] PROGMEM = "med high";
+  static const char LPF4_STR[] PROGMEM = "medium  ";
+  static const char LPF5_STR[] PROGMEM = "med low ";
+  static const char LPF6_STR[] PROGMEM = "low     ";
+  static const char LPF7_STR[] PROGMEM = "very low";
+  static const char* LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR };
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(YAW_FLTR_STR)+8)/2;
+  static const char FILTER_MENU_TITLE_STR[] PROGMEM = "filter menu";
+  OSD.printP(settings.COLS/2 - strlen_P(FILTER_MENU_TITLE_STR)/2, ++startRow, FILTER_MENU_TITLE_STR);
+  
+  OSD.printP( startCol, ++startRow, LPF_STR, activeFilterMenuItem);
+  OSD.print( fixPStr(LPF_FRQ_STR[lpf_frq]) );
+  OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, yawFilterCut, 0, 1, activeFilterMenuItem, "", 1);
+  OSD.printP( startCol, ++startRow, NOTCH_ROLL_STR, activeFilterMenuItem);
+  OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledR]) );
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CENTER_STR, notchFilterCenterR, 0, 1, activeFilterMenuItem, "hz", 1);
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CUTOFF_STR, notchFilterCutR, 0, 1, activeFilterMenuItem, "hz", 1);
+  OSD.printP( startCol, ++startRow, NOTCH_PITCH_STR, activeFilterMenuItem);
+  OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledP]) );
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, notchFilterCenterP, 0, 1, activeFilterMenuItem, "hz", 1); 
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, notchFilterCutP, 0, 1, activeFilterMenuItem, "hz", 1);
+  OSD.printP( startCol, ++startRow, BACK_STR, activeFilterMenuItem);
+  
+  return (void*)FilterMenu;  
 }
 
 void* TuneMenu()
@@ -328,30 +401,8 @@ void* TuneMenu()
         cleanScreen();
         return (void*)TPAMenu;
       }
-    break;
+    break;         
     case 4:
-        fcSettingChanged |= checkCode(lpf_frq, 1, 0, 6);
-    break;
-    case 5:
-      if(notchFilterEnabled < 2)
-      {
-        fcSettingChanged |= checkCode(notchFilterEnabled, 1, 0, 1);
-      }
-    break;
-    case 6:
-      if(notchFilterEnabled == 1 && code &  inputChecker.ROLL_RIGHT)
-      {
-        cleanScreen();
-        return (void*)NotchFilterMenu;
-      }
-    break;
-    /*case 5:
-      fcSettingChanged |= checkCode(minCommand, 10, 1000, 2000);
-    break;
-    case 6:
-      fcSettingChanged |= checkCode(minThrottle, 10, 1000, 2000);
-    break;*/        
-    case 7:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -361,45 +412,24 @@ void* TuneMenu()
     break;
   }
 
-  static const uint8_t TUNE_MENU_ITEMS = 8;
+  static const uint8_t TUNE_MENU_ITEMS = 5;
   activeTuneMenuItem = checkMenuItem(activeTuneMenuItem, TUNE_MENU_ITEMS);
   
-//static const char ROLL_STR[] PROGMEM =     "roll  ";
-//static const char PITCH_STR[] PROGMEM =    "pitch ";
-//static const char YAW_STR[] PROGMEM =      "yaw   ";
-  static const char TPA_STR[] PROGMEM =      "tpa";
-  static const char LPF_STR[] PROGMEM =      "lpf       : ";
-  static const char NOTCH_STR[] PROGMEM =    "notch fltr: ";
-  static const char NOTCH2_STR[] PROGMEM =   "notch settings";
-//static const char MINCMD_STR[] PROGMEM =   "min cmd   : ";
-//static const char MINTHRTL_STR[] PROGMEM = "min thrtl : ";
+//static const char ROLL_STR[] PROGMEM =     "roll";
+//static const char PITCH_STR[] PROGMEM =    "pitch";
+//static const char YAW_STR[] PROGMEM =      "yaw";
+  static const char TPA_STR[] PROGMEM =      "tpa";  
 //static const char BACK_STR[] PROGMEM =     "back";
   
-  static const char LPF1_STR[] PROGMEM = "off ";
-  static const char LPF2_STR[] PROGMEM = "high    ";
-  static const char LPF3_STR[] PROGMEM = "med high";
-  static const char LPF4_STR[] PROGMEM = "medium  ";
-  static const char LPF5_STR[] PROGMEM = "med low ";
-  static const char LPF6_STR[] PROGMEM = "low     ";
-  static const char LPF7_STR[] PROGMEM = "very low";
-  static const char* LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR };
-  
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (strlen_P(LPF_STR)+strlen_P(LPF7_STR))/2;
+  uint8_t startCol = settings.COLS/2 - strlen_P(PITCH_STR)/2;
   static const char TUNE_MENU_TITLE_STR[] PROGMEM = "tune menu";
   OSD.printP(settings.COLS/2 - strlen_P(TUNE_MENU_TITLE_STR)/2, ++startRow, TUNE_MENU_TITLE_STR);
   
   OSD.printP( startCol, ++startRow, ROLL_STR, activeTuneMenuItem);
   OSD.printP( startCol, ++startRow, PITCH_STR, activeTuneMenuItem);
   OSD.printP( startCol, ++startRow, YAW_STR, activeTuneMenuItem);
-  OSD.printP( startCol, ++startRow, TPA_STR, activeTuneMenuItem);
-  OSD.printP( startCol, ++startRow, LPF_STR, activeTuneMenuItem);
-  OSD.print( fixPStr(LPF_FRQ_STR[lpf_frq]) );
-  OSD.printP( startCol, ++startRow, NOTCH_STR, activeTuneMenuItem);
-  OSD.print( fixStr(ON_OFF_STR[notchFilterEnabled]) );
-  OSD.printP( startCol, ++startRow, NOTCH2_STR, activeTuneMenuItem);
-  /*OSD.printIntArrow( startCol, ++startRow, &MINCMD_STR, minCommand, 0, 1, activeTuneMenuItem);
-  OSD.printIntArrow( startCol, ++startRow, &MINTHRTL_STR, minThrottle, 0, 1, activeTuneMenuItem);*/
+  OSD.printP( startCol, ++startRow, TPA_STR, activeTuneMenuItem);  
   OSD.printP( startCol, ++startRow, BACK_STR, activeTuneMenuItem);
   
   return (void*)TuneMenu;
@@ -666,27 +696,34 @@ void* MainMenu()
     switch(activeMenuItem)
     {
       case 0:
-        if(fcSettingsReceived && code &  inputChecker.ROLL_RIGHT)
+        if(code &  inputChecker.ROLL_RIGHT)
         {
           cleanScreen();
           return (void*)TuneMenu;
         }
       break;
       case 1:
-        if(fcSettingsReceived && code &  inputChecker.ROLL_RIGHT)
+        if(code &  inputChecker.ROLL_RIGHT)
         {
           cleanScreen();
           return (void*)RatesMenu;
         }
-      break;      
+      break;
       case 2:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          cleanScreen();
+          return (void*)FilterMenu;
+        }
+      break;      
+      case 3:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           cleanScreen();
           return (void*)BatteryMenu;
         }
       break;
-      case 3:
+      case 4:
 #ifdef IMPULSERC_VTX
         if(code &  inputChecker.ROLL_RIGHT)
         {
@@ -701,21 +738,21 @@ void* MainMenu()
         }
 #endif
       break;
-      case 4:
+      case 5:
         symbolOnOffChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
         settingChanged |= symbolOnOffChanged;
       break;
-      case 5:
+      case 6:
         settingChanged |= checkCode(settings.m_airTimer, 1, 0, 1);        
       break;
-      case 6:
+      case 7:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           menuActive = false;
           menuWasActive = true;
         }
       break;
-      case 7:
+      case 8:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           menuActive = false;
@@ -728,11 +765,12 @@ void* MainMenu()
       break;
     }
   }
-  static const uint8_t MAIN_MENU_ITEMS = 8;
+  static const uint8_t MAIN_MENU_ITEMS = 9;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
   static const char PID_STR[] PROGMEM =             "tune";
   static const char RATES_STR[] PROGMEM =           "rates";
+  static const char FILTER_STR[] PROGMEM =          "filters";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols  : ";
@@ -741,14 +779,15 @@ void* MainMenu()
   static const char CANCEL_STR[] PROGMEM =          "cancel";
   
   uint8_t startRow = 0;
-  uint8_t startCol = settings.COLS/2 - strlen_P(SAVE_EXIT_STR)/2;
+  uint8_t startCol = settings.COLS/2 - strlen_P(SYMBOLS_SIZE_STR)/2;
   OSD.setCursor( settings.COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
   OSD.print( fixStr(KISS_OSD_VER) );
   static const char MAIN_TITLE_STR[] PROGMEM = "main menu";
   OSD.printP( settings.COLS/2 - strlen_P(MAIN_TITLE_STR)/2, ++startRow, MAIN_TITLE_STR );
   
   OSD.printP( startCol, ++startRow, PID_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, RATES_STR, activeMenuItem );  
+  OSD.printP( startCol, ++startRow, RATES_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, FILTER_STR, activeMenuItem);  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeMenuItem );
