@@ -276,7 +276,9 @@ void ReviveOSD()
 static int16_t p_roll = 0;
 static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
 static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
-static int16_t lpf_frq, minCommand, minThrottle;
+static uint8_t customTPAEnabled;
+static uint8_t ctpa_bp1, ctpa_bp2, ctpa_infl0, ctpa_infl1, ctpa_infl2, ctpa_infl3;
+static int16_t lpf_frq;
 static uint8_t notchFilterEnabledR, notchFilterEnabledP;
 static int16_t notchFilterCenterR, notchFilterCutR, notchFilterCenterP, notchFilterCutP;
 static int16_t yawFilterCut;
@@ -319,14 +321,30 @@ static int16_t checkCalced = 0;
 static uint16_t fcNotConnectedCount = 0;
 static bool telemetryReceived = false;
 static bool batWarnSymbol = true;
+#ifdef NEW_FC_SETTINGS
+enum _SETTING_MODES 
+{
+  FC_RATES, 
+  FC_PIDS, 
+  FC_VTX, 
+  FC_FILTERS,
+  FC_TPA,
+  FC_SETTINGS
+};
+static const uint8_t MAX_SETTING_MODES = 6;
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x4D, 0x43, 0x45, 0x47, 0x4B, 0x30 }; 
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x4E, 0x44, 0x46, 0x48, 0x4C, 0x10 };
+static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
+static uint8_t settingMode = 0;
+#endif
 
 
 static unsigned long _StartupTime = 0;
 extern void* MainMenu();
+static uint8_t serialBuf2[256];
 
 void loop(){
   uint16_t i = 0;
-  static uint8_t blink_i = 1;
 
 #ifdef IMPULSERC_VTX
   /*if(oldvTxBand != vTxBand || oldvTxChannel != vTxChannel || changevTxTime > 0)
@@ -376,20 +394,87 @@ void loop(){
         vtx_set_power(armed ? vTxPower : 0);
      }
 #endif
-    
+
+    for(i=0; i<MAX_SETTING_MODES; i++)
+    {
+      if(fcSettingModeChanged[i]) fcSettingChanged = true;
+    }
+    #ifdef NEW_FC_SETTINGS    
+    if(!fcSettingsReceived)
+    {
+      if(settingMode >= MAX_SETTING_MODES) settingMode = 0;
+      if(fcNotConnectedCount % 10 == 0) 
+      {
+        NewSerial.write(getSettingModes[settingMode]); // request settings
+        if(getSettingModes[settingMode] > 0x30)
+        {
+          NewSerial.write((uint8_t)0x00);
+          NewSerial.write((uint8_t)0x00);
+        }
+      }
+      ReadFCSettings(fcSettingChanged, settingMode);
+      if(!fcSettingsReceived) fcNotConnectedCount++;
+      else fcNotConnectedCount = 0;
+      if(fcSettingsReceived && settingMode < MAX_SETTING_MODES)
+      {
+        settingMode++;
+        if(settingMode < MAX_SETTING_MODES) fcSettingsReceived = false;
+      }
+      if(settingMode == MAX_SETTING_MODES && 
+            (p_roll < 0 || i_roll < 0 || d_roll < 0 || 
+            p_pitch < 0 || i_pitch < 0 || d_pitch < 0 ||
+            p_yaw < 0 || i_yaw < 0 || d_yaw < 0 ||
+            rcrate_roll < 0 || rcrate_pitch < 0 || rcrate_yaw < 0 ||
+            rate_roll < 0 || rate_pitch < 0 || rate_yaw < 0 ||
+            p_tpa < 0 || i_tpa < 0 || d_tpa < 0))
+      {
+        fcSettingsReceived = false;
+        settingMode = 0;
+        return;
+      }
+    }
+    else
+    {
+      if(!fcSettingChanged || menuActive)
+      {
+        NewSerial.write(0x20); // request telemetry
+      }
+      telemetryReceived = ReadTelemetry();
+      if(!telemetryReceived) 
+      {
+        if(fcSettingChanged && !menuActive)
+        {
+          bool savedBefore = false;
+          for(i=0; i<(MAX_SETTING_MODES-1); i++)
+          {
+            if(savedBefore && fcSettingModeChanged[i])
+            {              
+              while (!OSD.notInVSync());
+              cleanScreen();
+              static const char WAIT_SAVE_STR[] PROGMEM = "saving please wait!!!";
+              OSD.printP(settings.COLS/2 - strlen_P(WAIT_SAVE_STR)/2, settings.ROWS/2, WAIT_SAVE_STR);
+              delay(1000);
+            }
+            if(fcSettingModeChanged[i])
+            {
+              SendFCSettings(i);
+              fcSettingModeChanged[i] = false;
+              savedBefore = true;
+            }      
+          }
+          fcSettingChanged = false;
+        }
+        else fcNotConnectedCount++;
+      }
+      else fcNotConnectedCount = 0;
+    }
+    #else
     if(!fcSettingsReceived)
     {
       NewSerial.write(0x30); // request settings
       ReadFCSettings(fcSettingChanged);
       if(!fcSettingsReceived) fcNotConnectedCount++;
       else fcNotConnectedCount = 0;
-      #ifdef PROTODEBUG
-      if(checkCalced != bufminus1)
-      {
-        OSD.printInt16(8, -4, checkCalced, 0, 1);
-        OSD.printInt16(8, -3, bufminus1, 0, 1);
-      }
-      #endif
     }
     else
     {
@@ -409,6 +494,7 @@ void loop(){
       }
       else fcNotConnectedCount = 0;
     }
+    #endif
 
     if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
 
@@ -416,6 +502,7 @@ void loop(){
 
     if(fcNotConnectedCount > 500)
     {
+      cleanScreen();
       static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
       OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS/2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
@@ -424,20 +511,6 @@ void loop(){
     }
 
 #ifdef IMPULSERC_VTX
-      /*if(changevTxTime > 0)
-      {
-        static const char CHANGE_CHANNELS_STR PROGMEM = "changing vtx to ");
-        OSD.printP(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5), 8, &CHANGE_CHANNELS_STR);
-        OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 1, 8, bandSymbols[vTxBand], (int16_t)vTxChannel, 0, 1, "=");
-        OSD.printInt16(settings.COLS/2 - (CHANGE_CHANNELS_STR.length()/2 + 5) + CHANGE_CHANNELS_STR.length() + 5, 8, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz");
-        uint8_t timeLeft = (uint8_t)((6000 - (millis() - changevTxTime))/1000);   
-        OSD.printInt16(settings.COLS/2 - 6, 9, "in ", (int16_t)timeLeft, 0, 1, " seconds");
-        if(timeLeft < 1)
-        {
-          changevTxTime = 0;
-          cleanScreen();
-        }
-      }*/
       vtx_flash_led(1);
 #endif
 

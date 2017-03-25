@@ -634,7 +634,7 @@ void* MainMenu()
   static const char MOVE_ITEMS_STR[] PROGMEM =      "move items";
   static const char CENTER_OSD_STR[] PROGMEM =      "center osd";
   static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";
-  static const char NICKNAME_STR[] PROGMEM =        "nickname";
+  static const char NICKNAME_STR[] PROGMEM =        "callsign";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
   static const char SAVE_STR[] PROGMEM =            "save";
