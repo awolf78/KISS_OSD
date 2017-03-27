@@ -33,7 +33,7 @@
  * ALLOW_LARGE_BUFFERS controls whether uint16_t or uint8_t will be
  * used for buffer indices.
  */
-#define ALLOW_LARGE_BUFFERS 1
+#define ALLOW_LARGE_BUFFERS 0
 //------------------------------------------------------------------------------
 /**
  * Set USE_WRITE_OVERRIDES to zero to use the Arduino Print version
@@ -57,12 +57,12 @@
  * TxBufSize must be zero in all SerialPort constructors if
  * BUFFERED_TX is zero.
  */
-#define BUFFERED_TX 1
+#define BUFFERED_TX 0
 //------------------------------------------------------------------------------
 /**
  * Set ENABLE_RX_ERROR_CHECKING zero to disable RX error checking.
  */
-#define ENABLE_RX_ERROR_CHECKING 1
+#define ENABLE_RX_ERROR_CHECKING 0
 //------------------------------------------------------------------------------
 // Define symbols to allocate 64 byte ring buffers with capacity for 63 bytes.
 /** Define NewSerial with buffering like Arduino 1.0. */

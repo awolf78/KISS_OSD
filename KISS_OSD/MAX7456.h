@@ -122,7 +122,7 @@
       
       const static uint8_t safeVideoCols[2][4];
       const static uint8_t safeVideoRows[2][4];
-      const static uint8_t defaultCodePage[128];
+      //const static uint8_t defaultCodePage[128];
       
       
       
@@ -168,13 +168,13 @@
                          uint8_t timing 
                        );
       
-      bool           setBlinkingTime( 
+      /*bool           setBlinkingTime( 
                          uint8_t timing 
                        );
       
       bool           setBlinkingDuty( 
                          uint8_t timing 
-                       );
+                       );*/
       
       bool           setWhiteLevel( 
                          uint8_t brightness 

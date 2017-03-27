@@ -790,7 +790,7 @@
   
   
   // Sets the length of each cycle of blinking text.
-  bool MAX7456::setBlinkingTime( 
+  /*bool MAX7456::setBlinkingTime( 
                     uint8_t timing              // Blink delay [0 - 3] 
                   )
   {
@@ -840,7 +840,7 @@
     
     return false;
     
-  }
+  }*/
   // end setBlinkingDuty()
   
   

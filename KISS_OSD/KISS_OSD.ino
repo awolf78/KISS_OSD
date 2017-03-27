@@ -93,7 +93,7 @@ const byte osdReset                  =            2;
 
 
 CMyMax7456 OSD( osdChipSelect );
-SerialPort<0, 64, 0> NewSerial;
+SerialPort<0, 63, 0> NewSerial;
 CStickInput inputChecker;
 CSettings settings;
 static int16_t DV_PPMs[CSettings::DISPLAY_DV_SIZE];

@@ -4,11 +4,11 @@ static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
 const uint16_t filterCount = 5;
 const uint16_t filterCount2 = 3;
-#ifndef IMPULSERC_VTX
+//#ifndef IMPULSERC_VTX
 CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
 CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
 CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
-#endif
+//#endif
 
 boolean ReadTelemetry()
 {
@@ -36,7 +36,7 @@ boolean ReadTelemetry()
        for(i=2;i<minBytes;i++){
           checksum += serialBuf[i];
        }
-       checksum = (uint32_t)checksum/(minBytes-3);
+       checksum = (uint32_t)checksum/(minBytes-3);       
        
        if(checksum == serialBuf[recBytes-1])
        {
@@ -245,20 +245,20 @@ boolean ReadTelemetry()
            }
          }
          LipoVoltageRT = LipoVoltage;
-         #ifndef IMPULSERC_VTX
+         //#ifndef IMPULSERC_VTX
          LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
-         #endif
+         //#endif
          currentRT = current;
-         #ifndef IMPULSERC_VTX
+         //#ifndef IMPULSERC_VTX
          current = ampTotalFilter.ProcessValue(current);
-         #endif
+         //#endif
          for(i=0; i<4; i++)
          {
            motorKERPMRT[i] = motorKERPM[i];
-           #ifndef IMPULSERC_VTX
+           //#ifndef IMPULSERC_VTX
            motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
            motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
-           #endif
+           //#endif
          }         
       }
       else
@@ -272,6 +272,19 @@ boolean ReadTelemetry()
     return false;
   }
   return true;
+}
+
+uint8_t getCheckSum(uint8_t *buf, uint8_t startIndex, uint8_t stopIndex)
+{
+   double checksum = 0.0;
+   double dataCount = 0.0;
+   uint8_t i;       
+   for(i=startIndex;i<stopIndex;i++)
+   {
+      checksum += buf[i];
+      dataCount++;
+   }
+   return (uint8_t)floor(checksum/dataCount);  
 }
 
 #ifndef KISS_OSD_CONFIG
@@ -304,17 +317,10 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
        {
          return; //throwing away garbage data sent by FC during startup phase
        }
-       
-       double checksum = 0.0;
-       double dataCount = 0.0;
+
        uint8_t stopByte = minBytes;
        if(getSettingModes[sMode] > 0x30) stopByte--;
-       for(i=STARTCOUNT;i<stopByte;i++)
-       {
-          checksum += serialBuf2[i];
-          dataCount++;
-       }
-       uint8_t checksum2 = (uint8_t)floor(checksum/dataCount);
+       uint8_t checksum2 = getCheckSum(serialBuf2, STARTCOUNT, stopByte);       
 
        uint8_t index = 0;
        if(checksum2 == serialBuf2[recBytes-1])// || (checksum-1) == serialBuf2[recBytes-1])
@@ -522,19 +528,11 @@ void SendFCSettings(uint8_t sMode)
     break;
   }
   
-  double checksum = 0.0;
-  double dataCount = 0.0;
   serialBuf2[0] = index;
-  uint8_t i;
-  for(i=1;i<(STARTCOUNT+index);i++)
-  {
-   checksum += serialBuf2[i];
-   dataCount++;
-  }
-  checksum = checksum/dataCount;
-  serialBuf2[STARTCOUNT+index] = floor(checksum);
+  serialBuf2[STARTCOUNT+index] = getCheckSum(serialBuf2, 1, STARTCOUNT+index);
   
-  NewSerial.write(setSettingModes[sMode]); //Set settings 
+  NewSerial.write(setSettingModes[sMode]); //Set settings
+  uint8_t i; 
   for(i=0;i<(STARTCOUNT+index+1);i++)
   {
     NewSerial.write(serialBuf2[i]);
@@ -570,6 +568,7 @@ void ReadFCSettings(boolean skipValues = false)
           dataCount++;
        }
        uint8_t checksum2 = (uint8_t)floor(checksum/dataCount);
+       
        #ifdef PROTODEBUG
        checkCalced = checksum;
        bufminus1 = serialBuf2[recBytes-1];
