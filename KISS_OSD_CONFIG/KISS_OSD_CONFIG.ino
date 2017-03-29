@@ -866,7 +866,7 @@ void loop() {
       else
       {
         if (OSD_ITEM_BLINK[MAH]) OSD.blink1sec();
-        itemLengthOK[MAH] = OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH + previousMAH, 0, 1, "mah", MAHp);
+        itemLengthOK[MAH] = OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH + previousMAH, 0, 1, "mah", 0, MAHp);
       }
     }
 

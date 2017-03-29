@@ -867,7 +867,7 @@ void loop(){
           }
           else
           {
-            OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH+previousMAH, 0, 1, "mah", MAHp);
+            OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH+previousMAH, 0, 1, "mah", 0, MAHp);
           }
         }
   

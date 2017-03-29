@@ -323,7 +323,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
        uint8_t checksum2 = getCheckSum(serialBuf2, STARTCOUNT, stopByte);       
 
        uint8_t index = 0;
-       if(checksum2 == serialBuf2[recBytes-1])// || (checksum-1) == serialBuf2[recBytes-1])
+       if(checksum2 == serialBuf2[recBytes-1])
        {        
          if(!skipValues)
          {
