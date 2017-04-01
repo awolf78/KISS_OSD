@@ -186,9 +186,9 @@ void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, int1
   OSD.setCursor( settings.COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
   
-  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, 1, active3MenuItem, suffix[0], true);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, 1, active3MenuItem, suffix[1], true);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, 1, active3MenuItem, suffix[2], true);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, active3MenuItem, suffix[0], true);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, active3MenuItem, suffix[1], true);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, active3MenuItem, suffix[2], true);
   OSD.printP( startCol, ++startRow, BACK_STR, active3MenuItem);
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, active3MenuItem);
   
@@ -357,15 +357,15 @@ void* FilterMenu()
   
   OSD.printP( startCol, ++startRow, LPF_STR, activeFilterMenuItem);
   OSD.print( fixPStr(LPF_FRQ_STR[lpf_frq]) );
-  OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, yawFilterCut, 0, 1, activeFilterMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, yawFilterCut, 0, activeFilterMenuItem, "", 1);
   OSD.printP( startCol, ++startRow, NOTCH_ROLL_STR, activeFilterMenuItem);
   OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledR]) );
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CENTER_STR, notchFilterCenterR, 0, 1, activeFilterMenuItem, "hz", 1);
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CUTOFF_STR, notchFilterCutR, 0, 1, activeFilterMenuItem, "hz", 1);
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CENTER_STR, notchFilterCenterR, 0, activeFilterMenuItem, "hz", 1);
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CUTOFF_STR, notchFilterCutR, 0, activeFilterMenuItem, "hz", 1);
   OSD.printP( startCol, ++startRow, NOTCH_PITCH_STR, activeFilterMenuItem);
   OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledP]) );
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, notchFilterCenterP, 0, 1, activeFilterMenuItem, "hz", 1); 
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, notchFilterCutP, 0, 1, activeFilterMenuItem, "hz", 1);
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, notchFilterCenterP, 0, activeFilterMenuItem, "hz", 1); 
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, notchFilterCutP, 0, activeFilterMenuItem, "hz", 1);
   OSD.printP( startCol, ++startRow, BACK_STR, activeFilterMenuItem);
   
   return (void*)FilterMenu;  
@@ -434,17 +434,17 @@ void* CustomTPAMenu()
   OSD.printP( startCol, ++startRow, CSTM_TPA_ACTIVE_STR, activeCustomTPAMenuItem );
   OSD.print( fixStr(ON_OFF_STR[customTPAEnabled]) );
   
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, ctpa_infl0, 0, 1, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, ctpa_infl0, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_ONE_STR, ctpa_bp1, 0, 1, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_ONE_STR, ctpa_bp1, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP1_STR, ctpa_infl1, 0, 1, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP1_STR, ctpa_infl1, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_TWO_STR, ctpa_bp2, 0, 1, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_TWO_STR, ctpa_bp2, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP2_STR, ctpa_infl2, 0, 1, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP2_STR, ctpa_infl2, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_MAX_STR, ctpa_infl3, 0, 1, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_MAX_STR, ctpa_infl3, 0, activeCustomTPAMenuItem, "%", 1 );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeCustomTPAMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeCustomTPAMenuItem );
@@ -588,16 +588,16 @@ void* BatteryMenu()
   OSD.printP( startCol, ++startRow, BATTERY_WARNING_STR, activeBatteryMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
   
-  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
+  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, activeBatteryMenuItem, "%", true );
 
   OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
 
-  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, activeBatteryMenuItem, "v", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, activeBatteryMenuItem, "v", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, activeBatteryMenuItem, "w", 1 );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeBatteryMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeBatteryMenuItem );
@@ -677,8 +677,8 @@ void* vTxMenu()
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
   OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
   
-  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
-  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
+  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, activeVTXMenuItem, "=" );
+  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, "mhz" );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeVTXMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
@@ -745,15 +745,15 @@ void* vTxMenu()
   static const char VTX_TITLE_STR[] PROGMEM = "vtx menu";
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
-  OSD.printIntArrow(startCol, ++startRow, VTX_LOW_POWER_STR, vTxLowPower, 0, 1, activeVTXMenuItem, "mw", 1);
+  OSD.printIntArrow(startCol, ++startRow, VTX_LOW_POWER_STR, vTxLowPower, 0, activeVTXMenuItem, "mw", 1);
 
-  OSD.printIntArrow(startCol, ++startRow, VTX_HIGH_POWER_STR, vTxHighPower, 0, 1, activeVTXMenuItem, "mw", 1);
+  OSD.printIntArrow(startCol, ++startRow, VTX_HIGH_POWER_STR, vTxHighPower, 0, activeVTXMenuItem, "mw", 1);
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
   OSD.print( fixStr(bandSymbols[vTxBand]) );
   
-  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
-  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[vTxBand][vTxChannel]), 0, 1, "mhz" );
+  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, vTxChannel+1, 0, activeVTXMenuItem, "=" );
+  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[vTxBand][vTxChannel]), 0, "mhz" );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeVTXMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );

@@ -55,14 +55,7 @@ uint8_t CStickInput::CheckInput(int16_t input, unsigned long *startTime, uint16_
       *startTime = millis();
       if(!skip)
       {
-        if(input > 1750)
-        {
-          code |= bigMask;
-        }
-        else
-        {
-          code |= smallMask;
-        }
+        code |= CheckInputInternal(input, smallMask, bigMask);
       }
     }
     else
@@ -75,14 +68,7 @@ uint8_t CStickInput::CheckInput(int16_t input, unsigned long *startTime, uint16_
           *timedelay -= SPEEDUP;
           (*count) = 0;
         }
-        if(input > 1750)
-        {
-          code |= bigMask;
-        }
-        else
-        {
-          code |= smallMask;
-        }
+        code |= CheckInputInternal(input, smallMask, bigMask);
         *startTime = millis();
       }
     }
@@ -94,3 +80,16 @@ uint8_t CStickInput::CheckInput(int16_t input, unsigned long *startTime, uint16_
   }
   return code;  
 }
+
+uint8_t CStickInput::CheckInputInternal(int16_t input, uint8_t smallMask, uint8_t bigMask)
+{
+  if(input > 1750)
+  {
+    return bigMask;
+  }
+  else
+  {
+    return smallMask;
+  }
+}
+

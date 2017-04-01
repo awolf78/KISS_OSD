@@ -68,7 +68,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define DEBUG
 //#define PROTODEBUG
 
-const char KISS_OSD_VER[] = "kiss osd v2.3";
+const char KISS_OSD_VER[] = "kiss osd v2.3.1";
 
 #include <SPI.h>
 #include "MAX7456.h"
@@ -144,8 +144,7 @@ void setupMAX7456()
   else settings.ROWS = 13;
   OSD.setTextArea(settings.COLS, settings.ROWS);  
   OSD.setDefaultSystem(settings.m_videoMode);
-  OSD.setSwitchingTime( 5 );   
-  OSD.setCharEncoding( MAX7456_ASCII );  
+  OSD.setSwitchingTime( 5 ); 
   OSD.display();
 #ifdef IMPULSERC_VTX
   delay(100);
@@ -271,6 +270,7 @@ void ReviveOSD()
   OSD.reset();
   while(OSD.resetIsBusy()) delay(100);
   setupMAX7456();
+  delay(2000);
 }
 
 static int16_t p_roll = 0;
@@ -341,7 +341,6 @@ static uint8_t settingMode = 0;
 
 static unsigned long _StartupTime = 0;
 extern void* MainMenu();
-static uint8_t serialBuf2[256];
 
 void loop(){
   uint16_t i = 0;
@@ -362,10 +361,10 @@ void loop(){
   //}
 #endif
   
-  if(!OSD.status()) //trying to revive MAX7456 if it got a voltage hickup
+  /*if(!OSD.status()) //trying to revive MAX7456 if it got a voltage hickup
   {
     ReviveOSD();
-  }
+  }*/
   
   if(_StartupTime == 0)
   {
@@ -516,7 +515,7 @@ void loop(){
 
       #ifdef DEBUG
       vTxType = 2;
-      OSD.printInt16(0,8,protoVersion,0,1);
+      OSD.printInt16(0,8,protoVersion,0);
       #endif 
       
       if(triggerCleanScreen || (abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && (AuxChanVals[settings.m_DVchannel]+1000) < (CSettings::DV_PPM_INCREMENT*(CSettings::DISPLAY_DV_SIZE))))
@@ -601,12 +600,12 @@ void loop(){
         }
         static const char BATTERY_STR[] PROGMEM = "battery ";
         uint8_t batCol = settings.COLS/2 - (strlen_P(BATTERY_STR)+1)/2;
-        OSD.printInt16P(batCol, settings.ROWS/2 - 1, BATTERY_STR, settings.m_activeBattery+1, 0,1);        
+        OSD.printInt16P(batCol, settings.ROWS/2 - 1, BATTERY_STR, settings.m_activeBattery+1, 0);        
         batCol = settings.COLS/2 - 3;
-        OSD.printInt16(batCol, settings.ROWS/2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
+        OSD.printInt16(batCol, settings.ROWS/2, settings.m_batMAH[settings.m_activeBattery], 0, "mah", 2);
 
         static const char WARN_STR[] PROGMEM = "warn at ";
-        OSD.printInt16P(settings.COLS/2 - (strlen_P(WARN_STR) + 6)/2, settings.ROWS/2 + 1, WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
+        OSD.printInt16P(settings.COLS/2 - (strlen_P(WARN_STR) + 6)/2, settings.ROWS/2 + 1, WARN_STR, settings.m_batWarningMAH, 0, "mah", 2);
 
         if(batterySelect)
         {
@@ -677,7 +676,7 @@ void loop(){
         }
         uint8_t middle_infos_y     = 2;    
         static const char STATS_STR[] PROGMEM = "stats ";
-        OSD.printInt16P( settings.COLS/2 - (strlen_P(STATS_STR)+4)/2, middle_infos_y, STATS_STR, statPage+1, 0, 1);
+        OSD.printInt16P( settings.COLS/2 - (strlen_P(STATS_STR)+4)/2, middle_infos_y, STATS_STR, statPage+1, 0);
         OSD.print( fixStr("/5") );
         middle_infos_y++;
         
@@ -695,13 +694,13 @@ void loop(){
           uint8_t statCol = settings.COLS/2 - (strlen_P(TIME_STR)+7)/2;
           OSD.printP(statCol, ++middle_infos_y, TIME_STR);
           OSD.printTime( statCol+strlen_P(TIME_STR), middle_infos_y, total_time);  
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 1, 1, "a" );           
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, 1, "c");
-          OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, 1, "mah" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, 1, "kr" );  
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, 1, "w" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, 1, tempSymbol);
-          OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, 1, "v" );          
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 1, "a" );           
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
+          OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, "mah" );
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );  
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" );
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, tempSymbol);
+          OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );          
         }
         else
         {
@@ -718,20 +717,20 @@ void loop(){
           static const char ESC_MAH_STR[] PROGMEM =  " mah     : ";
           
           uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[statPage-1], 1, 1, "kr");
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[statPage-1], 1, "kr");
           
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[statPage-1], 2, 1, "a"); 
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[statPage-1], 2, "a"); 
           
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[statPage-1], 0, 1, tempSymbol);
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[statPage-1], 0, tempSymbol);
           
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[statPage-1], 2, 1, "v");
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[statPage-1], 2, "v");
           
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0, 1);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[statPage-1], 0, 1, "mah"); 
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[statPage-1], 0, "mah"); 
         }
      }
      else 
@@ -746,7 +745,7 @@ void loop(){
         uint8_t CurrentMargin      = 0;
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
         {
-          OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, 1, "%", 2, THROTTLEp);
+          OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, "%", 2, THROTTLEp);
         }
           
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
@@ -833,13 +832,13 @@ void loop(){
           }
           else
           {
-            OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
+            OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, "a", 2, AMPSp);
           }
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
         {
-          OSD.printInt16( settings.m_OSDItems[VOLTAGE][0], settings.m_OSDItems[VOLTAGE][1], LipoVoltage / 10, 1, 1, "v", 1, VOLTAGEp);
+          OSD.printInt16( settings.m_OSDItems[VOLTAGE][0], settings.m_OSDItems[VOLTAGE][1], LipoVoltage / 10, 1, "v", 1, VOLTAGEp);
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
@@ -867,7 +866,7 @@ void loop(){
           }
           else
           {
-            OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH+previousMAH, 0, 1, "mah", 0, MAHp);
+            OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH+previousMAH, 0, "mah", 0, MAHp);
           }
         }
   
@@ -925,10 +924,10 @@ void loop(){
             KR2[0] = 'k';
             KR2[1] = 'r';
             KR2[2] = 0x00;
-            OSD.printInt16(settings.m_OSDItems[ESC1kr][0], settings.m_OSDItems[ESC1kr][1], motorKERPM[0], 1, 1, KR2, 1, ESC1kr);
-            OSD.printInt16(settings.m_OSDItems[ESC2kr][0], settings.m_OSDItems[ESC2kr][1], motorKERPM[1], 1, 0, KR2, 1, ESC2kr);
-            OSD.printInt16(settings.m_OSDItems[ESC3kr][0], settings.m_OSDItems[ESC3kr][1], motorKERPM[2], 1, 0, KR2, 1, ESC3kr);
-            OSD.printInt16(settings.m_OSDItems[ESC4kr][0], settings.m_OSDItems[ESC4kr][1], motorKERPM[3], 1, 1, KR2, 1, ESC4kr);
+            OSD.printInt16(settings.m_OSDItems[ESC1kr][0], settings.m_OSDItems[ESC1kr][1], motorKERPM[0], 1, KR2, 1, ESC1kr);
+            OSD.printInt16(settings.m_OSDItems[ESC2kr][0], settings.m_OSDItems[ESC2kr][1], motorKERPM[1], 1, KR2, 1, ESC2kr);
+            OSD.printInt16(settings.m_OSDItems[ESC3kr][0], settings.m_OSDItems[ESC3kr][1], motorKERPM[2], 1, KR2, 1, ESC3kr);
+            OSD.printInt16(settings.m_OSDItems[ESC4kr][0], settings.m_OSDItems[ESC4kr][1], motorKERPM[3], 1, KR2, 1, ESC4kr);
           }
           
           TMPmargin++;
@@ -937,19 +936,21 @@ void loop(){
      
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
         {
-          OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0], 2, 1, "a", 1, ESC1voltage, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1], 2, 0, "a", 1, ESC2voltage, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2], 2, 0, "a", 1, ESC3voltage, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1]-CurrentMargin, motorCurrent[3], 2 ,1, "a", 1, ESC4voltage, ESCSymbol);
+          static char ampESC[] = { 'a', 0x7E, 0x00};
+          OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0], 2, "a", 1, ESC1voltage, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1], 2, ampESC, 1, ESC2voltage);
+          OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2], 2, ampESC, 1, ESC3voltage);
+          OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1]-CurrentMargin, motorCurrent[3], 2, "a", 1, ESC4voltage, ESCSymbol);
           TMPmargin++;
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
         {
-          OSD.printInt16( settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1]+TMPmargin, ESCTemps[0], 0, 1, tempSymbol, 1, ESC1temp, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC2temp][0], settings.m_OSDItems[ESC2temp][1]+TMPmargin, ESCTemps[1], 0, 0, tempSymbol, 1, ESC2temp, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC3temp][0], settings.m_OSDItems[ESC3temp][1]-TMPmargin, ESCTemps[2], 0, 0, tempSymbol, 1, ESC3temp, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC4temp][0], settings.m_OSDItems[ESC4temp][1]-TMPmargin, ESCTemps[3], 0, 1, tempSymbol, 1, ESC4temp, ESCSymbol);
+          static char tempESC[] = { tempSymbol[0], 0x7E, 0x00};
+          OSD.printInt16( settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1]+TMPmargin, ESCTemps[0], 0, tempSymbol, 1, ESC1temp, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC2temp][0], settings.m_OSDItems[ESC2temp][1]+TMPmargin, ESCTemps[1], 0, tempESC, 1, ESC2temp);
+          OSD.printInt16(settings.m_OSDItems[ESC3temp][0], settings.m_OSDItems[ESC3temp][1]-TMPmargin, ESCTemps[2], 0, tempESC, 1, ESC3temp);
+          OSD.printInt16(settings.m_OSDItems[ESC4temp][0], settings.m_OSDItems[ESC4temp][1]-TMPmargin, ESCTemps[3], 0, tempSymbol, 1, ESC4temp, ESCSymbol);
         }
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER]) 
@@ -991,7 +992,7 @@ void loop(){
               }
               else
               {
-                OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 3, LipoMAH+previousMAH, 0, 1, "mah");
+                OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 3, LipoMAH+previousMAH, 0, "mah");
               }
               flipOnce = true;              
             }
@@ -1024,7 +1025,7 @@ void loop(){
 
         if(settings.m_voltWarning > 0 && settings.m_minVolts > (LipoVoltage / 10) && !timer1sec)
         {
-          OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, 1, "v", 1);                      
+          OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, "v", 1);                      
         }
         else
         {
@@ -1083,36 +1084,6 @@ void loop(){
             cleanScreen();
           }
         }
-
-#ifdef MUSTACHE
-        if(settings.m_displaySymbols == 1 && settings.m_Moustache == 1)
-        {
-          OSD.printInt16(0,settings.ROWS/2,angleX,0,1,"",1);
-          OSD.printInt16(0,settings.ROWS/2+1,angleY,0,1,"",1);
-          if((angleX < -100 || angleY < -100) && moustacheStarted < 1) moustacheStarted++;         
-          if(moustacheStarted)
-          {
-            if(timer40Hz)
-            {
-              OSD.setCursor(moustacheCol, moustacheRow);
-              OSD.printSpaces(4);
-              moustacheCol--;
-            }
-            if(moustacheCol >= 0)
-            {
-              OSD.setCursor(moustacheCol, moustacheRow);
-              OSD.print(moustacheSymbol);
-            }
-            else 
-            {
-              OSD.setCursor(0, moustacheRow);
-              OSD.printSpaces(4);
-              moustacheCol = settings.COLS-1; 
-              moustacheStarted--;
-            }            
-          }          
-        }
-#endif
 
         if(symbolOnOffChanged)
         {

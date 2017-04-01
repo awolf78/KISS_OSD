@@ -44,7 +44,10 @@ char fixChar(char str)
     {
       return (char)(str2 + 0x2);
     }
-    return fixNo(str);
+    if(str > 0x2F && str < 0x3A)
+    {
+      return fixNo(str);
+    }
   }
   #endif
   return str; 

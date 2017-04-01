@@ -56,9 +56,9 @@ uint8_t CMyMax7456::checkPrintLength(volatile uint8_t col, uint8_t row, uint8_t 
 
 static char printBuf2[30];
 
-uint8_t CMyMax7456::printInt16(volatile uint8_t col, uint8_t row, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks = 0, _OSDItemPos item, const char* prefix)
+uint8_t CMyMax7456::printInt16(volatile uint8_t col, uint8_t row, int16_t value, uint8_t dec, const char* suffix, uint8_t blanks = 0, _OSDItemPos item, const char* prefix)
 {
-  print_int16(value, printBuf2, dec, AlignLeft);
+  print_int16(value, printBuf2, dec);
   uint8_t printLength = strlen(printBuf2)+strlen(prefix)+strlen(suffix);
   uint8_t lengthCorrection = checkPrintLength(col, row, printLength, blanks,item);
   if(blinkActive && timer1sec)
@@ -95,9 +95,9 @@ void CMyMax7456::printP(uint8_t col, uint8_t row, const char *key, uint8_t menuI
   blinkActive = false;
 }
 
-void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
+void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, uint8_t dec, const char* suffix, uint8_t blanks)
 {
-  print_int16(value, printBuf2, dec, AlignLeft);
+  print_int16(value, printBuf2, dec);
   uint8_t printLength = strlen(printBuf2)+strlen(suffix)+strlen(key)+blanks;
   checkPrintLength(col, row, printLength, blanks, CSettings::OSD_ITEMS_POS_SIZE);
   if(blinkActive && timer1sec)
@@ -112,16 +112,16 @@ void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, 
   blinkActive = false;
 }
 
-void CMyMax7456::printInt16P(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix, uint8_t blanks)
+void CMyMax7456::printInt16P(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, const char* suffix, uint8_t blanks)
 {
-  printInt16(col, row, fixPStr(key), value, dec, AlignLeft, suffix, blanks);
+  printInt16(col, row, fixPStr(key), value, dec, suffix, blanks);
 }
 
-void CMyMax7456::printIntArrow(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, uint8_t menuItem, const char* suffix, uint8_t blanks)
+void CMyMax7456::printIntArrow(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t menuItem, const char* suffix, uint8_t blanks)
 {
   setCursor(col, row);
   checkArrow(row, menuItem); 
-  printInt16(col+1, row, fixPStr(key), value, dec, AlignLeft, suffix, blanks);
+  printInt16(col+1, row, fixPStr(key), value, dec, suffix, blanks);
 }
 
 void CMyMax7456::checkArrow(uint8_t currentRow, uint8_t menuItem)
@@ -161,7 +161,7 @@ void CMyMax7456::printInternal(const char* suffix, uint8_t blanks)
   printSpaces(blanks);
 }
 
-uint8_t CMyMax7456::print_int16(int16_t p_int, char *str, uint8_t dec, uint8_t AlignLeft)
+uint8_t CMyMax7456::print_int16(int16_t p_int, char *str, uint8_t dec)
 {
   int16_t useVal = p_int;
   uint8_t aciidig[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
@@ -225,10 +225,10 @@ void CMyMax7456::print_time(unsigned long time, char *time_str)
     seconds = seconds - (minutes * 60);
     static char time_sec[6];
     uint8_t i = 0;
-    uint8_t time_pos = print_int16(minutes, time_str,0,1);
+    uint8_t time_pos = print_int16(minutes, time_str,0);
     time_str[time_pos++] = fixChar(':');
     
-    uint8_t sec_pos = print_int16(seconds, time_sec,0,1);
+    uint8_t sec_pos = print_int16(seconds, time_sec,0);
     if(seconds < 10) 
     {
       time_str[time_pos++] = fixChar('0');

@@ -41,7 +41,7 @@
  *
  * This will save some flash but is much slower.
  */
-#define USE_WRITE_OVERRIDES 1
+#define USE_WRITE_OVERRIDES 0
 //------------------------------------------------------------------------------
 /**
  * Set BUFFERED_RX zero to save flash and RAM if no RX buffering is used.

@@ -287,7 +287,7 @@
     
     syncSource       = MAX7456_AUTOSYNC;
     defaultSystem    = MAX7456_NTSC;
-    charEncoding     = MAX7456_MAXIM;
+    charEncoding     = MAX7456_ASCII;
   
     offsetPixelsH    = 0;
     offsetPixelsV    = 0;
@@ -1126,8 +1126,8 @@
         !clearIsBusy()                  )       // not already clearing.
     {
       clear();
-    }
-    */
+    }*/
+    
     ubSystem = videoSystem();
     if (ubSystem == NULL)                       // If no valid input,
     {

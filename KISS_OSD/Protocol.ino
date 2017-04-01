@@ -290,6 +290,8 @@ uint8_t getCheckSum(uint8_t *buf, uint8_t startIndex, uint8_t stopIndex)
 #ifndef KISS_OSD_CONFIG
 
 extern unsigned long _StartupTime;
+static uint8_t serialBuf2[256];
+
 #ifdef NEW_FC_SETTINGS
 void ReadFCSettings(boolean skipValues, uint8_t sMode)
 {

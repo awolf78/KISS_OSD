@@ -65,7 +65,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define PROTODEBUG
 #define KISS_OSD_CONFIG
 
-const char KISS_OSD_VER[] = "kiss osd config v2.3";
+const char KISS_OSD_VER[] = "kiss osd config v2.3.1";
 
 #include <SPI.h>
 #include "MAX7456.h"
@@ -944,12 +944,13 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
     {
+      static char ampESC[] = { 'a', 0x7E, 0x00};
       if (OSD_ITEM_BLINK[ESC1]) OSD.blink1sec();
       itemLengthOK[ESC1voltage] = OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1] + CurrentMargin, motorCurrent[0], 2, 1, "a", 1, ESC1voltage, ESCSymbol);
       if (OSD_ITEM_BLINK[ESC2]) OSD.blink1sec();
-      itemLengthOK[ESC2voltage] = OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1] + CurrentMargin, motorCurrent[1], 2, 0, "a", 1, ESC2voltage, ESCSymbol);
+      itemLengthOK[ESC2voltage] = OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1] + CurrentMargin, motorCurrent[1], 2, 0, ampESC, 1, ESC2voltage);
       if (OSD_ITEM_BLINK[ESC3]) OSD.blink1sec();
-      itemLengthOK[ESC3voltage] = OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1] - CurrentMargin, motorCurrent[2], 2, 0, "a", 1, ESC3voltage, ESCSymbol);
+      itemLengthOK[ESC3voltage] = OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1] - CurrentMargin, motorCurrent[2], 2, 0, ampESC, 1, ESC3voltage);
       if (OSD_ITEM_BLINK[ESC4]) OSD.blink1sec();
       itemLengthOK[ESC4voltage] = OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1] - CurrentMargin, motorCurrent[3], 2 , 1, "a", 1, ESC4voltage, ESCSymbol);
       TMPmargin++;
@@ -957,12 +958,14 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
     {
+      static char tempESC[] = { tempSymbol[0], 0x7E, 0x00};
+      tempESC[0] = tempSymbol[0];
       if (OSD_ITEM_BLINK[ESC1]) OSD.blink1sec();
       itemLengthOK[ESC1temp] = OSD.printInt16( settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1] + TMPmargin, ESCTemps[0], 0, 1, tempSymbol, 1, ESC1temp, ESCSymbol);
       if (OSD_ITEM_BLINK[ESC2]) OSD.blink1sec();
-      itemLengthOK[ESC2temp] = OSD.printInt16(settings.m_OSDItems[ESC2temp][0], settings.m_OSDItems[ESC2temp][1] + TMPmargin, ESCTemps[1], 0, 0, tempSymbol, 1, ESC2temp, ESCSymbol);
+      itemLengthOK[ESC2temp] = OSD.printInt16(settings.m_OSDItems[ESC2temp][0], settings.m_OSDItems[ESC2temp][1] + TMPmargin, ESCTemps[1], 0, 0, tempESC, 1, ESC2temp);
       if (OSD_ITEM_BLINK[ESC3]) OSD.blink1sec();
-      itemLengthOK[ESC3temp] = OSD.printInt16(settings.m_OSDItems[ESC3temp][0], settings.m_OSDItems[ESC3temp][1] - TMPmargin, ESCTemps[2], 0, 0, tempSymbol, 1, ESC3temp, ESCSymbol);
+      itemLengthOK[ESC3temp] = OSD.printInt16(settings.m_OSDItems[ESC3temp][0], settings.m_OSDItems[ESC3temp][1] - TMPmargin, ESCTemps[2], 0, 0, tempESC, 1, ESC3temp);
       if (OSD_ITEM_BLINK[ESC4]) OSD.blink1sec();
       itemLengthOK[ESC4temp] = OSD.printInt16(settings.m_OSDItems[ESC4temp][0], settings.m_OSDItems[ESC4temp][1] - TMPmargin, ESCTemps[3], 0, 1, tempSymbol, 1, ESC4temp, ESCSymbol);
     }

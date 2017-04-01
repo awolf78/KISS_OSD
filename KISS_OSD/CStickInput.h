@@ -27,6 +27,7 @@ private:
   unsigned long startYawTime, startRollTime, startPitchTime, startYawLongTime;
   
   uint8_t CheckInput(int16_t input, unsigned long *startTime, uint16_t *timedelay, uint16_t *count, uint8_t smallMask, uint8_t bigMask, boolean skip = false);
+  uint8_t CheckInputInternal(int16_t input, uint8_t smallMask, uint8_t bigMask);
 };
 
 #endif
