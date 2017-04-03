@@ -336,10 +336,10 @@ void* DisplayMenu()
       case 6:
         settingChanged |= checkCode(settings.m_props, 1, 0, 1);
       break;
-      /*case 6:
-        settingChanged |= checkCode(settings.m_Moustache, 1, 0, 1);
-      break;*/
       case 7:
+        settingChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
+      break;
+      case 8:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeDisplayMenuItem = 0;
@@ -349,7 +349,7 @@ void* DisplayMenu()
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 8;
+  static const uint8_t DISPLAY_MENU_ITEMS = 9;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
@@ -359,7 +359,7 @@ void* DisplayMenu()
   static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
   static const char BEERMUG_STR[] PROGMEM =         "watt meter : ";
   static const char PROPS_STR[] PROGMEM =           "props      : ";
-//static const char MUSTACHE_STR[] PROGMEM =        "mustache   : ";
+  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair  : ";
 //static const char BACK_STR[] PROGMEM =            "back";
   
   uint8_t startRow = 1;
@@ -398,8 +398,9 @@ void* DisplayMenu()
   OSD.printP( startCol, ++startRow, PROPS_STR, activeDisplayMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_props]) );
 
-  /*OSD.printP( startCol, ++startRow, MUSTACHE_STR, activeDisplayMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_Moustache]) );*/
+  OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeDisplayMenuItem );
+  static const char ON_OFF_STR_CROSS[][4] = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
+  OSD.print( fixStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeDisplayMenuItem );
   

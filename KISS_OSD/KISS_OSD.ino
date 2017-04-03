@@ -113,7 +113,7 @@ static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM
     { 5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880 }, //F
     { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }  //R
   };
-static const char bandSymbols[][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
+static const char bandSymbols[VTX_BAND_COUNT][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
 
 #ifdef IMPULSERC_VTX
 static volatile uint8_t vTxPower;
@@ -152,38 +152,6 @@ void setupMAX7456()
 #endif
   delay(100);
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
-}
-
-static int8_t moustacheRow, moustacheCol;
-
-void setup()
-{
-  uint8_t i = 0;
-  SPI.begin();
-  SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
-  setupMAX7456();
-  settings.cleanEEPROM();
-  settings.ReadSettings(); 
-  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
-  moustacheCol = settings.COLS;
-  moustacheRow = settings.ROWS-3; 
-  
-  //clean used area
-  while (!OSD.notInVSync());
-  cleanScreen();
-#ifdef IMPULSERC_VTX
-  //Ignore setting because this is critical to making sure we can detect the
-  //VTX power jumper being installed. If we aren't using 5V ref there is
-  //the chance we will power up on wrong frequency.
-  analogReference(DEFAULT);
-  setvTxSettings();
-  vtx_init();
-  vtx_set_frequency(vTxBand, vTxChannel);
-  vtx_flash_led(5);
-#endif
-  lastTempUnit = settings.m_tempUnit;
-  settings.SetupPPMs(DV_PPMs);
-  NewSerial.begin(115200);
 }
 
 static int16_t  throttle = 0;
@@ -293,6 +261,7 @@ extern void ReadFCSettings(boolean skipValues);
 typedef void* (*fptr)();
 static char tempSymbol[] = {0xB0, 0x00};
 static char ESCSymbol[] = {0x7E, 0x00};
+static const char crossHairSymbol[] = {0x13, 0x00};
 static uint8_t code = 0;
 static boolean menuActive = false;
 static boolean menuWasActive = false;
@@ -341,6 +310,35 @@ static uint8_t settingMode = 0;
 
 static unsigned long _StartupTime = 0;
 extern void* MainMenu();
+
+
+void setup()
+{
+  uint8_t i = 0;
+  SPI.begin();
+  SPI.setClockDivider( SPI_CLOCK_DIV2 ); 
+  setupMAX7456();
+  settings.cleanEEPROM();
+  settings.ReadSettings(); 
+  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+  
+  //clean used area
+  while (!OSD.notInVSync());
+  cleanScreen();
+#ifdef IMPULSERC_VTX
+  //Ignore setting because this is critical to making sure we can detect the
+  //VTX power jumper being installed. If we aren't using 5V ref there is
+  //the chance we will power up on wrong frequency.
+  analogReference(DEFAULT);
+  setvTxSettings();
+  vtx_init();
+  vtx_set_frequency(vTxBand, vTxChannel);
+  vtx_flash_led(5);
+#endif
+  lastTempUnit = settings.m_tempUnit;
+  settings.SetupPPMs(DV_PPMs);
+  NewSerial.begin(115200);
+}
 
 void loop(){
   uint16_t i = 0;
@@ -757,7 +755,7 @@ void loop(){
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
         {
-          if(settings.m_displaySymbols == 1)
+          if(settings.m_wattMeter > 0 && settings.m_displaySymbols == 1)
           {
             const int16_t wattPercentage = 20; //95% of max
             uint32_t Watts = (uint32_t)LipoVoltageRT * (uint32_t)(currentRT * 10);            
@@ -936,7 +934,10 @@ void loop(){
      
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
         {
-          static char ampESC[] = { 'a', 0x7E, 0x00};
+          static char ampESC[3];
+          ampESC[0] = 'a';
+          ampESC[1] = ESCSymbol[0];
+          ampESC[2] = 0x00;
           OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0], 2, "a", 1, ESC1voltage, ESCSymbol);
           OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1], 2, ampESC, 1, ESC2voltage);
           OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2], 2, ampESC, 1, ESC3voltage);
@@ -946,7 +947,10 @@ void loop(){
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
         {
-          static char tempESC[] = { tempSymbol[0], 0x7E, 0x00};
+          static char tempESC[3];
+          tempESC[0] = tempSymbol[0];
+          tempESC[1] = ESCSymbol[0];
+          tempESC[2] = 0x00;
           OSD.printInt16( settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1]+TMPmargin, ESCTemps[0], 0, tempSymbol, 1, ESC1temp, ESCSymbol);
           OSD.printInt16(settings.m_OSDItems[ESC2temp][0], settings.m_OSDItems[ESC2temp][1]+TMPmargin, ESCTemps[1], 0, tempESC, 1, ESC2temp);
           OSD.printInt16(settings.m_OSDItems[ESC3temp][0], settings.m_OSDItems[ESC3temp][1]-TMPmargin, ESCTemps[2], 0, tempESC, 1, ESC3temp);
@@ -974,6 +978,14 @@ void loop(){
             stopWatchStr[0] = 0x00;
           }
           OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
+        }
+
+        if(settings.m_crossHair && (logoDone || armed > 0))
+        {
+          int8_t crossOffset = 0;
+          if(settings.m_crossHair > 1) crossOffset = (int8_t)settings.m_crossHair - (int8_t)5;
+          OSD.setCursor(settings.COLS/2 - 1, (int8_t)(settings.ROWS/2) + crossOffset);
+          OSD.print(crossHairSymbol);
         }
         
         if(settings.m_batWarning > 0 && (LipoMAH+previousMAH) >= settings.m_batWarningMAH)
@@ -1031,7 +1043,7 @@ void loop(){
         {
           OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
           OSD.printSpaces(5);
-        }
+        }        
         
         if(DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel]) 
         {

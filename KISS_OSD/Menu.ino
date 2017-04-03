@@ -22,7 +22,7 @@ static const int16_t RATE_STEP = 50;
 
 static const char SAVE_EXIT_STR[] PROGMEM = "save+exit";
 static const char BACK_STR[] PROGMEM =      "back";
-static char ON_OFF_STR[][4] = { "off", "on " };
+static const char ON_OFF_STR[][4] = { "off", "on " };
 static const char ROLL_STR[] PROGMEM =  "roll  ";
 static const char PITCH_STR[] PROGMEM = "pitch ";
 static const char YAW_STR[] PROGMEM =   "yaw   ";
@@ -766,6 +766,7 @@ void* vTxMenu()
 void* MainMenu()
 {
   uint8_t i;
+  bool crossHairChanged = false;
   if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
   {
     switch(activeMenuItem)
@@ -821,13 +822,18 @@ void* MainMenu()
         settingChanged |= checkCode(settings.m_airTimer, 1, 0, 1);        
       break;
       case 7:
+        crossHairChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
+        if(crossHairChanged) logoDone = true;
+        settingChanged |= crossHairChanged;
+      break;
+      case 8:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           menuActive = false;
           menuWasActive = true;
         }
       break;
-      case 8:
+      case 9:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           menuActive = false;
@@ -843,7 +849,7 @@ void* MainMenu()
       break;
     }
   }
-  static const uint8_t MAIN_MENU_ITEMS = 9;
+  static const uint8_t MAIN_MENU_ITEMS = 10;
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
   static const char PID_STR[] PROGMEM =             "tune";
@@ -853,6 +859,7 @@ void* MainMenu()
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols  : ";
   static const char AIR_TIMER_STR[] PROGMEM =       "air timer: ";
+  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair: ";
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
   static const char CANCEL_STR[] PROGMEM =          "cancel";
   
@@ -872,6 +879,9 @@ void* MainMenu()
   OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
   OSD.printP( startCol, ++startRow, AIR_TIMER_STR, activeMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_airTimer]) );
+  OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeMenuItem );
+  static const char ON_OFF_STR_CROSS[][4] = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
+  OSD.print( fixStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CANCEL_STR, activeMenuItem );
   

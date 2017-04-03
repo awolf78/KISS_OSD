@@ -98,6 +98,7 @@ class CSettings
   volatile uint8_t m_props;
   volatile uint8_t m_airTimer;
   volatile int16_t m_voltCorrect;
+  volatile uint8_t m_crossHair;
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);

@@ -272,6 +272,7 @@ static uint32_t LastLoopTime = 0;
 typedef void* (*fptr)();
 static char tempSymbol[] = {0xB0, 0x00};
 static char ESCSymbol[] = {0x7E, 0x00};
+static const char crossHairSymbol[] = {0x13, 0x00};
 static uint8_t code = 0;
 static boolean menuActive = true;
 static boolean menuWasActive = false;
@@ -992,6 +993,14 @@ void loop() {
       }
       if (OSD_ITEM_BLINK[STOPW]) OSD.blink1sec();
       OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
+    }
+
+    if(settings.m_crossHair)
+    {
+      int8_t crossOffset = 0;
+      if(settings.m_crossHair > 1) crossOffset = (int8_t)settings.m_crossHair - (int8_t)5;
+      OSD.setCursor(settings.COLS/2  - 1, (int8_t)(settings.ROWS/2) + crossOffset);
+      OSD.print(crossHairSymbol);
     }
 
     if (DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel])
