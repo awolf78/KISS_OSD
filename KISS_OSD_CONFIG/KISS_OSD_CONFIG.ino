@@ -127,15 +127,33 @@ void cleanScreen()
 
 static uint8_t lastTempUnit;
 
+void checkVideoMode()
+{
+  uint8_t videoSys = OSD.videoSystem();
+  if(videoSys != settings.m_videoMode)
+  {
+    settings.m_videoMode = videoSys;
+    if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
+    else settings.ROWS = 13;
+    OSD.setDefaultSystem(videoSys);
+    OSD.setTextArea(settings.COLS, settings.ROWS);           
+  }  
+}
+
 void setupMAX7456()
 {
-  OSD.begin(settings.COLS,13);
-  delay(100);
-  settings.m_videoMode = OSD.videoSystem();
-  if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
-  else settings.ROWS = 13;
+  OSD.begin(settings.COLS,13);  
+  #ifdef FORCE_NTSC
+  OSD.setDefaultSystem(MAX7456_NTSC);
+  settings.ROWS = 13;
+  #elif defined(FORCE_PAL)
+  OSD.setDefaultSystem(MAX7456_PAL);
+  settings.ROWS = 15;
+  #else
+  delay(1000);
+  checkVideoMode();
+  #endif
   OSD.setTextArea(settings.COLS, settings.ROWS);  
-  OSD.setDefaultSystem(settings.m_videoMode);
   OSD.setSwitchingTime( 5 );   
   OSD.setCharEncoding( MAX7456_ASCII );  
   OSD.display();
@@ -360,6 +378,10 @@ void loop() {
   if ((micros() - LastLoopTime) > 10000)
   {
     LastLoopTime = micros();
+
+    #if !defined(FORCE_PAL) && !defined(FORCE_NTSC)
+    checkVideoMode();
+    #endif
 
 #ifdef IMPULSERC_VTX
     if (timer1sec)
@@ -793,7 +815,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
-      if(settings.m_wattMeter == 0)
+      if(settings.m_wattMeter == 0 || settings.m_displaySymbols == 0)
       {
         if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
         itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
@@ -946,6 +968,7 @@ void loop() {
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
     {
       static char ampESC[] = { 'a', 0x7E, 0x00};
+      ampESC[1] = ESCSymbol[0];
       if (OSD_ITEM_BLINK[ESC1]) OSD.blink1sec();
       itemLengthOK[ESC1voltage] = OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1] + CurrentMargin, motorCurrent[0], 2, 1, "a", 1, ESC1voltage, ESCSymbol);
       if (OSD_ITEM_BLINK[ESC2]) OSD.blink1sec();
@@ -961,6 +984,7 @@ void loop() {
     {
       static char tempESC[] = { tempSymbol[0], 0x7E, 0x00};
       tempESC[0] = tempSymbol[0];
+      tempESC[1] = ESCSymbol[0];
       if (OSD_ITEM_BLINK[ESC1]) OSD.blink1sec();
       itemLengthOK[ESC1temp] = OSD.printInt16( settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1] + TMPmargin, ESCTemps[0], 0, 1, tempSymbol, 1, ESC1temp, ESCSymbol);
       if (OSD_ITEM_BLINK[ESC2]) OSD.blink1sec();
@@ -995,7 +1019,7 @@ void loop() {
       OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
     }
 
-    if(settings.m_crossHair)
+    if(settings.m_crossHair && !moveItems)
     {
       int8_t crossOffset = 0;
       if(settings.m_crossHair > 1) crossOffset = (int8_t)settings.m_crossHair - (int8_t)5;

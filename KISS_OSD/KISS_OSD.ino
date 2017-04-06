@@ -81,6 +81,7 @@ const char KISS_OSD_VER[] = "kiss osd v2.3.1";
 #include "CMeanFilter.h"
 #include "Config.h"
 
+
 #ifdef IMPULSERC_VTX
 const uint8_t osdChipSelect          =            10;
 #else
@@ -135,15 +136,33 @@ void cleanScreen()
 
 static uint8_t lastTempUnit;
 
+void checkVideoMode()
+{
+  uint8_t videoSys = OSD.videoSystem();
+  if(videoSys != settings.m_videoMode)
+  {
+    settings.m_videoMode = videoSys;
+    if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
+    else settings.ROWS = 13;
+    OSD.setDefaultSystem(videoSys);
+    OSD.setTextArea(settings.COLS, settings.ROWS);           
+  }  
+}
+
 void setupMAX7456()
 {
-  OSD.begin(settings.COLS,13);
-  delay(100);
-  settings.m_videoMode = OSD.videoSystem();
-  if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
-  else settings.ROWS = 13;
-  OSD.setTextArea(settings.COLS, settings.ROWS);  
-  OSD.setDefaultSystem(settings.m_videoMode);
+  OSD.begin(settings.COLS,13);    
+  #ifdef FORCE_NTSC
+  OSD.setDefaultSystem(MAX7456_NTSC);
+  settings.ROWS = 13;
+  #elif defined(FORCE_PAL)
+  OSD.setDefaultSystem(MAX7456_PAL);
+  settings.ROWS = 15;
+  #else
+  delay(1000);
+  checkVideoMode();
+  #endif
+  OSD.setTextArea(settings.COLS, settings.ROWS);
   OSD.setSwitchingTime( 5 ); 
   OSD.display();
 #ifdef IMPULSERC_VTX
@@ -384,6 +403,10 @@ void loop(){
   if(micros()-LastLoopTime > 10000)
   { 
     LastLoopTime = micros();
+
+    #if !defined(FORCE_PAL) && !defined(FORCE_NTSC)
+    checkVideoMode();
+    #endif
     
 #ifdef IMPULSERC_VTX
      if (timer1sec) 
@@ -768,6 +791,9 @@ void loop(){
             switch(settings.m_wattMeter)
             {              
               case 1:
+              #ifndef BEERMUG
+              case 2:
+              #endif
                 wattSlice = (settings.m_maxWatts - settings.m_maxWatts/wattPercentage) / 8;
                 wattStatus = 0xD7;
                 while((tempWatt-wattSlice) > 0 && wattStatus < 0xE1) 
@@ -792,6 +818,7 @@ void loop(){
                 OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, 2, ampBlanks, AMPSp);
                 OSD.print(wattMeterSymbol);
               break;
+              #ifdef BEERMUG
               case 2:                
                 wattSlice = (settings.m_maxWatts - settings.m_maxWatts/wattPercentage) / 5;
                 //wattSlice = settings.m_maxWatts / 5;
@@ -826,6 +853,7 @@ void loop(){
                 OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, 2, ampBlanks, AMPSp);
                 OSD.print(wattMeterSymbol);
               break;
+              #endif
             }            
           }
           else
@@ -980,6 +1008,7 @@ void loop(){
           OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
         }
 
+        #ifdef CROSSHAIR
         if(settings.m_crossHair && (logoDone || armed > 0))
         {
           int8_t crossOffset = 0;
@@ -987,6 +1016,7 @@ void loop(){
           OSD.setCursor(settings.COLS/2 - 1, (int8_t)(settings.ROWS/2) + crossOffset);
           OSD.print(crossHairSymbol);
         }
+        #endif
         
         if(settings.m_batWarning > 0 && (LipoMAH+previousMAH) >= settings.m_batWarningMAH)
         {

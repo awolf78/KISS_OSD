@@ -1,6 +1,15 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// Uncomment ONE if PAL/NTSC autodetection does not work
+//======================================================
+//#define FORCE_NTSC
+//#define FORCE_PAL
+
+
+
+// INTERNALS - DO NOT CHANGE
+//=============================
 
 // vTx config
 //=============================

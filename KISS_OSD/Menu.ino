@@ -472,12 +472,16 @@ void* TuneMenu()
       case 3:
           cleanScreen();
           return (void*)TPAMenu;
-      break; 
+      break;
+      #ifdef CUSTOM_TPA 
       case 4:
           cleanScreen();
           return (void*)CustomTPAMenu;
       break;        
       case 5:
+      #else
+      case 4:
+      #endif
           cleanScreen();
           activeTuneMenuItem = 0;
           return (void*)MainMenu;
@@ -485,18 +489,28 @@ void* TuneMenu()
     }
   }
 
+  #ifdef CUSTOM_TPA
   static const uint8_t TUNE_MENU_ITEMS = 6;
+  #else
+  static const uint8_t TUNE_MENU_ITEMS = 5;
+  #endif
   activeTuneMenuItem = checkMenuItem(activeTuneMenuItem, TUNE_MENU_ITEMS);
   
 //static const char ROLL_STR[] PROGMEM =        "roll";
 //static const char PITCH_STR[] PROGMEM =       "pitch";
 //static const char YAW_STR[] PROGMEM =         "yaw";
   static const char TPA_STR[] PROGMEM =         "tpa";
-  static const char CUSTOM_TPA_STR[] PROGMEM =  "custom tpa";  
+  #ifdef CUSTOM_TPA
+  static const char CUSTOM_TPA_STR[] PROGMEM =  "custom tpa";
+  #endif  
 //static const char BACK_STR[] PROGMEM =        "back";
   
   uint8_t startRow = 1;
+  #ifdef CUSTOM_TPA
   uint8_t startCol = settings.COLS/2 - strlen_P(CUSTOM_TPA_STR)/2;
+  #else
+  uint8_t startCol = settings.COLS/2 - strlen_P(PITCH_STR)/2;
+  #endif
   static const char TUNE_MENU_TITLE_STR[] PROGMEM = "tune menu";
   OSD.printP(settings.COLS/2 - strlen_P(TUNE_MENU_TITLE_STR)/2, ++startRow, TUNE_MENU_TITLE_STR);
   
@@ -504,7 +518,9 @@ void* TuneMenu()
   OSD.printP( startCol, ++startRow, PITCH_STR, activeTuneMenuItem);
   OSD.printP( startCol, ++startRow, YAW_STR, activeTuneMenuItem);
   OSD.printP( startCol, ++startRow, TPA_STR, activeTuneMenuItem);
+  #ifdef CUSTOM_TPA
   OSD.printP( startCol, ++startRow, CUSTOM_TPA_STR, activeTuneMenuItem);  
+  #endif
   OSD.printP( startCol, ++startRow, BACK_STR, activeTuneMenuItem);
   
   return (void*)TuneMenu;
@@ -821,6 +837,7 @@ void* MainMenu()
       case 6:
         settingChanged |= checkCode(settings.m_airTimer, 1, 0, 1);        
       break;
+      #ifdef CROSSHAIR
       case 7:
         crossHairChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
         if(crossHairChanged) logoDone = true;
@@ -846,10 +863,37 @@ void* MainMenu()
           settings.ReadSettings();
           fcSettingsReceived = false;
         }
+      #else
+      case 7:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          menuActive = false;
+          menuWasActive = true;
+        }
+      break;
+      case 8:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          menuActive = false;
+          menuWasActive = true;
+          settingChanged = false;          
+          for(i=0; i<MAX_SETTING_MODES; i++)
+          {
+            fcSettingModeChanged[i] = false;
+          }
+          settings.ReadSettings();
+          fcSettingsReceived = false;
+        }
+      #endif
       break;
     }
   }
+
+  #ifdef CROSSHAIR
   static const uint8_t MAIN_MENU_ITEMS = 10;
+  #else
+  static const uint8_t MAIN_MENU_ITEMS = 9;
+  #endif
   activeMenuItem = checkMenuItem(activeMenuItem, MAIN_MENU_ITEMS);
   
   static const char PID_STR[] PROGMEM =             "tune";
@@ -859,7 +903,9 @@ void* MainMenu()
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols  : ";
   static const char AIR_TIMER_STR[] PROGMEM =       "air timer: ";
+  #ifdef CROSSHAIR
   static const char CROSSHAIR_STR[] PROGMEM =       "crosshair: ";
+  #endif
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
   static const char CANCEL_STR[] PROGMEM =          "cancel";
   
@@ -879,9 +925,11 @@ void* MainMenu()
   OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
   OSD.printP( startCol, ++startRow, AIR_TIMER_STR, activeMenuItem );
   OSD.print( fixStr(ON_OFF_STR[settings.m_airTimer]) );
+  #ifdef CROSSHAIR
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeMenuItem );
   static const char ON_OFF_STR_CROSS[][4] = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
   OSD.print( fixStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
+  #endif
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CANCEL_STR, activeMenuItem );
   

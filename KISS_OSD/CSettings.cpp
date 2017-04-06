@@ -5,6 +5,8 @@
 
 CSettings::CSettings()
 {
+  m_videoMode = 2;
+  ROWS = 13;
   COLS = 28;
   m_maxWatts = 2500;
   LoadDefaults();
