@@ -292,10 +292,8 @@ static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
 static char batterySymbol[] = { 0x83, 0x88, 0x88, 0x89, 0x00 };
 static char wattMeterSymbol[] = { 0xD7, 0xD8, 0x00 };
-static char moustacheSymbol[] = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
-static uint8_t moustacheStarted = 0;
-static bool angleXpositive = true;
-static bool angleYpositive = true;
+/*static bool angleXpositive = true;
+static bool angleYpositive = true;*/
 static uint8_t krSymbol[4] = { 0x9C, 0x9C, 0x9C, 0x9C };
 static unsigned long krTime[4] = { 0, 0, 0, 0 };
 volatile bool timer1sec = false;
@@ -778,6 +776,7 @@ void loop(){
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
         {
+          #ifdef WATTMETER_ICON
           if(settings.m_wattMeter > 0 && settings.m_displaySymbols == 1)
           {
             const int16_t wattPercentage = 20; //95% of max
@@ -857,6 +856,7 @@ void loop(){
             }            
           }
           else
+          #endif
           {
             OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, "a", 2, AMPSp);
           }
@@ -868,7 +868,8 @@ void loop(){
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
-        {        
+        {
+          #ifdef MAH_ICON        
           if(settings.m_displaySymbols == 1)
           {
             uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
@@ -891,6 +892,7 @@ void loop(){
             OSD.print(batterySymbol);            
           }
           else
+          #endif
           {
             OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH+previousMAH, 0, "mah", 0, MAHp);
           }
@@ -907,6 +909,7 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
         {
+          #ifdef PROP_ICON
           static char KR[4];
           if(settings.m_displaySymbols == 1 && settings.m_props == 1)
           {
@@ -945,6 +948,7 @@ void loop(){
             OSD.print(KR[3]);
           }
           else
+          #endif
           {
             static char KR2[3];
             KR2[0] = 'k';
@@ -1081,7 +1085,7 @@ void loop(){
           cleanScreen();
         }
 
-        
+        #ifdef SHOW_KISS_LOGO
         if(!logoDone && armed == 0 && !menuActive && !armedOnce)
         {
           uint8_t logoCol = 11;
@@ -1126,6 +1130,9 @@ void loop(){
             cleanScreen();
           }
         }
+        #else
+        logoDone = true;
+        #endif
 
         if(symbolOnOffChanged)
         {

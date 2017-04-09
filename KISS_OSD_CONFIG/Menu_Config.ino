@@ -355,7 +355,7 @@ void* DisplayMenu()
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
   static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit : ";
   static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
-  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols    : ";
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons      : ";
   static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
   static const char BEERMUG_STR[] PROGMEM =         "watt meter : ";
   static const char PROPS_STR[] PROGMEM =           "props      : ";

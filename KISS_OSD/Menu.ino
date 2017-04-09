@@ -901,7 +901,7 @@ void* MainMenu()
   static const char FILTER_STR[] PROGMEM =          "filters";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
-  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "symbols  : ";
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons    : ";
   static const char AIR_TIMER_STR[] PROGMEM =       "air timer: ";
   #ifdef CROSSHAIR
   static const char CROSSHAIR_STR[] PROGMEM =       "crosshair: ";

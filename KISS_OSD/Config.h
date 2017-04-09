@@ -12,7 +12,10 @@
 #define BEERMUG
 #define CUSTOM_TPA
 #define CROSSHAIR
-
+#define PROP_ICON
+#define MAH_ICON
+#define WATTMETER_ICON
+#define SHOW_KISS_LOGO
 
 
 
