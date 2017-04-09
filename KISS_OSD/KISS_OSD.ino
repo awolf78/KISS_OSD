@@ -312,16 +312,16 @@ static bool batWarnSymbol = true;
 #ifdef NEW_FC_SETTINGS
 enum _SETTING_MODES 
 {
+  FC_SETTINGS,
   FC_RATES, 
   FC_PIDS, 
   FC_VTX, 
   FC_FILTERS,
-  FC_TPA,
-  FC_SETTINGS
+  FC_TPA
 };
 static const uint8_t MAX_SETTING_MODES = 6;
-static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x4D, 0x43, 0x45, 0x47, 0x4B, 0x30 }; 
-static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x4E, 0x44, 0x46, 0x48, 0x4C, 0x10 };
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x30, 0x4D, 0x43, 0x45, 0x47, 0x4B }; 
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x10, 0x4E, 0x44, 0x46, 0x48, 0x4C };
 static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
 static uint8_t settingMode = 0;
 #endif
@@ -465,7 +465,7 @@ void loop(){
         if(fcSettingChanged && !menuActive)
         {
           bool savedBefore = false;
-          for(i=0; i<(MAX_SETTING_MODES-1); i++)
+          for(i=1; i<MAX_SETTING_MODES; i++)
           {
             if(savedBefore && fcSettingModeChanged[i])
             {              
@@ -873,14 +873,14 @@ void loop(){
           {
             uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
             uint8_t batStatus = 0x88;
-            while(batCount > 4)
+            while(batCount > 4 && batStatus > 0x84)
             {
               batStatus--;
               batCount--;
             }
             batterySymbol[2] = (char)batStatus;
             batStatus = 0x88;
-            while(batCount > 0)
+            while(batCount > 0 && batStatus > 0x84)
             {
               batStatus--;
               batCount--;
