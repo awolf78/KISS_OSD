@@ -65,7 +65,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define PROTODEBUG
 #define KISS_OSD_CONFIG
 
-const char KISS_OSD_VER[] = "kiss osd config v2.3.1";
+const char KISS_OSD_VER[] = "kiss osd config v2.4";
 
 #include <SPI.h>
 #include "MAX7456.h"
@@ -290,7 +290,7 @@ static uint32_t LastLoopTime = 0;
 typedef void* (*fptr)();
 static char tempSymbol[] = {0xB0, 0x00};
 static char ESCSymbol[] = {0x7E, 0x00};
-static const char crossHairSymbol[] = {0x13, 0x00};
+static const char crossHairSymbol[] = {0x11, 0x00};
 static uint8_t code = 0;
 static boolean menuActive = true;
 static boolean menuWasActive = false;
@@ -563,10 +563,12 @@ void loop() {
         OSD_ITEM_BLINK[moveSelected] = true;
       }
       uint8_t moveCount = 1;
+      uint8_t oldMoveSelected = moveSelected;
       if (moveSelected > STOPW)
       {
-        moveSelected = STOPW + (moveSelected - STOPW - 1) * 3 + 1;
-        moveCount = 3;
+        if(moveSelected > ESC4) moveSelected = 18 + (moveSelected - RSSI_);
+        else moveSelected = STOPW + (moveSelected - STOPW - 1) * 3 + 1;
+        if(moveSelected < RSSIp) moveCount = 3;
       }
       for (i = 0; i < moveCount; i++)
       {
@@ -608,14 +610,7 @@ void loop() {
         }
         moveSelected++;
       }
-      if ((moveSelected - 1) > STOPW)
-      {
-        moveSelected = STOPW + (moveSelected - STOPW - 1) / 3;
-      }
-      else
-      {
-        moveSelected--;
-      }
+      moveSelected = oldMoveSelected;
       if (code & inputChecker.YAW_LONG_LEFT)
       {
         OSD_ITEM_BLINK[moveSelected] = false;
@@ -1019,7 +1014,16 @@ void loop() {
       OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
     }
 
-    if(settings.m_crossHair && !moveItems)
+    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
+    {
+      static char rssiIcon[] = { 0x14, 0x17, 0x00 };
+      uint8_t zeroBlanks = 0;
+      itemLengthOK[RSSIp] = OSD.checkPrintLength(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], 2, zeroBlanks, RSSIp);
+      if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(2);
+      else OSD.print(rssiIcon);
+    }
+
+    if(settings.m_crossHair && !moveItems && !shiftOSDactive)
     {
       int8_t crossOffset = 0;
       if(settings.m_crossHair > 1) crossOffset = (int8_t)settings.m_crossHair - (int8_t)5;

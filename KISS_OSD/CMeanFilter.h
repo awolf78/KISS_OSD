@@ -7,12 +7,12 @@
 class CMeanFilter
 {
   public:
-  CMeanFilter(uint16_t maxCount);
+  CMeanFilter(uint8_t maxCount);
   int16_t ProcessValue(const int16_t value);
   private:
   uint32_t m_accValue;
-  uint16_t m_maxCount;
-  uint16_t m_count;
+  uint8_t m_maxCount;
+  uint8_t m_count;
   int16_t m_currentValue;
 };
 

@@ -99,6 +99,14 @@ boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int
   return changed;
 }
 
+boolean checkCode(volatile int8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+{
+  int16_t tempValue = value;
+  boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
+  value = (int8_t) tempValue;
+  return changed;
+}
+
 uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
 {
   if((code &  inputChecker.PITCH_UP) && menuItem > 0)
@@ -126,6 +134,7 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
 
 void* ChangeOrder()
 {
+  OSD.topOffset = 2;
   uint8_t i;
   uint8_t reverseLUT[CSettings::DISPLAY_DV_SIZE];
   for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
@@ -137,6 +146,7 @@ void* ChangeOrder()
   {
     cleanScreen();
     activeOrderMenuItem = 0;
+    OSD.topOffset = 3;
     return (void*)MainMenu;
   }
   else
@@ -189,6 +199,7 @@ void* ChangeOrder()
   static const char ESC_TEMP_ORDER_STR[] PROGMEM =      "esc temp   ";
   static const char ESC_VOLTAGE_ORDER_STR[] PROGMEM =   "esc voltage";
   static const char ESC_RPM_ORDER_STR[] PROGMEM =       "esc rpm    ";
+  static const char RSSI_ORDER_STR[] PROGMEM =          "rssi       ";
 //static const char BACK_STR[] PROGMEM =                "back";
 
   char *orderItems[CSettings::DISPLAY_DV_SIZE];
@@ -201,8 +212,9 @@ void* ChangeOrder()
   orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_KRPM]] = ESC_RPM_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_CURRENT]] = ESC_VOLTAGE_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE]] = ESC_TEMP_ORDER_STR;
+  orderItems[settings.m_DISPLAY_DV[DISPLAY_RSSI]] = RSSI_ORDER_STR;
   
-  uint8_t startRow = 1;
+  uint8_t startRow = 0;
   uint8_t startCol = settings.COLS/2 - strlen_P(ESC_VOLTAGE_ORDER_STR)/2;
   static const char ORDER_TITLE_STR[] PROGMEM = "order menu";
   OSD.printP(settings.COLS/2 - strlen_P(ORDER_TITLE_STR)/2, ++startRow, ORDER_TITLE_STR);
@@ -210,7 +222,6 @@ void* ChangeOrder()
   {
     if(i == activeOrderMenuSelectedItem) OSD.blink1sec(); 
     OSD.printP( startCol, ++startRow, orderItems[i], activeOrderMenuItem );
-    OSD.noBlink();
   }  
   OSD.printP( startCol, ++startRow, BACK_STR, activeOrderMenuItem );
   
@@ -312,12 +323,15 @@ void* DisplayMenu()
         settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 3);
       break;
       case 1:
-        settingChanged |= checkCode(settings.m_tempUnit, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_RSSIchannel, 1, -1, 3);
       break;
       case 2:
-        settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
+        settingChanged |= checkCode(settings.m_tempUnit, 1, 0, 1);
       break;
       case 3:
+        settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
+      break;
+      case 4:
         symbolChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
         settingChanged |= symbolChanged;
         if(symbolChanged) 
@@ -325,21 +339,21 @@ void* DisplayMenu()
           symbolOnOffChanged = true;
         }
       break;
-      case 4:
+      case 5:
         gogglechanged = checkCode(settings.m_goggle, 1, 0, 1);
         if(gogglechanged) correctItemsOnce = false;
         settingChanged |= gogglechanged;
       break;
-      case 5:
+      case 6:
         settingChanged |= checkCode(settings.m_wattMeter, 1, 0, 2);
       break;
-      case 6:
+      case 7:
         settingChanged |= checkCode(settings.m_props, 1, 0, 1);
       break;
-      case 7:
+      case 8:
         settingChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
       break;
-      case 8:
+      case 9:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeDisplayMenuItem = 0;
@@ -349,10 +363,11 @@ void* DisplayMenu()
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 9;
+  static const uint8_t DISPLAY_MENU_ITEMS = 10;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
+  static const char RSSI_CHANNEL_STR[] PROGMEM =    "rssi chan. : ";
   static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit : ";
   static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons      : ";
@@ -371,7 +386,19 @@ void* DisplayMenu()
   OSD.print( fixStr("aux") );
   uint8_t tempCol = startCol + strlen_P(DV_CHANNEL_STR) + 4;
   OSD.printInt16(tempCol, startRow, settings.m_DVchannel+1, 0, 1 );
-  
+
+  OSD.printP( startCol, ++startRow, RSSI_CHANNEL_STR, activeDisplayMenuItem );
+  if(settings.m_RSSIchannel < 0)
+  {
+    OSD.print( fixStr("off") );
+  }
+  else
+  {
+    OSD.print( fixStr("aux") );
+    uint8_t tempCol = startCol + strlen_P(RSSI_CHANNEL_STR) + 4;
+    OSD.printInt16(tempCol, startRow, settings.m_RSSIchannel+1, 0, 1 );
+  }
+    
   OSD.printP( startCol, ++startRow, TEMP_UNIT_STR, activeDisplayMenuItem);
   static const char tempSymbols[][2] = { {0xB0,0x00} , {0xB1, 0x00}};
   OSD.print( fixStr(tempSymbols[settings.m_tempUnit]) );
@@ -579,6 +606,13 @@ void* MainMenu()
       break;
       case 2:
         cleanScreen();
+        setupNickname = true;
+        charSelected = 0;
+        charIndex = findCharPos(settings.m_nickname[charSelected]);
+        return (void*)MainMenu; 
+      break;
+      case 3:
+        cleanScreen();
         moveItems = true;
         settings.SetupPPMs(DV_PPMs, true);
         menuActive = false;
@@ -586,7 +620,7 @@ void* MainMenu()
         OSD_ITEM_BLINK[moveSelected] = true;
         return (void*)MainMenu; 
       break;
-      case 3:
+      case 4:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -595,17 +629,10 @@ void* MainMenu()
         return (void*)MainMenu;
       }
       break;
-      case 4:
-        cleanScreen();
-        return (void*)ChangeOrder;
-      break;
       case 5:
         cleanScreen();
-        setupNickname = true;
-        charSelected = 0;
-        charIndex = findCharPos(settings.m_nickname[charSelected]);
-        return (void*)MainMenu; 
-      break;
+        return (void*)ChangeOrder;
+      break;      
       case 6:
         cleanScreen();
         return (void*)BatteryMenu;
@@ -632,10 +659,10 @@ void* MainMenu()
   
   static const char UPDATE_FONT_STR[] PROGMEM =     "update font";
   static const char DISPLAY_PAGE_STR[] PROGMEM =    "display";
+  static const char NICKNAME_STR[] PROGMEM =        "callsign";
   static const char MOVE_ITEMS_STR[] PROGMEM =      "move items";
   static const char CENTER_OSD_STR[] PROGMEM =      "center osd";
-  static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";
-  static const char NICKNAME_STR[] PROGMEM =        "callsign";
+  static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";  
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
   static const char SAVE_STR[] PROGMEM =            "save";
@@ -650,10 +677,10 @@ void* MainMenu()
   
   OSD.printP( startCol, ++startRow, UPDATE_FONT_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, DISPLAY_PAGE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, NICKNAME_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, MOVE_ITEMS_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CENTER_OSD_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, NICKNAME_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, SAVE_STR, activeMenuItem );

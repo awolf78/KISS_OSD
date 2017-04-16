@@ -13,7 +13,8 @@ enum _DISPLAY
   DISPLAY_MA_CONSUMPTION, 
   DISPLAY_ESC_KRPM, 
   DISPLAY_ESC_CURRENT, 
-  DISPLAY_ESC_TEMPERATURE 
+  DISPLAY_ESC_TEMPERATURE,
+  DISPLAY_RSSI 
 };
 
 enum _OSDItems
@@ -27,7 +28,8 @@ enum _OSDItems
   ESC1,
   ESC2,
   ESC3,
-  ESC4
+  ESC4,
+  RSSI_
 };
 
 enum _OSDItemPos
@@ -49,7 +51,8 @@ enum _OSDItemPos
   ESC3temp,
   ESC4kr,
   ESC4voltage,
-  ESC4temp
+  ESC4temp,
+  RSSIp
 };
 
 class CSettings
@@ -82,11 +85,11 @@ class CSettings
   volatile uint8_t m_stats;
   static const uint8_t NICKNAME_STR_SIZE = 9;
   volatile char m_nickname[NICKNAME_STR_SIZE]; //Nickname to be displayed on OSD
-  static const uint8_t OSD_ITEMS_SIZE = 10;
-  static const uint8_t OSD_ITEMS_POS_SIZE = 18;
+  static const uint8_t OSD_ITEMS_SIZE = 11;
+  static const uint8_t OSD_ITEMS_POS_SIZE = 19;
   volatile uint8_t m_OSDItems[OSD_ITEMS_POS_SIZE][2]; // OSD item positions
   volatile bool m_colBorder[OSD_ITEMS_POS_SIZE];
-  static const uint8_t DISPLAY_DV_SIZE = 9;
+  static const uint8_t DISPLAY_DV_SIZE = 10;
   volatile uint8_t m_DISPLAY_DV[DISPLAY_DV_SIZE];
   static const int16_t DV_PPM_INCREMENT = 150;
   volatile uint8_t m_goggle; //0 = fatshark, 1 = headplay
@@ -99,6 +102,7 @@ class CSettings
   volatile uint8_t m_airTimer;
   volatile int16_t m_voltCorrect;
   volatile uint8_t m_crossHair;
+  volatile int8_t m_RSSIchannel;
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);

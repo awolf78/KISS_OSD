@@ -16,6 +16,8 @@
 #define MAH_ICON
 #define WATTMETER_ICON
 #define SHOW_KISS_LOGO
+#define RSSI_
+#define RSSI_ICON
 
 
 

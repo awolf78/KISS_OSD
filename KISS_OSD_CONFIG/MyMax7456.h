@@ -16,6 +16,7 @@ class CMyMax7456 : public MAX7456
     void blink1sec();
     void printSpaces(uint8_t printLength);
     uint8_t checkPrintLength(volatile uint8_t col, uint8_t row, uint8_t printLength, uint8_t &blanks, _OSDItemPos item);
+    uint8_t topOffset;
   protected:
     void printInt16(uint8_t col, uint8_t row, char *key, int16_t value, uint8_t dec, uint8_t AlignLeft, const char* suffix = "", uint8_t blanks = 0);
     uint8_t print_int16(int16_t p_int, char *str, uint8_t dec, uint8_t AlignLeft);

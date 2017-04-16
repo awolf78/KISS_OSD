@@ -2,8 +2,8 @@ static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
-const uint16_t filterCount = 5;
-const uint16_t filterCount2 = 3;
+const uint8_t filterCount = 5;
+const uint8_t filterCount2 = 3;
 //#ifndef IMPULSERC_VTX
 CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
 CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
@@ -84,7 +84,7 @@ boolean ReadTelemetry()
                settings.m_lastMAH = 0;
                settings.WriteLastMAH();
              }
-             settings.UpdateMaxWatt(settings.m_maxWatts);
+             settings.UpdateMaxWatt(MaxWatt);
            } 
            else if (armed > 0) 
            {
@@ -101,30 +101,34 @@ boolean ReadTelemetry()
          }
          armed = current_armed;
          
-         uint32_t tmpVoltage = 0;
-         uint32_t voltDev = 0;
+         uint32_t tmp32 = 0;
+         uint8_t voltDev = 0;
          if(((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]) > 5){ // the ESC's read the voltage better then the FC
            ESCVoltage[0] = ((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]);
-           tmpVoltage += ESCVoltage[0];
+           tmp32 += ESCVoltage[0];
            voltDev++;
          }
          if(((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]) > 5){ 
            ESCVoltage[1] = ((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]);
-           tmpVoltage += ESCVoltage[1];
+           tmp32 += ESCVoltage[1];
            voltDev++;
          }
          if(((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]) > 5){
            ESCVoltage[2] = ((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]);
-           tmpVoltage += ESCVoltage[2];
+           tmp32 += ESCVoltage[2];
            voltDev++;
          }
          if(((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]) > 5){ 
            ESCVoltage[3] = ((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]);
-           tmpVoltage += ESCVoltage[3];
+           tmp32 += ESCVoltage[3];
            voltDev++;
          }
          
-         if(voltDev!=0) LipoVoltage = tmpVoltage/voltDev;  
+         if(voltDev!=0) 
+         {
+          tmp32 = tmp32/(uint32_t)voltDev;  
+          LipoVoltage = (int16_t)tmp32;
+         }
          LipoVoltage += settings.m_voltCorrect * 10;
          
          LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]); 
@@ -231,10 +235,10 @@ boolean ReadTelemetry()
              MinBat = LipoVoltage;
            }
            MaxAmps = findMax(MaxAmps, current);
-           uint32_t temp = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
-           MaxC = (int16_t) temp;
-           uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
-           MaxWatt = findMax(MaxWatt, (uint16_t) (Watts / 1000));
+           tmp32 = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
+           MaxC = (int16_t) tmp32;
+           tmp32 = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
+           MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
            if(MaxWatt > settings.m_maxWatts) settings.m_maxWatts = MaxWatt;
            for(i=0; i<4; i++)
            {
@@ -290,7 +294,8 @@ uint8_t getCheckSum(uint8_t *buf, uint8_t startIndex, uint8_t stopIndex)
 #ifndef KISS_OSD_CONFIG
 
 extern unsigned long _StartupTime;
-static uint8_t serialBuf2[256];
+//static uint8_t serialBuf2[256];
+#define serialBuf2 serialBuf
 
 #ifdef NEW_FC_SETTINGS
 void ReadFCSettings(boolean skipValues, uint8_t sMode)

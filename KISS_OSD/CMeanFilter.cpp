@@ -1,6 +1,6 @@
 #include "CMeanFilter.h"
 
-CMeanFilter::CMeanFilter(uint16_t maxCount) :
+CMeanFilter::CMeanFilter(uint8_t maxCount) :
 m_maxCount(maxCount),
 m_accValue(0),
 m_count(0),

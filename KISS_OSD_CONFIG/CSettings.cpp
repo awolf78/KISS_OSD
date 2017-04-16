@@ -5,6 +5,8 @@
 
 CSettings::CSettings()
 {
+  m_videoMode = 2;
+  ROWS = 13;
   COLS = 28;
   m_maxWatts = 2500;
   LoadDefaults();
@@ -52,15 +54,16 @@ void CSettings::LoadDefaults()
   m_xOffset = 0; // Center OSD offsets
   m_yOffset = 0;
   m_stats = 1;
-  m_DISPLAY_DV[DISPLAY_NICKNAME] = 8;
+  m_DISPLAY_DV[DISPLAY_NICKNAME] = 9;
   m_DISPLAY_DV[DISPLAY_TIMER] = 2;
-  m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 7;
-  m_DISPLAY_DV[DISPLAY_COMB_CURRENT] = 4;
+  m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 8;
+  m_DISPLAY_DV[DISPLAY_COMB_CURRENT] = 5;
   m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE] = 0;
   m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION] = 1;
-  m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 3;
-  m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 5;
-  m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 6;
+  m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 4;
+  m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 6;
+  m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 7;
+  m_DISPLAY_DV[DISPLAY_RSSI] = 3;
   uint8_t i;
   for(i=0; i < NICKNAME_STR_SIZE; i++)
   {
@@ -102,6 +105,8 @@ void CSettings::LoadDefaults()
   m_OSDItems[NICKNAME][1] = ROWS - 1;
   m_OSDItems[MAH][0] = COLS - 1;
   m_OSDItems[MAH][1] = ROWS - 1;
+  m_OSDItems[RSSIp][0] = COLS/4;
+  m_OSDItems[RSSIp][1] = ROWS - 1;
   m_goggle = 0; //0 = fatshark, 1 = headplay
   m_wattMeter = 1;
   m_Moustache = 1;
@@ -111,6 +116,7 @@ void CSettings::LoadDefaults()
   m_airTimer = 1;
   m_voltCorrect = 0;
   m_crossHair = 0;
+  m_RSSIchannel = 3; //AUX4  
 }
 
 void CSettings::fixColBorders()
@@ -128,7 +134,7 @@ void CSettings::fixColBorders()
       }
       else
       {
-        if(i >= STOPWp)
+        if(i >= STOPWp && i < RSSIp)
         {
            m_OSDItems[i][0] += (int8_t)((int8_t)1 * moveDir);
         }
@@ -181,7 +187,7 @@ void CSettings::ReadSettingsInternal()
   pos++;
   m_yOffset = EEPROM.read(pos);
   pos++;
-  for(i=0; i<DISPLAY_DV_SIZE; i++)
+  for(i=0; i<DISPLAY_DV_SIZE-1; i++)
   {
     m_DISPLAY_DV[i] = EEPROM.read(pos);
     pos++;
@@ -192,7 +198,7 @@ void CSettings::ReadSettingsInternal()
     pos++;
   }
   uint8_t j;
-  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  for(i=0; i < OSD_ITEMS_POS_SIZE-1; i++)
   {
     for(j=0; j<2; j++)
     {
@@ -219,6 +225,15 @@ void CSettings::ReadSettingsInternal()
   m_voltCorrect = EEPROM.read(pos);
   pos++;
   m_crossHair = EEPROM.read(pos);
+  pos++;
+  m_RSSIchannel = EEPROM.read(pos);
+  pos++;
+  for(j=0; j<2; j++)
+  {
+    m_OSDItems[RSSIp][j] = EEPROM.read(pos);
+    pos++;
+  }
+  m_DISPLAY_DV[DISPLAY_RSSI] = EEPROM.read(pos);
   pos++;
   
   m_lastMAH = ReadInt16_t(200, 201);
@@ -250,17 +265,24 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     {
       m_crossHair = 0;
     }
+    if(ver < 0x0F)
+    {
+      m_RSSIchannel = 3;
+      m_DISPLAY_DV[DISPLAY_RSSI] = 9;
+      m_OSDItems[RSSIp][0] = COLS/4;
+      m_OSDItems[RSSIp][1] = ROWS - 1;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x0E) //first start of OSD - or older version
+  if(settingsVer < 0x0F) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x0E);
+    EEPROM.update(0x01,0x0F);
   }
   else
   {
@@ -310,7 +332,7 @@ void CSettings::WriteSettings()
   pos++;
   EEPROM.update(pos, (byte)m_yOffset);
   pos++;
-  for(i=0; i<DISPLAY_DV_SIZE; i++)
+  for(i=0; i<DISPLAY_DV_SIZE-1; i++)
   {
     EEPROM.update(pos, (byte)m_DISPLAY_DV[i]);
     pos++;
@@ -321,7 +343,7 @@ void CSettings::WriteSettings()
     pos++;
   }
   uint8_t j;
-  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  for(i=0; i < OSD_ITEMS_POS_SIZE-1; i++)
   {
     for(j=0; j<2; j++)
     {
@@ -348,6 +370,15 @@ void CSettings::WriteSettings()
   EEPROM.update(pos, (byte)m_voltCorrect);
   pos++;
   EEPROM.update(pos, (byte)m_crossHair);
+  pos++;
+  EEPROM.update(pos, (byte)m_RSSIchannel);
+  pos++;
+  for(j=0; j<2; j++)
+  {
+    EEPROM.update(pos, (byte)m_OSDItems[RSSIp][j]);
+    pos++;
+  }
+  EEPROM.update(pos, (byte)m_DISPLAY_DV[DISPLAY_RSSI]);
   pos++;
 }
 
