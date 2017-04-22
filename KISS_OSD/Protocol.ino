@@ -2,13 +2,16 @@ static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
+#ifdef NEW_FILTER
+const uint8_t filterCount = 10;
+const uint8_t filterCount2 = 10;
+#else
 const uint8_t filterCount = 5;
-const uint8_t filterCount2 = 3;
-//#ifndef IMPULSERC_VTX
+const uint8_t filterCount2 = 5;
+#endif
 CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
 CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) }; 
 CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
-//#endif
 
 boolean ReadTelemetry()
 {
@@ -133,7 +136,7 @@ boolean ReadTelemetry()
          
          LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]); 
          
-         static uint32_t windedupfilterdatas[8];
+         /*static uint32_t windedupfilterdatas[8];
          
          windedupfilterdatas[0] = ESC_filter((uint32_t)windedupfilterdatas[0],(uint32_t)((serialBuf[91+STARTCOUNT]<<8) | serialBuf[92+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
          windedupfilterdatas[1] = ESC_filter((uint32_t)windedupfilterdatas[1],(uint32_t)((serialBuf[101+STARTCOUNT]<<8) | serialBuf[102+STARTCOUNT])/(MAGNETPOLECOUNT/2)<<4);
@@ -153,7 +156,17 @@ boolean ReadTelemetry()
          motorCurrent[0] = windedupfilterdatas[4]>>4;
          motorCurrent[1] = windedupfilterdatas[5]>>4;
          motorCurrent[2] = windedupfilterdatas[6]>>4;
-         motorCurrent[3] = windedupfilterdatas[7]>>4;
+         motorCurrent[3] = windedupfilterdatas[7]>>4;*/
+
+         motorKERPM[0] = ((serialBuf[91+STARTCOUNT]<<8) | serialBuf[92+STARTCOUNT])/(MAGNETPOLECOUNT/2);
+         motorKERPM[1] = ((serialBuf[101+STARTCOUNT]<<8) | serialBuf[102+STARTCOUNT])/(MAGNETPOLECOUNT/2);
+         motorKERPM[2] = ((serialBuf[111+STARTCOUNT]<<8) | serialBuf[112+STARTCOUNT])/(MAGNETPOLECOUNT/2);
+         motorKERPM[3] = ((serialBuf[121+STARTCOUNT]<<8) | serialBuf[122+STARTCOUNT])/(MAGNETPOLECOUNT/2);
+
+         motorCurrent[0] = ((serialBuf[87+STARTCOUNT]<<8) | serialBuf[88+STARTCOUNT]);
+         motorCurrent[1] = ((serialBuf[97+STARTCOUNT]<<8) | serialBuf[98+STARTCOUNT]);
+         motorCurrent[2] = ((serialBuf[107+STARTCOUNT]<<8) | serialBuf[108+STARTCOUNT]);
+         motorCurrent[3] = ((serialBuf[117+STARTCOUNT]<<8) | serialBuf[118+STARTCOUNT]);
          
          
          ESCTemps[0] = ((serialBuf[83+STARTCOUNT]<<8) | serialBuf[84+STARTCOUNT]);
@@ -222,6 +235,15 @@ boolean ReadTelemetry()
            MaxTemp = (MaxTemp - 32) * 5 / 9;
          }
          lastTempUnit = settings.m_tempUnit;
+
+         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
+         current = ampTotalFilter.ProcessValue(current);
+         for(i=0; i<4; i++)
+         {
+           motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
+           motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]/10);
+         }
+         
          if(armedOnce) 
          {
            MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
@@ -247,23 +269,7 @@ boolean ReadTelemetry()
              maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
              minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
            }
-         }
-         LipoVoltageRT = LipoVoltage;
-         //#ifndef IMPULSERC_VTX
-         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
-         //#endif
-         currentRT = current;
-         //#ifndef IMPULSERC_VTX
-         current = ampTotalFilter.ProcessValue(current);
-         //#endif
-         for(i=0; i<4; i++)
-         {
-           motorKERPMRT[i] = motorKERPM[i];
-           //#ifndef IMPULSERC_VTX
-           motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
-           motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
-           //#endif
-         }         
+         }                         
       }
       else
       {

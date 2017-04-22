@@ -20,7 +20,7 @@ void CMyMax7456::blink1sec()
 
 void CMyMax7456::printSpaces(uint8_t printLength)
 {
-  uint8_t i;
+  uint8_t i;  
   for(i=0; i<printLength; i++) 
   {
     print(fixChar(' '));  

@@ -39,8 +39,9 @@ CMax7456Config::CMax7456Config(uint8_t chipSelect) : CMyMax7456(chipSelect)
   
 }
 
-void CMax7456Config::updateFont()
+void CMax7456Config::updateFont(uint8_t *byteBuf)
 {
+  ringBuf = byteBuf;
   BS.begin(fontCompressed);
   O = BS.getn(4);
   L = BS.getn(4);

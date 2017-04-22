@@ -7,7 +7,7 @@ class CMax7456Config : public CMyMax7456
 {
   public:
     CMax7456Config(uint8_t chipSelect);
-    void updateFont();
+    void updateFont(uint8_t *byteBuf);
   private:
     bool m_ledstatus;
     const uint8_t LEDPIN = 7;
@@ -16,7 +16,8 @@ class CMax7456Config : public CMyMax7456
     int16_t m_offset;
     int16_t m_length;
     static const int16_t RING_BUF_SIZE = 512;
-    uint8_t ringBuf[RING_BUF_SIZE];
+    //uint8_t ringBuf[RING_BUF_SIZE];
+    uint8_t *ringBuf;
     int16_t ringHead;
     
     uint8_t spi_transfer(uint8_t data);

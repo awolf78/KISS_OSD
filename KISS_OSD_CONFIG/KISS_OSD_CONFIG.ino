@@ -325,8 +325,8 @@ static uint8_t charIndex = 1;
 volatile bool timer1sec = false;
 static unsigned long timer1secTime = 0;
 static uint8_t currentDVItem = 0;
-static bool symbolOnOffChanged = false;
 static uint16_t fcNotConnectedCount = 0;
+static uint8_t serialBuf[512];
 
 #ifdef DEBUG
 static int16_t versionProto = 0;
@@ -636,7 +636,7 @@ void loop() {
     {
       delay(3000);
       cleanScreen();
-      OSD.updateFont();
+      OSD.updateFont(serialBuf);
       updateFont = false;
       setupMAX7456();      
       updateFontComplete = true;
@@ -810,37 +810,54 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
-      if(settings.m_wattMeter == 0 || settings.m_displaySymbols == 0)
+      if(settings.m_wattMeter == 0)
       {
         if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
-        itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 2, AMPSp);
+        itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 1, AMPSp);
       }
       else
       {
-        char finalMeter1[] = { 0xEB, 0xEC, 0x00 }; 
-        char finalMeter2[] = { 0xE1, 0xE2, 0x00 };
-        if(settings.m_wattMeter == 2)
+        if(settings.m_wattMeter == 0)
         {
-          finalMeter1[0] = 0x01;
-          finalMeter1[1] = 0x02;
-          finalMeter2[0] = 0x09;
-          finalMeter2[1] = 0x0A;
-        }
-        int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
-        if(wattRow < 0) wattRow = 0;
-        uint8_t ampBlanks = 0;
-        itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
-        if (OSD_ITEM_BLINK[AMPS] && timer1sec)
-        {
-          OSD.printSpaces(2);
-          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
-          OSD.printSpaces(2);
+          if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
+          itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], (int16_t)999, 0, 0, "w", 1, AMPSp);                    
         }
         else
         {
-          OSD.print(finalMeter1);
-          OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
-          OSD.print(finalMeter2);
+          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[WATT_ICON] == 1)
+          {
+            char finalMeter1[] = { 0xEB, 0xEC, 0x00 }; 
+            char finalMeter2[] = { 0xE1, 0xE2, 0x00 };
+            if(settings.m_wattMeter == 2)
+            {
+              finalMeter1[0] = 0x01;
+              finalMeter1[1] = 0x02;
+              finalMeter2[0] = 0x09;
+              finalMeter2[1] = 0x0A;
+            }
+            int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
+            if(wattRow < 0) wattRow = 0;
+            uint8_t ampBlanks = 0;
+            itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+            if (OSD_ITEM_BLINK[AMPS] && timer1sec)
+            {
+              OSD.printSpaces(2);
+              OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+              OSD.printSpaces(2);
+            }
+            else
+            {
+              OSD.print(finalMeter1);
+              OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+              OSD.print(finalMeter2);
+            }
+          }
+          else
+          {
+            int16_t tempWatt = 999;
+            if(tempWatt > 1000) OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], tempWatt/100, 1, "kw", 1, AMPSp);
+            else OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], tempWatt, 0, "w", 1, AMPSp);
+          }
         }
       }
     }
@@ -853,7 +870,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
     {
-      if (settings.m_displaySymbols == 1)
+      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
       {
         uint8_t batCount = (LipoMAH + previousMAH) / settings.m_batSlice;
         uint8_t batStatus = 0x88;
@@ -888,7 +905,7 @@ void loop() {
       }
     }
 
-    if (settings.m_displaySymbols == 1)
+    if (settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
     {
       ESCSymbol[0] = fixChar((char)0x7E);
     }
@@ -900,7 +917,7 @@ void loop() {
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
     {
       static char KR[4];
-      if (settings.m_displaySymbols == 1 && settings.m_props == 1)
+      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
       {
         for (i = 0; i < 4; i++)
         {
@@ -965,13 +982,13 @@ void loop() {
       static char ampESC[] = { 'a', 0x7E, 0x00};
       ampESC[1] = ESCSymbol[0];
       if (OSD_ITEM_BLINK[ESC1]) OSD.blink1sec();
-      itemLengthOK[ESC1voltage] = OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1] + CurrentMargin, motorCurrent[0], 2, 1, "a", 1, ESC1voltage, ESCSymbol);
+      itemLengthOK[ESC1voltage] = OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1] + CurrentMargin, motorCurrent[0], 1, 1, "a", 1, ESC1voltage, ESCSymbol);
       if (OSD_ITEM_BLINK[ESC2]) OSD.blink1sec();
-      itemLengthOK[ESC2voltage] = OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1] + CurrentMargin, motorCurrent[1], 2, 0, ampESC, 1, ESC2voltage);
+      itemLengthOK[ESC2voltage] = OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1] + CurrentMargin, motorCurrent[1], 1, 0, ampESC, 1, ESC2voltage);
       if (OSD_ITEM_BLINK[ESC3]) OSD.blink1sec();
-      itemLengthOK[ESC3voltage] = OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1] - CurrentMargin, motorCurrent[2], 2, 0, ampESC, 1, ESC3voltage);
+      itemLengthOK[ESC3voltage] = OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1] - CurrentMargin, motorCurrent[2], 1, 0, ampESC, 1, ESC3voltage);
       if (OSD_ITEM_BLINK[ESC4]) OSD.blink1sec();
-      itemLengthOK[ESC4voltage] = OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1] - CurrentMargin, motorCurrent[3], 2 , 1, "a", 1, ESC4voltage, ESCSymbol);
+      itemLengthOK[ESC4voltage] = OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1] - CurrentMargin, motorCurrent[3], 1 , 1, "a", 1, ESC4voltage, ESCSymbol);
       TMPmargin++;
     }
 
@@ -993,7 +1010,7 @@ void loop() {
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER])
     {
       char stopWatchStr[] = { 0x00, 0x00 };
-      if (settings.m_displaySymbols == 1)
+      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
       {
         if (time - old_time > 1000)
         {
@@ -1014,13 +1031,21 @@ void loop() {
       OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
     }
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
+    if((settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || moveItems)
     {
-      static char rssiIcon[] = { 0x14, 0x17, 0x00 };
-      uint8_t zeroBlanks = 0;
-      itemLengthOK[RSSIp] = OSD.checkPrintLength(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], 2, zeroBlanks, RSSIp);
-      if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(2);
-      else OSD.print(rssiIcon);
+      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
+      {
+        static char rssiIcon[] = { 0x14, 0x17, 0x00 };
+        uint8_t zeroBlanks = 0;
+        itemLengthOK[RSSIp] = OSD.checkPrintLength(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], 2, zeroBlanks, RSSIp);
+        if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(2);
+        else OSD.print(rssiIcon);
+      }
+      else
+      {
+        if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(5);
+        else itemLengthOK[RSSIp] = OSD.printInt16(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], (int16_t)100, 0, 1, "db", 0, RSSIp);
+      }
     }
 
     if(settings.m_crossHair && !moveItems && !shiftOSDactive)
@@ -1048,12 +1073,12 @@ void loop() {
       }
       correctItemsOnce = true;
     }
-
-    if (symbolOnOffChanged)
+    /*bool displaySettingsChanged = settings.m_oldDisplaySymbols != settings.m_displaySymbols;
+    if(displaySettingsChanged)
     {
+      cleanScreen();
       settings.fixColBorders();
-      symbolOnOffChanged = false;
-    }
+    }*/
   }
 }
 

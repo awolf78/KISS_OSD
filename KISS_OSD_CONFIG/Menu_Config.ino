@@ -3,6 +3,7 @@ static uint8_t activeDisplayMenuItem = 0;
 static uint8_t activeVTXMenuItem = 0;
 static uint8_t activeOrderMenuItem = 0;
 static uint8_t activeResetMenuItem = 0;
+static uint8_t activeIconsMenuItem = 0;
 static bool selectedOrder = false;
 static uint8_t activeOrderMenuSelectedItem = 199;
 static uint8_t confirmIndex = 0;
@@ -202,11 +203,14 @@ void* ChangeOrder()
   static const char RSSI_ORDER_STR[] PROGMEM =          "rssi       ";
 //static const char BACK_STR[] PROGMEM =                "back";
 
+  static const char WATT_ORDER_STR[] PROGMEM =          "wattmeter  ";
+
   char *orderItems[CSettings::DISPLAY_DV_SIZE];
   orderItems[settings.m_DISPLAY_DV[DISPLAY_NICKNAME]] = NICKNAME_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_TIMER]] = TIMER_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_RC_THROTTLE]] = THROTTLE_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = AMPS_ORDER_STR;
+  if(settings.m_wattMeter) orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = WATT_ORDER_STR;
+  else orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = AMPS_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE]] = VOLTAGE_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION]] = MAH_ORDER_STR;
   orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_KRPM]] = ESC_RPM_ORDER_STR;
@@ -312,6 +316,96 @@ void* BatteryMenu()
 
 
 
+void* IconsMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    uint8_t oldVal;
+    uint8_t temp1;
+    switch(activeIconsMenuItem)
+    {
+      case 0:
+        settings.m_oldDisplaySymbols = settings.m_displaySymbols;
+        settingChanged |= checkCode(settings.m_displaySymbols, 1, 0, 1);
+        settings.fixColBorders();        
+      break;
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        oldVal = settings.m_IconSettings[activeIconsMenuItem-1];
+        settingChanged |= checkCode(settings.m_IconSettings[activeIconsMenuItem-1], 1, 0, 1);
+        if((activeIconsMenuItem-1) == ESC_ICON && oldVal != settings.m_IconSettings[activeIconsMenuItem-1] && settings.m_displaySymbols == 1) 
+        {
+          temp1 = settings.m_IconSettings[PROPS_ICON];
+          settings.m_IconSettings[PROPS_ICON] = 0;
+          settings.m_oldDisplaySymbols = 2;
+          settings.m_displaySymbols = settings.m_IconSettings[activeIconsMenuItem-1];
+          settings.fixColBorders();
+          settings.m_IconSettings[PROPS_ICON] = temp1;
+          settings.m_displaySymbols = 1;
+          settings.m_oldDisplaySymbols = 1;
+        }
+        if((activeIconsMenuItem-1) == PROPS_ICON && oldVal != settings.m_IconSettings[activeIconsMenuItem-1] && settings.m_displaySymbols == 1) 
+        {
+          temp1 = settings.m_IconSettings[ESC_ICON];
+          settings.m_IconSettings[ESC_ICON] = 0;
+          settings.m_oldDisplaySymbols = 2;
+          settings.m_displaySymbols = settings.m_IconSettings[activeIconsMenuItem-1];
+          settings.fixColBorders();
+          settings.m_IconSettings[ESC_ICON] = temp1;
+          settings.m_displaySymbols = 1;
+          settings.m_oldDisplaySymbols = 1;
+        }
+      break;      
+      case 8:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          activeIconsMenuItem = 0;
+          cleanScreen();
+          return (void*)DisplayMenu;
+        }
+      break;
+    }    
+  }
+  static const uint8_t ICONS_MENU_ITEMS = 9;
+  activeIconsMenuItem = checkMenuItem(activeIconsMenuItem, ICONS_MENU_ITEMS);
+
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons      : ";
+  static const char ALL_ICONS_STR[][14] PROGMEM = { "props icon : ",
+                                                    "esc icon   : ",
+                                                    "watt icon  : ",
+                                                    "mah icon   : ",
+                                                    "rssi icon  : ",
+                                                    "timer icon : ",
+                                                    "kiss logo  : " };
+//static const char BACK_STR[] PROGMEM =            "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(SYMBOLS_SIZE_STR)+3)/2;
+  static const char ICONS_TITLE_STR[] PROGMEM = "icons menu";
+  OSD.printP( settings.COLS/2 - strlen_P(ICONS_TITLE_STR)/2, ++startRow, ICONS_TITLE_STR);
+
+  OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeIconsMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  
+  uint8_t i;
+  for(i=0; i<settings.ICON_SETTINGS_SIZE; i++)
+  {
+    OSD.printP( startCol, ++startRow, ALL_ICONS_STR[i], activeIconsMenuItem );
+    OSD.print( fixStr(ON_OFF_STR[settings.m_IconSettings[i]]) );
+  }
+  
+  OSD.printP( startCol, ++startRow, BACK_STR, activeIconsMenuItem );
+  
+  return (void*)IconsMenu;
+}
+
+
+
 void* DisplayMenu()
 {
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
@@ -332,11 +426,10 @@ void* DisplayMenu()
         settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
       break;
       case 4:
-        symbolChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
-        settingChanged |= symbolChanged;
-        if(symbolChanged) 
+        if(code &  inputChecker.ROLL_RIGHT)
         {
-          symbolOnOffChanged = true;
+          cleanScreen();
+          return (void*)IconsMenu;          
         }
       break;
       case 5:
@@ -348,12 +441,9 @@ void* DisplayMenu()
         settingChanged |= checkCode(settings.m_wattMeter, 1, 0, 2);
       break;
       case 7:
-        settingChanged |= checkCode(settings.m_props, 1, 0, 1);
-      break;
-      case 8:
         settingChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
       break;
-      case 9:
+      case 8:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeDisplayMenuItem = 0;
@@ -363,17 +453,16 @@ void* DisplayMenu()
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 10;
+  static const uint8_t DISPLAY_MENU_ITEMS = 9;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
   static const char RSSI_CHANNEL_STR[] PROGMEM =    "rssi chan. : ";
   static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit : ";
   static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
-  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons      : ";
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons";
   static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
   static const char BEERMUG_STR[] PROGMEM =         "watt meter : ";
-  static const char PROPS_STR[] PROGMEM =           "props      : ";
   static const char CROSSHAIR_STR[] PROGMEM =       "crosshair  : ";
 //static const char BACK_STR[] PROGMEM =            "back";
   
@@ -410,7 +499,6 @@ void* DisplayMenu()
   OSD.print( fixPStr(FONT_SIZES_STR[settings.m_fontSize]) );
   
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeDisplayMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
 
   static const char FATSHARK_STR[] PROGMEM =   "fshark";
   static const char HEADPLAY_STR[] PROGMEM =   "hplay ";
@@ -421,9 +509,6 @@ void* DisplayMenu()
   OSD.printP( startCol, ++startRow, BEERMUG_STR, activeDisplayMenuItem );
   static char ON_OFF_BEER_STR[][8] = { "off    ", "on     ", "beermug" };
   OSD.print( fixStr(ON_OFF_BEER_STR[settings.m_wattMeter]) );
-
-  OSD.printP( startCol, ++startRow, PROPS_STR, activeDisplayMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_props]) );
 
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeDisplayMenuItem );
   static const char ON_OFF_STR_CROSS[][4] = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };

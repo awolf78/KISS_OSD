@@ -112,33 +112,40 @@ void CSettings::LoadDefaults()
   m_Moustache = 1;
   m_voltWarning = 0;
   m_minVolts = 148;
-  m_props = 1;
   m_airTimer = 1;
   m_voltCorrect = 0;
   m_crossHair = 0;
-  m_RSSIchannel = 3; //AUX4  
+  m_RSSIchannel = 3; //AUX4
+  for(i=0; i<ICON_SETTINGS_SIZE; i++)
+  {
+    m_IconSettings[i] = 1;  
+  }
 }
 
 void CSettings::fixColBorders()
 {
-  int8_t moveDir = 1;
-  if(m_displaySymbols == 1) moveDir = -1;
-  uint8_t i;
-  for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
+  if(m_oldDisplaySymbols != m_displaySymbols)
   {
-    if(m_colBorder[i])
+    m_oldDisplaySymbols = m_displaySymbols;
+    int8_t moveDir = 1;
+    if(m_displaySymbols == 1) moveDir = -1;
+    uint8_t i;
+    for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
     {
-      if(i== ESC1kr || i== ESC2kr || i== ESC3kr || i== ESC4kr)
+      if(m_colBorder[i])
       {
-        m_OSDItems[i][0] += (int8_t)((int8_t)5 * moveDir);
-      }
-      else
-      {
-        if(i >= STOPWp && i < RSSIp)
+        if((i== ESC1kr || i== ESC2kr || i== ESC3kr || i== ESC4kr) && m_IconSettings[PROPS_ICON] == 1)
         {
-           m_OSDItems[i][0] += (int8_t)((int8_t)1 * moveDir);
+          m_OSDItems[i][0] += (int8_t)((int8_t)5 * moveDir);
         }
-      }      
+        else
+        {
+          if(i >= STOPWp && i < RSSIp && m_IconSettings[ESC_ICON] == 1)
+          {
+             m_OSDItems[i][0] += (int8_t)((int8_t)1 * moveDir);
+          }
+        }      
+      }
     }
   }
 }
@@ -218,7 +225,7 @@ void CSettings::ReadSettingsInternal()
   pos++;
   m_minVolts = EEPROM.read(pos);
   pos++;
-  m_props = EEPROM.read(pos);
+  m_IconSettings[PROPS_ICON] = EEPROM.read(pos);
   pos++;
   m_airTimer = EEPROM.read(pos);
   pos++;
@@ -235,8 +242,14 @@ void CSettings::ReadSettingsInternal()
   }
   m_DISPLAY_DV[DISPLAY_RSSI] = EEPROM.read(pos);
   pos++;
+  for(i=1; i<ICON_SETTINGS_SIZE; i++)
+  {
+    m_IconSettings[i] = EEPROM.read(pos);
+    pos++;
+  }
   
   m_lastMAH = ReadInt16_t(200, 201);
+  m_maxWatts = ReadInt16_t(202, 203);
 }
 
 void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
@@ -257,7 +270,7 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     } 
     if(ver < 0x0D)
     {
-      m_props = 1;
+      m_IconSettings[PROPS_ICON] = 1;
       m_airTimer = 1;
       m_voltCorrect = 0;
     }
@@ -272,17 +285,27 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_OSDItems[RSSIp][0] = COLS/4;
       m_OSDItems[RSSIp][1] = ROWS - 1;
     }
+    if(ver < 0x10)
+    {
+      uint8_t i;
+      for(i=1; i<ICON_SETTINGS_SIZE; i++)
+      {
+        m_IconSettings[i] = 1;
+      }
+      m_OSDItems[ESC2voltage][0]++;
+      m_OSDItems[ESC3voltage][0]++;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x0F) //first start of OSD - or older version
+  if(settingsVer < 0x10) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x0F);
+    EEPROM.update(0x01,0x10);
   }
   else
   {
@@ -363,7 +386,7 @@ void CSettings::WriteSettings()
   pos++;
   EEPROM.update(pos, (byte)m_minVolts);
   pos++;
-  EEPROM.update(pos, (byte)m_props);
+  EEPROM.update(pos, (byte)m_IconSettings[PROPS_ICON]);
   pos++;
   EEPROM.update(pos, (byte)m_airTimer);
   pos++;
@@ -380,6 +403,13 @@ void CSettings::WriteSettings()
   }
   EEPROM.update(pos, (byte)m_DISPLAY_DV[DISPLAY_RSSI]);
   pos++;
+  for(i=1; i<ICON_SETTINGS_SIZE; i++)
+  {
+    EEPROM.update(pos, (byte)m_IconSettings[i]);
+    pos++;
+  }
+
+  UpdateMaxWatt(m_maxWatts);
 }
 
 void CSettings::FixBatWarning()

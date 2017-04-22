@@ -1,4 +1,3 @@
-static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t protoVersion = 0;
@@ -127,10 +126,10 @@ boolean ReadTelemetry()
          windedupfilterdatas[6] = ESC_filter((uint32_t)windedupfilterdatas[6],(uint32_t)((serialBuf[107+STARTCOUNT]<<8) | serialBuf[108+STARTCOUNT])<<4);
          windedupfilterdatas[7] = ESC_filter((uint32_t)windedupfilterdatas[7],(uint32_t)((serialBuf[117+STARTCOUNT]<<8) | serialBuf[118+STARTCOUNT])<<4);
          
-         motorCurrent[0] = windedupfilterdatas[4]>>4;
-         motorCurrent[1] = windedupfilterdatas[5]>>4;
-         motorCurrent[2] = windedupfilterdatas[6]>>4;
-         motorCurrent[3] = windedupfilterdatas[7]>>4;
+         motorCurrent[0] = (windedupfilterdatas[4]>>4)/10;
+         motorCurrent[1] = (windedupfilterdatas[5]>>4)/10;
+         motorCurrent[2] = (windedupfilterdatas[6]>>4)/10;
+         motorCurrent[3] = (windedupfilterdatas[7]>>4)/10;
          
          
          ESCTemps[0] = ((serialBuf[83+STARTCOUNT]<<8) | serialBuf[84+STARTCOUNT]);

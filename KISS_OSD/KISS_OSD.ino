@@ -56,7 +56,7 @@ displayed according to the percentage configured in the menu. Enter the menu wit
 for more than 3 seconds. Default is 23%, so if you have a 1300 mAh battery, it would start warning 
 you at 1001 mAh used capacity.
 =============================*/
-static const int16_t BAT_MAH_INCREMENT = 50;
+static const uint8_t BAT_MAH_INCREMENT = 50;
 
 // END OF CONFIGURATION
 //=========================================================================================================================
@@ -67,7 +67,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 
 //#define DEBUG
 //#define SIMULATE_VALUES
-volatile bool doItOnce;
+static bool doItOnce = true;
 
 const char KISS_OSD_VER[] = "kiss osd v2.4";
 
@@ -181,11 +181,9 @@ static int16_t  yaw = 0;
 static int16_t angleX = 0;
 static int16_t angleY = 0;
 static uint16_t current = 0;
-static volatile uint16_t currentRT = 0;
 static int8_t armed = 0;
 static int8_t idleTime = 0;
 static int16_t LipoVoltage = 0;
-static int16_t LipoVoltageRT = 0;
 static volatile int16_t LipoMAH = 0;
 static volatile int16_t  previousMAH = 0;
 static int16_t totalMAH = 0;
@@ -196,7 +194,6 @@ static int16_t MaxWatt = 0;
 static int16_t MaxTemp = 0;
 static int16_t MinBat = 0;
 static int16_t motorKERPM[4] = {0,0,0,0};
-static int16_t motorKERPMRT[4] = {0,0,0,0};
 static int16_t maxKERPM[4] = {0,0,0,0};
 static int16_t motorCurrent[4] = {0,0,0,0};
 static int16_t maxCurrent[4] = {0,0,0,0};
@@ -216,8 +213,12 @@ static boolean armedOnce = false;
 static boolean showBat = false;
 static boolean settingChanged = false;
 static uint8_t statPage = 0;
-static bool flipOnce = false;
+static volatile bool flipOnce = true;
+#ifdef NEW_FILTER
+CMeanFilter rssiFilter(10);
+#else
 CMeanFilter rssiFilter(7);
+#endif
 
 
 uint32_t ESC_filter(uint32_t oldVal, uint32_t newVal){
@@ -292,7 +293,7 @@ static boolean batterySelect = false;
 static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
-static char batterySymbol[] = { 0x83, 0x88, 0x88, 0x89, 0x00 };
+static char batteryIcon[] = { 0x83, 0x84, 0x84, 0x89, 0x00 };
 static char wattMeterSymbol[] = { 0xD7, 0xD8, 0x00 };
 /*static bool angleXpositive = true;
 static bool angleYpositive = true;*/
@@ -334,7 +335,7 @@ extern void* MainMenu();
 static char iconPrintBuf1[] = { 0x00, 0x00, 0x00 };
 static char iconPrintBuf2[] = { 0x00, 0x00, 0x00 };
 
-void getIconPos(int16_t value, int16_t maxValue, uint8_t steps, char &iconPos1, char &iconPos2, char inc = 1, bool overlap = false)
+void getIconPos(int16_t value, int16_t maxValue, uint8_t steps, char &iconPos1, char &iconPos2, char inc = 1)
 {
   if(value > maxValue) value = maxValue;
   if(value < 0) return;
@@ -347,10 +348,6 @@ void getIconPos(int16_t value, int16_t maxValue, uint8_t steps, char &iconPos1, 
   if(tempValue1 > 0)
   {    
     iconPos2 += ((char)(tempValue1 / stepValue)) * inc;    
-  }
-  if(overlap && (tempValue1 >= 0) && tempValue1 < stepValue)
-  {
-    iconPos2 += inc;
   }
 }
 
@@ -544,7 +541,7 @@ void loop(){
     {
       cleanScreen();
       static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
-      OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS/2, FC_NOT_CONNECTED_STR);
+      OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS-2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;
       return;
@@ -747,7 +744,7 @@ void loop(){
         {
           static char ESC_STAT_STR1[] = "esc";
           char* ESC_STAT_STR = ESC_STAT_STR1;
-          if(settings.m_displaySymbols == 1)
+          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
           {
             ESC_STAT_STR = ESCSymbol;
           }
@@ -776,6 +773,26 @@ void loop(){
      }
      else 
       {
+        #ifdef SIMULATE_VALUES
+        static int16_t currentRT2 = 0;
+        static int16_t LipoMAH2 = 0;
+        static int16_t rssi2 = 0;
+        if(doItOnce && timer1sec)
+        {
+          currentRT2 += 50;
+          if(currentRT2 > 1000) currentRT2 = 0;
+          LipoMAH2 += 100;
+          if(LipoMAH2 > settings.m_batMAH[settings.m_activeBattery]) LipoMAH2 = 0;
+          rssi2 += 10;
+          if(rssi2 > 100) rssi2 = 0;
+          doItOnce = false;
+        }
+        if(!timer1sec) doItOnce = true;
+        currentRT = currentRT2;
+        LipoMAH = LipoMAH2;
+        AuxChanVals[settings.m_RSSIchannel] = rssi2;
+        #endif 
+         
         if(armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[settings.m_DVchannel]) 
         {
           DV_change_time = _millis;
@@ -793,117 +810,60 @@ void loop(){
         {
           OSD.checkPrintLength(settings.m_OSDItems[NICKNAME][0], settings.m_OSDItems[NICKNAME][1], strlen(settings.m_nickname), zeroBlanks, NICKNAMEp);
           OSD.print( fixStr(settings.m_nickname) );          
-        }
-
-        #ifdef SIMULATE_VALUES
-        if(doItOnce && timer1sec)
-        {
-          currentRT += 100;
-          if(currentRT > 10000) currentRT = 0;
-          LipoMAH += 100;
-          if(LipoMAH > settings.m_batMAH[settings.m_activeBattery]) LipoMAH = 0;
-          AuxChanVals[settings.m_RSSIchannel] += 3;
-          if(AuxChanVals[settings.m_RSSIchannel] > 100) AuxChanVals[settings.m_RSSIchannel] = 0;
-          doItOnce = false;
-        }
-        if(!timer1sec) doItOnce = true;
-        #endif
+        }        
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
         {
-          #ifdef WATTMETER_ICON
-          if(settings.m_wattMeter > 0 && settings.m_displaySymbols == 1)
+          #ifdef WATTMETER
+          if(settings.m_wattMeter > 0)
           {
             const int16_t wattPercentage = 20; //95% of max
-            uint32_t Watts = (uint32_t)LipoVoltageRT * (uint32_t)(currentRT * 10);            
+            uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);            
             int16_t tempWatt = (int16_t)(Watts/1000);
-            int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
-            if(wattRow < 0) wattRow = 0;
-            int16_t wattSlice;
-            uint8_t wattStatus;
-            uint8_t steps;
-            switch(settings.m_wattMeter)
-            {              
-              case 1:
-              #ifndef BEERMUG
-              case 2:
-              #endif
-                iconPrintBuf1[0] = 0xD7;
-                iconPrintBuf2[0] = 0xE3;
-                steps = 8;                        
-                
-                /*wattSlice = (settings.m_maxWatts - settings.m_maxWatts/wattPercentage) / 8;
-                wattStatus = 0xD7;
-                while((tempWatt-wattSlice) > 0 && wattStatus < 0xE1) 
-                {
-                  tempWatt -= wattSlice;
-                  wattStatus += 2;                    
-                }
-                if(wattStatus == 0xD7 && armed > 0) wattStatus += 2;
-                wattMeterSymbol[0] = wattStatus;
-                wattMeterSymbol[1] = wattStatus+1;                                
-                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, 2, ampBlanks, AMPSp);
-                OSD.print(wattMeterSymbol);
-                if(wattStatus == 0xE1) wattStatus = 0xE5;
-                else wattStatus = 0xE3;
-                while((tempWatt-wattSlice) > 0 && wattStatus < 0xEB) 
-                {
-                  tempWatt -= wattSlice;
-                  wattStatus += 2;                    
-                }                
-                wattMeterSymbol[0] = wattStatus;
-                wattMeterSymbol[1] = wattStatus+1;
-                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, 2, ampBlanks, AMPSp);
-                OSD.print(wattMeterSymbol);*/
-              break;
-              #ifdef BEERMUG
-              case 2:
-                iconPrintBuf1[0] = 0x09;
-                iconPrintBuf2[0] = 0x01;
-                steps = 6;                
-                
-                /*wattSlice = (settings.m_maxWatts - settings.m_maxWatts/wattPercentage) / 5;
-                //wattSlice = settings.m_maxWatts / 5;
-                wattStatus = 0x01;
-                while((tempWatt-wattSlice) > 0 && wattStatus < 0x07) 
-                {
-                  tempWatt -= wattSlice;
-                  wattStatus += 2;                    
-                }
-                wattMeterSymbol[0] = wattStatus;
-                wattMeterSymbol[1] = wattStatus+1;
-                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, 2, ampBlanks, AMPSp);
-                OSD.print(wattMeterSymbol);
-                if(wattStatus == 0x07) wattStatus = 0x0B;
-                else wattStatus = 0x09;
-                while((tempWatt-wattSlice) > 0 && wattStatus < 0x0D) 
-                {
-                  tempWatt -= wattSlice;
-                  wattStatus += 2;                    
-                }      
-                if(wattStatus == 0x0D)
-                {
-                  wattSlice /= 2;
-                  while((tempWatt-wattSlice) > 0 && wattStatus < 0x11) 
-                  {
-                    tempWatt -= wattSlice;
-                    wattStatus += 2;                    
-                  }
-                }
-                wattMeterSymbol[0] = wattStatus;
-                wattMeterSymbol[1] = wattStatus+1;
-                OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, 2, ampBlanks, AMPSp);
-                OSD.print(wattMeterSymbol);*/
-              break;
-              #endif
+            if(settings.m_displaySymbols == 1 && settings.m_IconSettings[WATT_ICON] == 1)
+            {
+              int8_t wattRow2 = settings.m_OSDItems[AMPS][1]-1;            
+              if(wattRow2 < 0) wattRow2 = 0;
+              int8_t wattRow1 = wattRow2 + 1;
+              int16_t wattSlice;
+              uint8_t wattStatus;
+              uint8_t steps;
+              switch(settings.m_wattMeter)
+              {              
+                case 1:
+                #ifndef BEERMUG
+                case 2:
+                #endif
+                  iconPrintBuf1[0] = 0xD7;
+                  iconPrintBuf2[0] = 0xE3;
+                  steps = 8;              
+                break;
+                #ifdef BEERMUG
+                case 2:
+                  iconPrintBuf1[0] = 0x01;
+                  iconPrintBuf2[0] = 0x09;
+                  steps = 6;
+                  wattRow1--;
+                  wattRow2++;
+                break;
+                #endif
+              }
+              getIconPos(tempWatt, settings.m_maxWatts - settings.m_maxWatts/wattPercentage, steps, iconPrintBuf1[0], iconPrintBuf2[0], 2);
+              if((uint8_t)iconPrintBuf2[0] > 0xE3) iconPrintBuf1[0] = 0xE1;
+              if((uint8_t)iconPrintBuf1[0] == 0x07 && (uint8_t)iconPrintBuf2[0] == 0x09) iconPrintBuf2[0] = 0x0B;
+              iconPrintBuf1[1] = iconPrintBuf1[0] + 1;
+              iconPrintBuf2[1] = iconPrintBuf2[0] + 1;
+              OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow1, 2, zeroBlanks, AMPSp);
+              OSD.print(iconPrintBuf1);
+              OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow2, 2, zeroBlanks, AMPSp);
+              OSD.print(iconPrintBuf2);
             }
-            getIconPos(tempWatt, settings.m_maxWatts - settings.m_maxWatts/wattPercentage, steps, iconPrintBuf1[0], iconPrintBuf2[0], 2);
-            iconPrintBuf1[1] = iconPrintBuf1[0] + 1;
-            iconPrintBuf2[1] = iconPrintBuf2[0] + 1;
-            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, 2, zeroBlanks, AMPSp);
-            OSD.print(iconPrintBuf1);
-            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, 2, zeroBlanks, AMPSp);
-            OSD.print(iconPrintBuf2);            
+            else
+            {
+              tempWatt /= 10;
+              if(tempWatt > 1000) OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], tempWatt/100, 1, "kw", 1, AMPSp);
+              else OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], tempWatt, 0, "w", 1, AMPSp);
+            }
           }
           else
           #endif
@@ -919,34 +879,14 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
         {
-          #ifdef MAH_ICON        
-          if(settings.m_displaySymbols == 1)
-          {
-            static char batteryIcon[] = { 0x83, 0x84, 0x84, 0x89, 0x00 };
+          #ifdef _MAH_ICON        
+          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
+          {            
             batteryIcon[1] = 0x84;
             batteryIcon[2] = 0x84;
-            getIconPos(settings.m_batMAH[settings.m_activeBattery]-(LipoMAH+previousMAH), settings.m_batMAH[settings.m_activeBattery], 8, batteryIcon[1], batteryIcon[2]);
+            getIconPos(settings.m_batMAH[settings.m_activeBattery]-(LipoMAH+previousMAH), settings.m_batMAH[settings.m_activeBattery], 8, batteryIcon[2], batteryIcon[1]);
             OSD.checkPrintLength(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], 4, zeroBlanks, MAHp);
-            OSD.print(batteryIcon);
-            
-            /*uint8_t batCount = (LipoMAH+previousMAH) / settings.m_batSlice;
-            uint8_t batStatus = 0x88;
-            while(batCount > 4 && batStatus > 0x84)
-            {
-              batStatus--;
-              batCount--;
-            }
-            batterySymbol[2] = (char)batStatus;
-            batStatus = 0x88;
-            while(batCount > 0 && batStatus > 0x84)
-            {
-              batStatus--;
-              batCount--;
-            }
-            batterySymbol[1] = (char)batStatus;
-            uint8_t mahBlanks = 0;
-            OSD.checkPrintLength(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], 4, mahBlanks, MAHp);
-            OSD.print(batterySymbol);*/            
+            OSD.print(batteryIcon);           
           }
           else
           #endif
@@ -955,7 +895,7 @@ void loop(){
           }
         }
   
-        if(settings.m_displaySymbols == 1)
+        if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
         {
           ESCSymbol[0] = fixChar((char)0x7E);
         }
@@ -968,11 +908,11 @@ void loop(){
         {
           #ifdef PROP_ICON
           static char KR[4][2];
-          if(settings.m_displaySymbols == 1 && settings.m_props == 1)
+          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
           {
             for(i=0; i<4; i++)
             {
-              if(_millis - krTime[i] > (10000/motorKERPMRT[i]))
+              if(_millis - krTime[i] > (10000/motorKERPM[i]))
               {
                 krTime[i] = _millis;
                 if((i+1)%2 == 0)
@@ -1007,14 +947,17 @@ void loop(){
           else
           #endif
           {
-            static char KR2[3];
+            static char KR2[4];
             KR2[0] = 'k';
             KR2[1] = 'r';
             KR2[2] = 0x00;
-            OSD.printInt16(settings.m_OSDItems[ESC1kr][0], settings.m_OSDItems[ESC1kr][1], motorKERPM[0], 1, KR2, 1, ESC1kr);
+            KR2[3] = 0x00;
+            OSD.printInt16(settings.m_OSDItems[ESC1kr][0], settings.m_OSDItems[ESC1kr][1], motorKERPM[0], 1, KR2, 1, ESC1kr, ESCSymbol);
+            KR2[2] = ESCSymbol[0];
             OSD.printInt16(settings.m_OSDItems[ESC2kr][0], settings.m_OSDItems[ESC2kr][1], motorKERPM[1], 1, KR2, 1, ESC2kr);
             OSD.printInt16(settings.m_OSDItems[ESC3kr][0], settings.m_OSDItems[ESC3kr][1], motorKERPM[2], 1, KR2, 1, ESC3kr);
-            OSD.printInt16(settings.m_OSDItems[ESC4kr][0], settings.m_OSDItems[ESC4kr][1], motorKERPM[3], 1, KR2, 1, ESC4kr);
+            KR2[2] = 0x00;
+            OSD.printInt16(settings.m_OSDItems[ESC4kr][0], settings.m_OSDItems[ESC4kr][1], motorKERPM[3], 1, KR2, 1, ESC4kr, ESCSymbol);
           }
           
           TMPmargin++;
@@ -1027,10 +970,10 @@ void loop(){
           ampESC[0] = 'a';
           ampESC[1] = ESCSymbol[0];
           ampESC[2] = 0x00;
-          OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0], 2, "a", 1, ESC1voltage, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1], 2, ampESC, 1, ESC2voltage);
-          OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2], 2, ampESC, 1, ESC3voltage);
-          OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1]-CurrentMargin, motorCurrent[3], 2, "a", 1, ESC4voltage, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0], 1, "a", 1, ESC1voltage, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1], 1, ampESC, 1, ESC2voltage);
+          OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2], 1, ampESC, 1, ESC3voltage);
+          OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1]-CurrentMargin, motorCurrent[3], 1, "a", 1, ESC4voltage, ESCSymbol);
           TMPmargin++;
         }
     
@@ -1040,7 +983,7 @@ void loop(){
           tempESC[0] = tempSymbol[0];
           tempESC[1] = ESCSymbol[0];
           tempESC[2] = 0x00;
-          OSD.printInt16( settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1]+TMPmargin, ESCTemps[0], 0, tempSymbol, 1, ESC1temp, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC1temp][0], settings.m_OSDItems[ESC1temp][1]+TMPmargin, ESCTemps[0], 0, tempSymbol, 1, ESC1temp, ESCSymbol);
           OSD.printInt16(settings.m_OSDItems[ESC2temp][0], settings.m_OSDItems[ESC2temp][1]+TMPmargin, ESCTemps[1], 0, tempESC, 1, ESC2temp);
           OSD.printInt16(settings.m_OSDItems[ESC3temp][0], settings.m_OSDItems[ESC3temp][1]-TMPmargin, ESCTemps[2], 0, tempESC, 1, ESC3temp);
           OSD.printInt16(settings.m_OSDItems[ESC4temp][0], settings.m_OSDItems[ESC4temp][1]-TMPmargin, ESCTemps[3], 0, tempSymbol, 1, ESC4temp, ESCSymbol);
@@ -1049,7 +992,8 @@ void loop(){
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER]) 
         {
           char stopWatchStr[] = { 0x00, 0x00 };
-          if(settings.m_displaySymbols == 1)
+          #ifdef STOPWATCH_ICON
+          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
           {
             if(time - old_time > 1000)
             {
@@ -1066,6 +1010,7 @@ void loop(){
           {
             stopWatchStr[0] = 0x00;
           }
+          #endif
           OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
         }
 
@@ -1080,7 +1025,7 @@ void loop(){
         #endif
 
         #ifdef RSSI_
-        if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI] && settings.m_RSSIchannel > -1)
+        if(settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
         {                             
           int16_t rssiVal = AuxChanVals[settings.m_RSSIchannel];
           if(rssiVal > 100)
@@ -1091,22 +1036,22 @@ void loop(){
 
           //OSD.printInt16(0, settings.ROWS/2, rssiVal, 0, "db", 1);
 
-          if(rssiVal < 50 && timer1sec)
+          if(rssiVal < 45 && timer1sec)
           {
             uint8_t spaces = 5;
-            if(settings.m_displaySymbols == 1) spaces = 2;
+            if(settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1) spaces = 2;
             OSD.checkPrintLength(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], 2, zeroBlanks, RSSIp);
             OSD.printSpaces(spaces);
           }
           else
           {
-            #ifdef RSSI_ICON
-            if(settings.m_displaySymbols == 1)
+            #ifdef _RSSI_ICON
+            if(settings.m_displaySymbols == 1)// && settings.m_IconSettings[RSSI_ICON] == 1)
             {
-              const int16_t maxRSSIvalue = 40;
+              const int16_t maxRSSIvalue = 50;
               iconPrintBuf1[0] = 0x12;
               iconPrintBuf1[1] = 0x15;
-              rssiVal -= 40;
+              rssiVal -= 30;
               getIconPos(rssiVal, maxRSSIvalue, 5, iconPrintBuf1[0], iconPrintBuf1[1]);
               if(iconPrintBuf1[0] < 0x14) iconPrintBuf1[1] = 0x20;
               OSD.checkPrintLength(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], 2, zeroBlanks, RSSIp);
@@ -1115,7 +1060,7 @@ void loop(){
             else
             #endif
             {
-              OSD.printInt16(settings.COLS, settings.ROWS/2, rssiVal, 0, "db", 1);
+              OSD.printInt16(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], rssiVal, 0, "db", 1, RSSIp);
             }
           }
         }
@@ -1125,26 +1070,25 @@ void loop(){
         {
           totalMAH = 0;
           static const char BATTERY_LOW[] PROGMEM =   "battery low";
-          static const char BATTERY_EMPTY[] PROGMEM = "           ";
           if(timer1sec) 
           {
             if(batWarnSymbol)
             {
-              if(settings.m_displaySymbols == 1)
+              if(settings.m_displaySymbols == 1)// && settings.m_IconSettings[MAH_ICON] == 1)
               {
-                OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 3);
-                OSD.print(batterySymbol);            
+                OSD.setCursor(settings.COLS/2 - 2, settings.ROWS/2 + 3);
+                OSD.print(batteryIcon);            
               }
               else
               {
                 OSD.printP(settings.COLS/2 - strlen_P(BATTERY_LOW)/2, settings.ROWS/2 +3, BATTERY_LOW);
-              }
+              }              
             }
             else
             {
-              OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 3, LipoMAH+previousMAH, 0, "mah");
-              flipOnce = true;
+              OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 3, LipoMAH+previousMAH, 0, "mah");              
             }
+            flipOnce = true;
           }
           else 
           {
@@ -1153,7 +1097,8 @@ void loop(){
               batWarnSymbol = !batWarnSymbol;
               flipOnce = false;              
             }
-            OSD.printP(settings.COLS/2 - strlen_P(BATTERY_LOW)/2, settings.ROWS/2 +3, BATTERY_EMPTY);
+            OSD.setCursor(settings.COLS/2 - strlen_P(BATTERY_LOW)/2, settings.ROWS/2 +3);
+            OSD.printSpaces(11);
           }
         }
         else
@@ -1185,7 +1130,7 @@ void loop(){
         }
 
         #ifdef SHOW_KISS_LOGO
-        if(!logoDone && armed == 0 && !menuActive && !armedOnce)
+        if(!logoDone && armed == 0 && !menuActive && !armedOnce && settings.m_IconSettings[KISS_ICON] == 1)
         {
           uint8_t logoCol = 11;
           uint8_t logoRow = 5;
@@ -1224,6 +1169,7 @@ void loop(){
 
         if(symbolOnOffChanged)
         {
+          cleanScreen();
           settings.fixColBorders();
           symbolOnOffChanged = false;
         }

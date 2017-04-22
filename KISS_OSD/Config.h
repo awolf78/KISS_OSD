@@ -13,11 +13,13 @@
 #define CUSTOM_TPA
 #define CROSSHAIR
 #define PROP_ICON
-#define MAH_ICON
-#define WATTMETER_ICON
+#define _MAH_ICON
+#define WATTMETER
 #define SHOW_KISS_LOGO
 #define RSSI_
-#define RSSI_ICON
+#define _RSSI_ICON
+#define STOPWATCH_ICON
+#define NEW_FILTER
 
 
 
@@ -34,6 +36,6 @@
 
 // DO NOT CHANGE
 //=============================
-#define  NEW_FC_SETTINGS
+#define NEW_FC_SETTINGS
 
 #endif

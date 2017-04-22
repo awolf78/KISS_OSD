@@ -55,6 +55,17 @@ enum _OSDItemPos
   RSSIp
 };
 
+enum _IconSettings
+{
+  PROPS_ICON,
+  ESC_ICON,
+  WATT_ICON,
+  MAH_ICON,
+  RSSI_ICON,
+  TIMER_ICON,
+  KISS_ICON
+};
+
 class CSettings
 {
   public:
@@ -98,11 +109,13 @@ class CSettings
   volatile uint8_t m_wattMeter, m_Moustache;
   volatile int16_t m_maxWatts;
   volatile uint8_t m_voltWarning, m_minVolts;
-  volatile uint8_t m_props;
   volatile uint8_t m_airTimer;
   volatile int16_t m_voltCorrect;
   volatile uint8_t m_crossHair;
   volatile int8_t m_RSSIchannel;
+  static const uint8_t ICON_SETTINGS_SIZE = 7;
+  volatile uint8_t m_IconSettings[ICON_SETTINGS_SIZE];
+  volatile uint8_t m_oldDisplaySymbols;
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);
