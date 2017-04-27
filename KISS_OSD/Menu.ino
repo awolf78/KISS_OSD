@@ -298,25 +298,25 @@ void* FilterMenu()
       fcSettingModeChanged[FC_FILTERS] |= checkCode(lpf_frq, 1, 0, 6);
     break;
     case 1:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(yawFilterCut, 1, 0, 97);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(yawFilterCut, 10, 0, 97);
     break;
     case 2:
       fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterEnabledR, 1, 0, 1);
     break;
     case 3:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCenterR, 1, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCenterR, 10, 0, 490);
     break;
     case 4:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCutR, 1, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCutR, 10, 0, 490);
     break;
     case 5:
       fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterEnabledP, 1, 0, 1);
     break;
     case 6:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCenterP, 1, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCenterP, 10, 0, 490);
     break;
     case 7:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCutP, 1, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCutP, 10, 0, 490);
     break;        
     case 8:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -379,22 +379,22 @@ void* CustomTPAMenu()
       fcSettingModeChanged[FC_TPA] |= checkCode(customTPAEnabled, 1, 0, 1);
     break;
     case 1:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl0, 1, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl0, 10, 0, 100);
     break;
     case 2:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp1, 1, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp1, 10, 0, 100);
     break;
     case 3:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl1, 1, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl1, 10, 0, 100);
     break;
     case 4:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp2, 1, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp2, 10, 0, 100);
     break;
     case 5:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl2, 1, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl2, 10, 0, 100);
     break;
     case 6:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl3, 1, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl3, 10, 0, 100);
     break;
     case 7:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -710,7 +710,7 @@ void* vTxMenu()
       fcSettingModeChanged[FC_VTX] |= checkCode(vTxLowPower, 10, 5, 800);
     break;
     case 1:
-      fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 10, 25, 800);
+      fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 25, 25, 800);
     break;
     case 2:
       fcSettingModeChanged[FC_VTX] |= checkCode(vTxBand, 1, 0, 4);

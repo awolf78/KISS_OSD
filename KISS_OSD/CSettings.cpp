@@ -41,7 +41,7 @@ void CSettings::LoadDefaults()
   m_batMAH[2] = 1800; //1800 mAh by default
   m_batMAH[3] = 2250; //2250 mAh by default
   m_activeBattery = 0;
-  m_batWarningPercent = 23; //23% by default
+  m_batWarningPercent = 25; //25% by default
   FixBatWarning();
   m_DVchannel = 0; //AUX1 default
   m_tempUnit = 0; //°C default
@@ -248,8 +248,8 @@ void CSettings::ReadSettingsInternal()
     pos++;
   }
   
-  m_lastMAH = ReadInt16_t(200, 201);
-  m_maxWatts = ReadInt16_t(202, 203);
+  m_lastMAH = ReadInt16_t(251, 252);
+  m_maxWatts = ReadInt16_t(253, 254);
 }
 
 void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
@@ -409,7 +409,7 @@ void CSettings::WriteSettings()
     pos++;
   }
 
-  UpdateMaxWatt(m_maxWatts);
+  WriteInt16_t(253, 254, m_maxWatts);
 }
 
 void CSettings::FixBatWarning()
@@ -421,7 +421,7 @@ void CSettings::FixBatWarning()
 
 void CSettings::WriteLastMAH()
 {
-  WriteInt16_t(200, 201, m_lastMAH);
+  WriteInt16_t(251, 252, m_lastMAH);
 }
 
 void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
@@ -445,7 +445,10 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 
 void CSettings::UpdateMaxWatt(int16_t maxWatt)
 {
-  m_maxWatts = maxWatt;
-  WriteInt16_t(202, 203, m_maxWatts);
+  if(maxWatt > m_maxWatts)
+  {
+    m_maxWatts = maxWatt;
+    WriteInt16_t(253, 254, m_maxWatts);
+  }
 }
 

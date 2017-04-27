@@ -817,46 +817,37 @@ void loop() {
       }
       else
       {
-        if(settings.m_wattMeter == 0)
+        if(settings.m_displaySymbols == 0 || settings.m_IconSettings[WATT_ICON] == 0)
         {
           if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
-          itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], (int16_t)999, 0, 0, "w", 1, AMPSp);                    
+          itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], (int16_t)999, 1, 0, "w", 1, AMPSp);                    
         }
         else
         {
-          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[WATT_ICON] == 1)
+          char finalMeter1[] = { 0xEB, 0xEC, 0x00 }; 
+          char finalMeter2[] = { 0xE1, 0xE2, 0x00 };
+          if(settings.m_wattMeter == 2)
           {
-            char finalMeter1[] = { 0xEB, 0xEC, 0x00 }; 
-            char finalMeter2[] = { 0xE1, 0xE2, 0x00 };
-            if(settings.m_wattMeter == 2)
-            {
-              finalMeter1[0] = 0x01;
-              finalMeter1[1] = 0x02;
-              finalMeter2[0] = 0x09;
-              finalMeter2[1] = 0x0A;
-            }
-            int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
-            if(wattRow < 0) wattRow = 0;
-            uint8_t ampBlanks = 0;
-            itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
-            if (OSD_ITEM_BLINK[AMPS] && timer1sec)
-            {
-              OSD.printSpaces(2);
-              OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
-              OSD.printSpaces(2);
-            }
-            else
-            {
-              OSD.print(finalMeter1);
-              OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
-              OSD.print(finalMeter2);
-            }
+            finalMeter1[0] = 0x01;
+            finalMeter1[1] = 0x02;
+            finalMeter2[0] = 0x09;
+            finalMeter2[1] = 0x0A;
+          }
+          int8_t wattRow = settings.m_OSDItems[AMPS][1]-1;
+          if(wattRow < 0) wattRow = 0;
+          uint8_t ampBlanks = 0;
+          itemLengthOK[AMPS] = OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+          if (OSD_ITEM_BLINK[AMPS] && timer1sec)
+          {
+            OSD.printSpaces(2);
+            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+            OSD.printSpaces(2);
           }
           else
           {
-            int16_t tempWatt = 999;
-            if(tempWatt > 1000) OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], tempWatt/100, 1, "kw", 1, AMPSp);
-            else OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], tempWatt, 0, "w", 1, AMPSp);
+            OSD.print(finalMeter1);
+            OSD.checkPrintLength(settings.m_OSDItems[AMPS][0], wattRow+1, (uint8_t)strlen(finalMeter1), ampBlanks, AMPSp);
+            OSD.print(finalMeter2);
           }
         }
       }

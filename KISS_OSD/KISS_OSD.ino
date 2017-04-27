@@ -221,10 +221,6 @@ CMeanFilter rssiFilter(7);
 #endif
 
 
-uint32_t ESC_filter(uint32_t oldVal, uint32_t newVal){
-  return (uint32_t)((uint32_t)((uint32_t)((uint32_t)oldVal*ESC_FILTER)+(uint32_t)newVal))/(ESC_FILTER+1);
-}
-
 int16_t findMax4(int16_t maxV, int16_t *values, int16_t length) 
 {
   for(uint8_t i = 0; i < length; i++) 
@@ -278,6 +274,7 @@ static uint32_t LastLoopTime = 0;
 static boolean dShotEnabled = false;
 static boolean logoDone = false;
 static uint8_t protoVersion = 0;
+static uint8_t failSafeState = 0;
 extern void ReadFCSettings(boolean skipValues);
 
 typedef void* (*fptr)();
@@ -310,6 +307,7 @@ static uint16_t fcNotConnectedCount = 0;
 static bool telemetryReceived = false;
 static bool batWarnSymbol = true;
 static uint8_t zeroBlanks = 0;
+static bool failsafeTriggered = false;
 
 #ifdef NEW_FC_SETTINGS
 enum _SETTING_MODES 
@@ -545,6 +543,20 @@ void loop(){
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;
       return;
+    }
+
+    if(failSafeState > 9)
+    {
+      if(!failsafeTriggered) cleanScreen();
+      static const char FAILSAFE_STR[] PROGMEM = "failsafe";
+      OSD.printP(settings.COLS/2 - strlen_P(FAILSAFE_STR)/2, settings.ROWS/2, FAILSAFE_STR);
+      failsafeTriggered = true;
+      return;
+    }
+    else if(failsafeTriggered)
+    {
+      failsafeTriggered = false;
+      cleanScreen();
     }
 
 #ifdef IMPULSERC_VTX
@@ -1113,15 +1125,18 @@ void loop(){
           }
         }
 
-        if(settings.m_voltWarning > 0 && settings.m_minVolts > (LipoVoltage / 10) && !timer1sec)
+        if(armed > 0)
         {
-          OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, "v", 1);                      
+          if(settings.m_voltWarning > 0 && settings.m_minVolts > (LipoVoltage / 10) && !timer1sec)
+          {
+            OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 2, LipoVoltage / 10, 1, "v", 1);                      
+          }
+          else
+          {
+            OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
+            OSD.printSpaces(5);
+          }        
         }
-        else
-        {
-          OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
-          OSD.printSpaces(5);
-        }        
         
         if(DV_change_time > 0 && (_millis - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel]) 
         {

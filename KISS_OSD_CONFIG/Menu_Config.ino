@@ -338,24 +338,29 @@ void* IconsMenu()
       case 7:
         oldVal = settings.m_IconSettings[activeIconsMenuItem-1];
         settingChanged |= checkCode(settings.m_IconSettings[activeIconsMenuItem-1], 1, 0, 1);
-        if((activeIconsMenuItem-1) == ESC_ICON && oldVal != settings.m_IconSettings[activeIconsMenuItem-1] && settings.m_displaySymbols == 1) 
+        if((activeIconsMenuItem-1) == ESC_ICON && oldVal != settings.m_IconSettings[ESC_ICON] && settings.m_displaySymbols == 1) 
         {
           temp1 = settings.m_IconSettings[PROPS_ICON];
           settings.m_IconSettings[PROPS_ICON] = 0;
           settings.m_oldDisplaySymbols = 2;
-          settings.m_displaySymbols = settings.m_IconSettings[activeIconsMenuItem-1];
+          settings.m_displaySymbols = settings.m_IconSettings[ESC_ICON];
+          settings.m_IconSettings[ESC_ICON] = 1;
           settings.fixColBorders();
+          settings.m_IconSettings[ESC_ICON] = settings.m_displaySymbols;
           settings.m_IconSettings[PROPS_ICON] = temp1;
           settings.m_displaySymbols = 1;
           settings.m_oldDisplaySymbols = 1;
+          
         }
-        if((activeIconsMenuItem-1) == PROPS_ICON && oldVal != settings.m_IconSettings[activeIconsMenuItem-1] && settings.m_displaySymbols == 1) 
+        if((activeIconsMenuItem-1) == (uint8_t)PROPS_ICON && oldVal != settings.m_IconSettings[PROPS_ICON] && settings.m_displaySymbols == 1) 
         {
           temp1 = settings.m_IconSettings[ESC_ICON];
           settings.m_IconSettings[ESC_ICON] = 0;
           settings.m_oldDisplaySymbols = 2;
-          settings.m_displaySymbols = settings.m_IconSettings[activeIconsMenuItem-1];
+          settings.m_displaySymbols = settings.m_IconSettings[PROPS_ICON];
+          settings.m_IconSettings[PROPS_ICON] = 1;
           settings.fixColBorders();
+          settings.m_IconSettings[PROPS_ICON] = settings.m_displaySymbols;
           settings.m_IconSettings[ESC_ICON] = temp1;
           settings.m_displaySymbols = 1;
           settings.m_oldDisplaySymbols = 1;
