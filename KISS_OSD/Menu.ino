@@ -201,17 +201,17 @@ static const char RATES_DESC_STR3[] PROGMEM = "rc curve : ";
 
 void* RatesRollMenu()
 {
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesRollMenuItem, rcrate_roll, rate_roll, rccurve_roll, RATE_STEP, RATE_STEP, RATE_STEP, "roll", (void*) RatesMenu, (void*) RatesRollMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesRollMenuItem, rcrate[_ROLL], rate[_ROLL], rccurve[_ROLL], RATE_STEP, RATE_STEP, RATE_STEP, "roll", (void*) RatesMenu, (void*) RatesRollMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
 }
 
 void* RatesPitchMenu()
 {
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate_pitch, rate_pitch, rccurve_pitch, RATE_STEP, RATE_STEP, RATE_STEP, "pitch", (void*)RatesMenu, (void*) RatesPitchMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_PITCH], rate[_PITCH], rccurve[_PITCH], RATE_STEP, RATE_STEP, RATE_STEP, "pitch", (void*)RatesMenu, (void*) RatesPitchMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
 }
 
 void* RatesYawMenu()
 {
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate_yaw, rate_yaw, rccurve_yaw, RATE_STEP, RATE_STEP, RATE_STEP, "yaw", (void*)RatesMenu, (void*) RatesYawMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_YAW], rate[_YAW], rccurve[_YAW], RATE_STEP, RATE_STEP, RATE_STEP, "yaw", (void*)RatesMenu, (void*) RatesYawMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
 }
 
 void* RatesMenu()
@@ -269,17 +269,17 @@ static const char PID_DESC_STR3[] PROGMEM = "d : ";
 
 void* PIDRollMenu()
 {
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDRollMenuItem,  p_roll, i_roll, d_roll, P_STEP, I_STEP, D_STEP, "roll", (void*)TuneMenu, (void*) PIDRollMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDRollMenuItem,  pid_p[_ROLL], pid_i[_ROLL], pid_d[_ROLL], P_STEP, I_STEP, D_STEP, "roll", (void*)TuneMenu, (void*) PIDRollMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
 }
 
 void* PIDPitchMenu()
 {
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDPitchMenuItem,  p_pitch, i_pitch, d_pitch, P_STEP, I_STEP, D_STEP, "pitch", (void*)TuneMenu, (void*) PIDPitchMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDPitchMenuItem,  pid_p[_PITCH], pid_i[_PITCH], pid_d[_PITCH], P_STEP, I_STEP, D_STEP, "pitch", (void*)TuneMenu, (void*) PIDPitchMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
 }
 
 void* PIDYawMenu()
 {
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDYawMenuItem,  p_yaw, i_yaw, d_yaw, P_STEP, I_STEP, D_STEP, "yaw", (void*)TuneMenu, (void*) PIDYawMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDYawMenuItem,  pid_p[_YAW], pid_i[_YAW], pid_d[_YAW], P_STEP, I_STEP, D_STEP, "yaw", (void*)TuneMenu, (void*) PIDYawMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
 }
 
 void* TPAMenu()
@@ -287,7 +287,7 @@ void* TPAMenu()
   static const char TPA_DESC_STR1[] PROGMEM = "tpa p : "; 
   static const char TPA_DESC_STR2[] PROGMEM = "tpa i : "; 
   static const char TPA_DESC_STR3[] PROGMEM = "tpa d : ";
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_TPA], activeTPAMenuItem,  p_tpa, i_tpa, d_tpa, TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_TPA], activeTPAMenuItem,  tpa[0], tpa[1], tpa[2], TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
 }
 
 void* FilterMenu()
@@ -348,7 +348,8 @@ void* FilterMenu()
   static const char LPF5_STR[] PROGMEM = "med low ";
   static const char LPF6_STR[] PROGMEM = "low     ";
   static const char LPF7_STR[] PROGMEM = "very low";
-  static const char* LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR };
+  static const char LPF8_STR[] PROGMEM = "advanced";
+  static const char* LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR, LPF8_STR };
   
   uint8_t startRow = 1;
   uint8_t startCol = settings.COLS/2 - (strlen_P(YAW_FLTR_STR)+8)/2;
@@ -379,22 +380,22 @@ void* CustomTPAMenu()
       fcSettingModeChanged[FC_TPA] |= checkCode(customTPAEnabled, 1, 0, 1);
     break;
     case 1:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl0, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[0], 10, 0, 100);
     break;
     case 2:
       fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp1, 10, 0, 100);
     break;
     case 3:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl1, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[1], 10, 0, 100);
     break;
     case 4:
       fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp2, 10, 0, 100);
     break;
     case 5:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl2, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[2], 10, 0, 100);
     break;
     case 6:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl3, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[3], 10, 0, 100);
     break;
     case 7:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -434,17 +435,17 @@ void* CustomTPAMenu()
   OSD.printP( startCol, ++startRow, CSTM_TPA_ACTIVE_STR, activeCustomTPAMenuItem );
   OSD.print( fixStr(ON_OFF_STR[customTPAEnabled]) );
   
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, ctpa_infl0, 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, ctpa_infl[0], 0, activeCustomTPAMenuItem, "%", 1 );
 
   OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_ONE_STR, ctpa_bp1, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP1_STR, ctpa_infl1, 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP1_STR, ctpa_infl[1], 0, activeCustomTPAMenuItem, "%", 1 );
 
   OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_TWO_STR, ctpa_bp2, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP2_STR, ctpa_infl2, 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP2_STR, ctpa_infl[2], 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_MAX_STR, ctpa_infl3, 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_MAX_STR, ctpa_infl[3], 0, activeCustomTPAMenuItem, "%", 1 );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeCustomTPAMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeCustomTPAMenuItem );
@@ -707,10 +708,10 @@ void* vTxMenu()
   switch(activeVTXMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_VTX] |= checkCode(vTxLowPower, 10, 5, 800);
+      if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxLowPower, 10, 5, 800);
     break;
     case 1:
-      fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 25, 25, 800);
+      if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 25, 25, 800);
     break;
     case 2:
       fcSettingModeChanged[FC_VTX] |= checkCode(vTxBand, 1, 0, 4);
@@ -761,9 +762,14 @@ void* vTxMenu()
   static const char VTX_TITLE_STR[] PROGMEM = "vtx menu";
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
-  OSD.printIntArrow(startCol, ++startRow, VTX_LOW_POWER_STR, vTxLowPower, 0, activeVTXMenuItem, "mw", 1);
+  static const char KNOB_STR[] PROGMEM = "knob";
+  OSD.printP(startCol, ++startRow, VTX_LOW_POWER_STR, activeVTXMenuItem);  
+  if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, KNOB_STR);
+  else OSD.printInt16(startCol + strlen_P(VTX_LOW_POWER_STR), startRow, vTxLowPower, 0, "mw", 1);
 
-  OSD.printIntArrow(startCol, ++startRow, VTX_HIGH_POWER_STR, vTxHighPower, 0, activeVTXMenuItem, "mw", 1);
+  OSD.printP(startCol, ++startRow, VTX_HIGH_POWER_STR, activeVTXMenuItem);
+  if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, KNOB_STR);
+  else OSD.printInt16(startCol + strlen_P(VTX_HIGH_POWER_STR), startRow, vTxHighPower, 0, "mw", 1);
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
   OSD.print( fixStr(bandSymbols[vTxBand]) );

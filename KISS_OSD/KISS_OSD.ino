@@ -259,11 +259,21 @@ void ReviveOSD()
   delay(2000);
 }
 
-static int16_t p_roll = 0;
-static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
+enum _ROLL_PITCH_YAW
+{
+  _ROLL,
+  _PITCH,
+  _YAW
+};
+
+static int16_t pid_p[3], pid_i[3], pid_d[3], rcrate[3], rate[3], rccurve[3];
+//static int16_t p_roll = 0;
+//static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
+static int16_t tpa[3];
 static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
 static uint8_t customTPAEnabled;
-static uint8_t ctpa_bp1, ctpa_bp2, ctpa_infl0, ctpa_infl1, ctpa_infl2, ctpa_infl3;
+static uint8_t ctpa_infl[4];
+static uint8_t ctpa_bp1, ctpa_bp2;//, ctpa_infl0, ctpa_infl1, ctpa_infl2, ctpa_infl3;
 static int16_t lpf_frq;
 static uint8_t notchFilterEnabledR, notchFilterEnabledP;
 static int16_t notchFilterCenterR, notchFilterCutR, notchFilterCenterP, notchFilterCutP;
@@ -308,8 +318,11 @@ static bool telemetryReceived = false;
 static bool batWarnSymbol = true;
 static uint8_t zeroBlanks = 0;
 static bool failsafeTriggered = false;
+static bool vTxPowerActive = false;
+static int8_t vTxPowerKnobChannel = -1;
+static int16_t vTxPowerKnobLastPPM = -1;
+static unsigned long vTxPowerTime = 0;
 
-#ifdef NEW_FC_SETTINGS
 enum _SETTING_MODES 
 {
   FC_SETTINGS,
@@ -324,7 +337,6 @@ static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x30, 0x4D, 0x43, 0x
 static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x10, 0x4E, 0x44, 0x46, 0x48, 0x4C };
 static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
 static uint8_t settingMode = 0;
-#endif
 
 
 static unsigned long _StartupTime = 0;
@@ -434,7 +446,7 @@ void loop(){
     {
       if(fcSettingModeChanged[i]) fcSettingChanged = true;
     }
-    #ifdef NEW_FC_SETTINGS    
+    
     if(!fcSettingsReceived)
     {
       if(settingMode >= MAX_SETTING_MODES) settingMode = 0;
@@ -455,17 +467,19 @@ void loop(){
         settingMode++;
         if(settingMode < MAX_SETTING_MODES) fcSettingsReceived = false;
       }
-      if(settingMode == MAX_SETTING_MODES && 
-            (p_roll < 0 || i_roll < 0 || d_roll < 0 || 
-            p_pitch < 0 || i_pitch < 0 || d_pitch < 0 ||
-            p_yaw < 0 || i_yaw < 0 || d_yaw < 0 ||
-            rcrate_roll < 0 || rcrate_pitch < 0 || rcrate_yaw < 0 ||
-            rate_roll < 0 || rate_pitch < 0 || rate_yaw < 0 ||
-            p_tpa < 0 || i_tpa < 0 || d_tpa < 0))
+      if(settingMode == MAX_SETTING_MODES)
       {
-        fcSettingsReceived = false;
-        settingMode = 0;
-        return;
+        for(i=0; i<3; i++)
+        {
+          if(pid_p[i] < 0 || pid_i[i] < 0 || pid_d[i] < 0 || 
+            rcrate[i] < 0 || rate[i] < 0 || rccurve[i] < 0 ||
+            tpa[i] < 0)
+          {
+            fcSettingsReceived = false;
+            settingMode = 0;
+            return;
+          }  
+        }
       }
     }
     else
@@ -503,33 +517,6 @@ void loop(){
       }
       else fcNotConnectedCount = 0;
     }
-    #else
-    if(!fcSettingsReceived)
-    {
-      NewSerial.write(0x30); // request settings
-      ReadFCSettings(fcSettingChanged);
-      if(!fcSettingsReceived) fcNotConnectedCount++;
-      else fcNotConnectedCount = 0;
-    }
-    else
-    {
-      if(!fcSettingChanged || menuActive)
-      {
-        NewSerial.write(0x20); // request telemetry
-      }
-      telemetryReceived = ReadTelemetry();
-      if(!telemetryReceived) 
-      {
-        if(fcSettingChanged && !menuActive)
-        {
-          SendFCSettings();
-          fcSettingChanged = false;
-        }
-        else fcNotConnectedCount++;
-      }
-      else fcNotConnectedCount = 0;
-    }
-    #endif
 
     if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
 
@@ -545,6 +532,7 @@ void loop(){
       return;
     }
 
+    #ifdef FAILSAFE
     if(failSafeState > 9)
     {
       if(!failsafeTriggered) cleanScreen();
@@ -558,6 +546,7 @@ void loop(){
       failsafeTriggered = false;
       cleanScreen();
     }
+    #endif
 
 #ifdef IMPULSERC_VTX
       vtx_flash_led(1);
@@ -982,10 +971,10 @@ void loop(){
           ampESC[0] = 'a';
           ampESC[1] = ESCSymbol[0];
           ampESC[2] = 0x00;
-          OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0], 1, "a", 1, ESC1voltage, ESCSymbol);
-          OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1], 1, ampESC, 1, ESC2voltage);
-          OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2], 1, ampESC, 1, ESC3voltage);
-          OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1]-CurrentMargin, motorCurrent[3], 1, "a", 1, ESC4voltage, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC1voltage][0], settings.m_OSDItems[ESC1voltage][1]+CurrentMargin, motorCurrent[0]/10, 1, "a", 1, ESC1voltage, ESCSymbol);
+          OSD.printInt16(settings.m_OSDItems[ESC2voltage][0], settings.m_OSDItems[ESC2voltage][1]+CurrentMargin, motorCurrent[1]/10, 1, ampESC, 1, ESC2voltage);
+          OSD.printInt16(settings.m_OSDItems[ESC3voltage][0], settings.m_OSDItems[ESC3voltage][1]-CurrentMargin, motorCurrent[2]/10, 1, ampESC, 1, ESC3voltage);
+          OSD.printInt16(settings.m_OSDItems[ESC4voltage][0], settings.m_OSDItems[ESC4voltage][1]-CurrentMargin, motorCurrent[3]/10, 1, "a", 1, ESC4voltage, ESCSymbol);
           TMPmargin++;
         }
     
@@ -1025,9 +1014,51 @@ void loop(){
           #endif
           OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
         }
+        
+        #ifndef IMPULSERC_VTX
+        #ifdef VTX_POWER_KNOB
+        //OSD.printInt16(0, settings.ROWS/2, vTxPowerKnobChannel, 0);
+        if(vTxPowerKnobChannel > -1 && vTxPowerKnobLastPPM == -1) vTxPowerKnobLastPPM = AuxChanVals[vTxPowerKnobChannel]+1000;                 
+        if(vTxPowerKnobChannel > -1 && ((AuxChanVals[vTxPowerKnobChannel]+1000 != vTxPowerKnobLastPPM) || vTxPowerActive))
+        {          
+          if((!vTxPowerActive || AuxChanVals[vTxPowerKnobChannel]+1000 != vTxPowerKnobLastPPM) && armed == 0)
+          {
+            vTxPowerTime = _millis;
+            vTxPowerActive = true;
+            vTxPowerKnobLastPPM = AuxChanVals[vTxPowerKnobChannel]+1000;
+            if(_millis - _StartupTime > 5000 && !logoDone) 
+            {
+              logoDone = true;
+              cleanScreen();
+            }
+          }
+          else 
+          {
+            if(_millis - vTxPowerTime > 1000 || armed > 0)
+            {
+              vTxPowerActive = false;
+              cleanScreen();
+            }
+          }
+          if(vTxPowerActive)
+          {              
+            static const char VTX_POWER_STATE[] PROGMEM = "vtx power:";
+            OSD.printP(settings.COLS/2 - strlen_P(VTX_POWER_STATE)/2, settings.ROWS/2, VTX_POWER_STATE);
+            char suffix[] = "mw";
+            uint8_t maxMWmult = 60;            
+            if(vTxType > 2)
+            {
+              maxMWmult = 80;              
+            }
+            int16_t currentVTXPower = ((vTxPowerKnobLastPPM/(int16_t)20)*(int16_t)maxMWmult)/(int16_t)10;          
+            OSD.printInt16(settings.COLS/2 - 2, settings.ROWS/2+1, currentVTXPower, 0, suffix, 1);
+          }
+        }
+        #endif
+        #endif
 
         #ifdef CROSSHAIR
-        if(settings.m_crossHair && (logoDone || armed > 0))
+        if(settings.m_crossHair && (logoDone || armed > 0) && !vTxPowerActive)
         {
           int8_t crossOffset = 0;
           if(settings.m_crossHair > 1) crossOffset = (int8_t)settings.m_crossHair - (int8_t)5;
@@ -1058,7 +1089,7 @@ void loop(){
           else
           {
             #ifdef _RSSI_ICON
-            if(settings.m_displaySymbols == 1)// && settings.m_IconSettings[RSSI_ICON] == 1)
+            if(settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
             {
               const int16_t maxRSSIvalue = 50;
               iconPrintBuf1[0] = 0x12;

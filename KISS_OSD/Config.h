@@ -20,6 +20,8 @@
 #define _RSSI_ICON
 #define STOPWATCH_ICON
 #define NEW_FILTER
+#define FAILSAFE
+#define VTX_POWER_KNOB
 
 
 
@@ -36,6 +38,5 @@
 
 // DO NOT CHANGE
 //=============================
-#define NEW_FC_SETTINGS
 
 #endif

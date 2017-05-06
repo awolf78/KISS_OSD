@@ -539,6 +539,10 @@ void loop() {
 
     if (armed == 0 && moveItems)
     {
+      for(i=0; i < settings.OSD_ITEMS_POS_SIZE; i++)
+      {
+        if(settings.m_OSDItems[i][1] >= settings.ROWS) settings.m_OSDItems[i][1] = settings.ROWS - 1;
+      }
       if (startMoveTime == 0) startMoveTime = millis();
       static const char ROLL_UP_DOWN_MOVE_STR[] PROGMEM = "use pitch/roll to move";
       static const char YAW_LEFT_SELECT_STR[] PROGMEM = "yaw left for next item";
@@ -1034,8 +1038,8 @@ void loop() {
       }
       else
       {
-        if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(5);
-        else itemLengthOK[RSSIp] = OSD.printInt16(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], (int16_t)100, 0, 1, "db", 0, RSSIp);
+        itemLengthOK[RSSIp] = OSD.printInt16(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], (int16_t)0, 0, 1, "db", 0, RSSIp);
+        if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(3);
       }
     }
 
