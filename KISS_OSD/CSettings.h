@@ -116,6 +116,7 @@ class CSettings
   static const uint8_t ICON_SETTINGS_SIZE = 7;
   volatile uint8_t m_IconSettings[ICON_SETTINGS_SIZE];
   volatile uint8_t m_oldDisplaySymbols;
+  volatile int16_t m_vTxMaxPower;
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);

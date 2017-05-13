@@ -13,15 +13,31 @@
 The version on the flyduino page is very basic. Some people like that. This one can do more:
 
 * Read the following or simply watch this: https://www.youtube.com/watch?v=XR2UEFcM3bA
+* Fully customizeable OSD - make it look like you want:
+  * You can change the position of each OSD item and setup if/when it will be displayed in the KISS OSD CONFIG TOOL.
+  * You can make the OSD more or less busy using a digital volume (DV) dial on your radio. You can change the order the OSD items are displayed in the KISS OSD CONFIG TOOL.
 * PIDs and Rates
 	* You can change your PIDs and rates in the menu. KISS FC Version 1.2 or higher is required to change the PIDs/Rates.
 * Filters
   * You can play around witht he LPF or Notch filter. KISS FC Version 1.2 or higher is required.
-* Menu
-	* Yaw all the way to the left (while disarmed) for 3 seconds will enter the Menu. You can configure some of the settings.
-* Displays statistics when you land (such as max amps, max watts, max RPM, etc.)
-* You can make the OSD more or less busy using a digital volume (DV) dial on your radio. You can change the order the OSD items are displayed in the KISS OSD CONFIG TOOL.
-* Fully customizeable: You can change the position of each OSD item and setup if/when it will be displayed in the KISS OSD CONFIG TOOL.
+* VTX control (Immersion RC Tramp and TBS Unify Pro)
+  * You can change vTx channels/bands and power settings via OSD. KISS FC Version 1.3 or higher is required.
+  * If you configure the vTx power on a knob on your radio, the OSD will display the power setting (for one second when you turn the knob).
+* Battery management
+	* You can configure 4 battery sizes and easily switch between them using stick controls. 
+	* You can activate a battery alarm (on by default). At 25% battery capacity (default setting) it will flash a warning "BATTERY LOW" in the lower part of the screen. You can turn this feature off or change the capacity percentage in the Menu.
+	* While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
+		* ATTENTION: For everyone arming their FC through yaw, this is disabled. You have to go through the menu to change your battery.
+	* Maximize your batteries in the field: If you did not finish your last battery (hey, we all crash) it will ask you to resume your last battery after plugging in again. 
+	* Voltage alarm
+		* You can setup a voltage alarm at any voltage you like
+	* C-Rating calculation: The statistics will display the calculated C-Rating of your battery. Keep in mind this will be only realistic if you did a few punch outs during your flight.
+* RSSI (FrSky Telemetry and XM+ receivers with special FW)
+	* RSSI data is obtained via a radio channel - no need to solder extra wires
+	* Please check out my wiki how to put RSSI on a radio channel
+* Statistics
+  * General flight statistics showing maximum Amps, Watts, motor rotation speed, flight time, used mAh etc.
+  * Statistics for each ESC: maximum Amps, motor rotation speed, temperatures, used mAh and minimum Voltage
 * Graphic display available for the following: 
 	* Battery mAh
 	* Wattmeter
@@ -30,15 +46,6 @@ The version on the flyduino page is very basic. Some people like that. This one 
 	* Everyone loves to watch their amp draw on the OSD, however that does not really tell you how much power your quad really produces: If your voltage sags dramatically, it might not produce as much power as you think.
 	* Watt = Amps x Voltage. That is the true definition of electric power.
 	* The OSD will calibrate itself to the maximum Watt output it records and set that as the maximum scale for the graphical Wattmeter. In case you do a drastic change in your setup (change prop style, motors, escs etc.) which causes your copter to produce less Watt you can lower the "Wattmeter max" setting in the battery menu.
-* Battery management
-	* You can configure 4 battery sizes and easily switch between them using stick controls. 
-	* You can activate a battery alarm (on by default). At 23% battery capacity (default setting) it will flash a warning "BATTERY LOW" in the lower part of the screen. You can turn this feature off or change the capacity percentage in the Menu.
-	* While disarmed, move yaw to the right. Now you can select the batteries with roll and change the values with pitch.
-		* ATTENTION: For everyone arming their FC through yaw, this is disabled. You have to go through the menu to change your battery.
-	* Maximize your batteries in the field: If you did not finish your last battery (hey, we all crash) it will ask you to resume your last battery after plugging in again. 
-	* Voltage alarm
-		* You can setup a voltage alarm at any voltage you like
-		* I recommend using mAh to tell you when it's time to land, however it still makes sense to activate the voltage alarm anyhow: You might want to set it very low to be alerted if your battery sags too much for your taste.
 
 ## When should you not use this version?
 

@@ -321,6 +321,13 @@ void* FilterMenu()
     case 8:
       if(code &  inputChecker.ROLL_RIGHT)
       {
+        activeFilterMenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+      }
+    case 9:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         activeFilterMenuItem = 0;
         return (void*)MainMenu;
@@ -328,7 +335,7 @@ void* FilterMenu()
     break;
   }
 
-  static const uint8_t FILTER_MENU_ITEMS = 9;
+  static const uint8_t FILTER_MENU_ITEMS = 10;
   activeFilterMenuItem = checkMenuItem(activeFilterMenuItem, FILTER_MENU_ITEMS);
   
   static const char LPF_STR[] PROGMEM =                 "lpf      : ";
@@ -339,7 +346,8 @@ void* FilterMenu()
   static const char NOTCH_PITCH_STR[] PROGMEM =         "notch pitch fltr :";
   static const char NOTCH_PITCH_CENTER_STR[] PROGMEM =  "pitch center freq:";
   static const char NOTCH_PITCH_CUTOFF_STR[] PROGMEM =  "pitch cutoff freq:";
-//static const char BACK_STR[] PROGMEM =     "back";
+//static const char SAVE_EXIT_STR[] PROGMEM =           "save+exit";
+//static const char BACK_STR[] PROGMEM =                "back";
   
   static const char LPF1_STR[] PROGMEM = "off ";
   static const char LPF2_STR[] PROGMEM = "high    ";
@@ -367,6 +375,7 @@ void* FilterMenu()
   OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledP]) );
   OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, notchFilterCenterP, 0, activeFilterMenuItem, "hz", 1); 
   OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, notchFilterCutP, 0, activeFilterMenuItem, "hz", 1);
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeFilterMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeFilterMenuItem);
   
   return (void*)FilterMenu;  
@@ -676,7 +685,7 @@ void* vTxMenu()
   static const char VTX_POWER_STR[] PROGMEM =      "power   : ";
   static const char VTX_BAND_STR[] PROGMEM =       "band    : ";
   static const char VTX_CHANNEL_STR[] PROGMEM =    "channel : ";
-//static const char SAVE_EXIT_STR[] PROGMEM =      "save+exit";
+  static const char SET_EXIT_STR[] PROGMEM =       "set+exit";
 //static const char BACK_STR[] PROGMEM =           "back";
   
   uint8_t startRow = 1;
@@ -697,7 +706,7 @@ void* vTxMenu()
   OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, activeVTXMenuItem, "=" );
   OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, "mhz" );
   
-  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeVTXMenuItem );
+  OSD.printP( startCol, ++startRow, SET_EXIT_STR, activeVTXMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;
@@ -729,7 +738,6 @@ void* vTxMenu()
         oldvTxChannel = vTxChannel;
         oldvTxLowPower = vTxLowPower;
         oldvTxHighPower = vTxHighPower;
-        return (void*)MainMenu;
       }
     break;
     case 5:
@@ -754,7 +762,7 @@ void* vTxMenu()
   static const char VTX_HIGH_POWER_STR[] PROGMEM = "high power: ";
   static const char VTX_BAND_STR[] PROGMEM =       "band      : ";
   static const char VTX_CHANNEL_STR[] PROGMEM =    "channel   : ";
-//static const char SAVE_EXIT_STR[] PROGMEM =      "save+exit";
+  static const char SET_EXIT_STR[] PROGMEM =       "set+exit";
 //static const char BACK_STR[] PROGMEM =           "back";
   
   uint8_t startRow = 1;
@@ -765,11 +773,11 @@ void* vTxMenu()
   static const char KNOB_STR[] PROGMEM = "knob";
   OSD.printP(startCol, ++startRow, VTX_LOW_POWER_STR, activeVTXMenuItem);  
   if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, KNOB_STR);
-  else OSD.printInt16(startCol + strlen_P(VTX_LOW_POWER_STR), startRow, vTxLowPower, 0, "mw", 1);
+  else OSD.printInt16(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, vTxLowPower, 0, "mw", 1);
 
   OSD.printP(startCol, ++startRow, VTX_HIGH_POWER_STR, activeVTXMenuItem);
   if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, KNOB_STR);
-  else OSD.printInt16(startCol + strlen_P(VTX_HIGH_POWER_STR), startRow, vTxHighPower, 0, "mw", 1);
+  else OSD.printInt16(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, vTxHighPower, 0, "mw", 1);
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
   OSD.print( fixStr(bandSymbols[vTxBand]) );
@@ -777,7 +785,7 @@ void* vTxMenu()
   OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, vTxChannel+1, 0, activeVTXMenuItem, "=" );
   OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[vTxBand][vTxChannel]), 0, "mhz" );
   
-  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeVTXMenuItem );
+  OSD.printP( startCol, ++startRow, SET_EXIT_STR, activeVTXMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;

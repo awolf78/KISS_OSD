@@ -604,6 +604,43 @@ void* vTxMenu()
   
   return (void*)vTxMenu;
 }
+#else
+void* vTxMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeVTXMenuItem)
+    {
+      case 0:
+        settingChanged |= checkCode(settings.m_vTxMaxPower, 50);
+      break;
+      case 1:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          activeVTXMenuItem = 0;          
+          cleanScreen();
+          return (void*)MainMenu;
+        }
+      break;
+    }
+  }
+  static const uint8_t VTX_MENU_ITEMS = 2;
+  activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
+  
+  static const char VTX_MAX_POWER_STR[] PROGMEM =      "max vtx power: ";
+//static const char BACK_STR[] PROGMEM =               "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(VTX_MAX_POWER_STR)+6)/2;
+  static const char VTX_TITLE_STR[] PROGMEM = "vtx config menu";
+  OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
+  
+  OSD.printIntArrow( startCol, ++startRow, VTX_MAX_POWER_STR, settings.m_vTxMaxPower, 0, 0, activeVTXMenuItem, "mw", 1);
+  
+  OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
+  
+  return (void*)vTxMenu;
+}
 #endif
 
 void* ResetMenu()
@@ -728,10 +765,8 @@ void* MainMenu()
         return (void*)BatteryMenu;
       break;
       case 7:
-#ifdef IMPULSERC_VTX
         cleanScreen();
         return (void*)vTxMenu;
-#endif
       break;
       case 8:
         cleanScreen();

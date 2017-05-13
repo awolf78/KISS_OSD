@@ -120,6 +120,7 @@ void CSettings::LoadDefaults()
   {
     m_IconSettings[i] = 1;  
   }
+  m_vTxMaxPower = 0;
 }
 
 void CSettings::fixColBorders()
@@ -247,6 +248,8 @@ void CSettings::ReadSettingsInternal()
     m_IconSettings[i] = EEPROM.read(pos);
     pos++;
   }
+  m_vTxMaxPower = ReadInt16_t(pos, pos+1);
+  pos += 2;
   
   m_lastMAH = ReadInt16_t(251, 252);
   m_maxWatts = ReadInt16_t(253, 254);
@@ -295,17 +298,21 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_OSDItems[ESC2voltage][0]++;
       m_OSDItems[ESC3voltage][0]++;
     }
+    if(ver < 0x11)
+    {
+      m_vTxMaxPower = 0;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x10) //first start of OSD - or older version
+  if(settingsVer < 0x11) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x10);
+    EEPROM.update(0x01,0x11);
   }
   else
   {
@@ -408,6 +415,8 @@ void CSettings::WriteSettings()
     EEPROM.update(pos, (byte)m_IconSettings[i]);
     pos++;
   }
+  WriteInt16_t(pos, pos+1, m_vTxMaxPower);
+  pos += 2;
 
   WriteInt16_t(253, 254, m_maxWatts);
 }

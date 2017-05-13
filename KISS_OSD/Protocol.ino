@@ -102,29 +102,7 @@ boolean ReadTelemetry()
              }             
            }
          }
-         armed = current_armed;                          
-         
-         /*if(((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]) > 5){ // the ESC's read the voltage better then the FC
-           ESCVoltage[0] = ((serialBuf[85+STARTCOUNT]<<8) | serialBuf[86+STARTCOUNT]);
-           tmp32 += ESCVoltage[0];
-           voltDev++;
-         }
-         if(((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]) > 5){ 
-           ESCVoltage[1] = ((serialBuf[95+STARTCOUNT]<<8) | serialBuf[96+STARTCOUNT]);
-           tmp32 += ESCVoltage[1];
-           voltDev++;
-         }
-         if(((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]) > 5){
-           ESCVoltage[2] = ((serialBuf[105+STARTCOUNT]<<8) | serialBuf[106+STARTCOUNT]);
-           tmp32 += ESCVoltage[2];
-           voltDev++;
-         }
-         if(((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]) > 5){ 
-           ESCVoltage[3] = ((serialBuf[115+STARTCOUNT]<<8) | serialBuf[116+STARTCOUNT]);
-           tmp32 += ESCVoltage[3];
-           voltDev++;
-         }*/
-          
+         armed = current_armed;          
          
          LipoMAH =       ((serialBuf[148+STARTCOUNT]<<8) | serialBuf[149+STARTCOUNT]);         
 
@@ -181,7 +159,7 @@ boolean ReadTelemetry()
          AuxChanVals[2] = ((serialBuf[12+STARTCOUNT]<<8) | serialBuf[13+STARTCOUNT]);
          AuxChanVals[3] = ((serialBuf[14+STARTCOUNT]<<8) | serialBuf[15+STARTCOUNT]);*/
          
-         current = (uint16_t)(motorCurrent[0]+motorCurrent[1]+motorCurrent[2]+motorCurrent[3])/10;
+         current = (uint16_t)(motorCurrent[0]+motorCurrent[1]+motorCurrent[2]+motorCurrent[3]);
 
          failSafeState = serialBuf[41+STARTCOUNT];
                  
@@ -257,7 +235,7 @@ boolean ReadTelemetry()
            MaxAmps = findMax(MaxAmps, current);
            tmp32 = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
            MaxC = (int16_t) tmp32;
-           tmp32 = (uint32_t)LipoVoltage * (uint32_t)(current * 10);
+           tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
            MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
            if(MaxWatt > settings.m_maxWatts) settings.m_maxWatts = MaxWatt;
            for(i=0; i<4; i++)

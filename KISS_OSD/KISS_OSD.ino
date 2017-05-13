@@ -193,6 +193,7 @@ static int16_t MaxRPMs = 0;
 static int16_t MaxWatt = 0;
 static int16_t MaxTemp = 0;
 static int16_t MinBat = 0;
+static int16_t MinRSSI = 100;
 static int16_t motorKERPM[4] = {0,0,0,0};
 static int16_t maxKERPM[4] = {0,0,0,0};
 static int16_t motorCurrent[4] = {0,0,0,0};
@@ -533,7 +534,7 @@ void loop(){
     }
 
     #ifdef FAILSAFE
-    if(failSafeState > 9)
+    if(armedOnce && failSafeState > 9)
     {
       if(!failsafeTriggered) cleanScreen();
       static const char FAILSAFE_STR[] PROGMEM = "failsafe";
@@ -700,8 +701,51 @@ void loop(){
         DV_change_time = _millis;
         last_Aux_Val = AuxChanVals[settings.m_DVchannel];
       }
+
+      #ifndef IMPULSERC_VTX
+      #ifdef VTX_POWER_KNOB
+      //OSD.printInt16(0, settings.ROWS/2, vTxPowerKnobChannel, 0);      
+      if(vTxPowerKnobChannel > -1 && vTxPowerKnobLastPPM == -1 && failSafeState < 10) vTxPowerKnobLastPPM = AuxChanVals[vTxPowerKnobChannel]+1000;                 
+      if(vTxPowerKnobChannel > -1 && failSafeState < 10 && ((AuxChanVals[vTxPowerKnobChannel]+1000 != vTxPowerKnobLastPPM) || vTxPowerActive))
+      {          
+        if((!vTxPowerActive || AuxChanVals[vTxPowerKnobChannel]+1000 != vTxPowerKnobLastPPM) && armed == 0)
+        {
+          if(!vTxPowerActive) 
+          {            
+            logoDone = true;
+            cleanScreen();
+          }
+          vTxPowerTime = _millis;
+          vTxPowerActive = true;
+          vTxPowerKnobLastPPM = AuxChanVals[vTxPowerKnobChannel]+1000;          
+        }
+        else 
+        {
+          if(_millis - vTxPowerTime > 1000 || armed > 0)
+          {
+            vTxPowerActive = false;
+            cleanScreen();
+          }
+        }
+        if(vTxPowerActive)
+        {              
+          static const char VTX_POWER_STATE[] PROGMEM = "vtx power:";
+          OSD.printP(settings.COLS/2 - strlen_P(VTX_POWER_STATE)/2, settings.ROWS/2, VTX_POWER_STATE);
+          char suffix[] = "mw";
+          uint8_t maxMWmult = 60;            
+          if(vTxType > 2)
+          {
+            maxMWmult = 80;              
+          }
+          if(settings.m_vTxMaxPower > 0) maxMWmult = (uint8_t)(settings.m_vTxMaxPower/(int16_t)10);
+          int16_t currentVTXPower = ((vTxPowerKnobLastPPM/(int16_t)20)*(int16_t)maxMWmult)/(int16_t)10;          
+          OSD.printInt16(settings.COLS/2 - 2, settings.ROWS/2+1, currentVTXPower, 0, suffix, 1);
+        }
+      }
+      #endif
+      #endif
       
-      if(DV_change_time == 0 && armed == 0 && armedOnce) 
+      if(!vTxPowerActive && DV_change_time == 0 && armed == 0 && armedOnce) 
       {
         if(code & inputChecker.PITCH_UP && statPage > 0)
         {
@@ -713,7 +757,7 @@ void loop(){
           statPage++;
           cleanScreen();
         }
-        uint8_t middle_infos_y     = 2;    
+        uint8_t middle_infos_y     = 1;    
         static const char STATS_STR[] PROGMEM = "stats ";
         OSD.printInt16P( settings.COLS/2 - (strlen_P(STATS_STR)+4)/2, middle_infos_y, STATS_STR, statPage+1, 0);
         OSD.print( fixStr("/5") );
@@ -723,23 +767,28 @@ void loop(){
         {
           static const char TIME_STR[] PROGMEM =     "time     : ";
           static const char MAX_AMP_STR[] PROGMEM =  "max amps : ";
-          static const char MAX_C_STR[] PROGMEM =    "max c    : ";
-          static const char MAH_STR[] PROGMEM =      "mah      : ";
-          static const char MAX_RPM_STR[] PROGMEM =  "max rpm  : ";
-          static const char MAX_WATT_STR[] PROGMEM = "max watt : ";
-          static const char MAX_TEMP_STR[] PROGMEM = "max temp : ";
           static const char MIN_V_STR[] PROGMEM =    "min v    : ";
+          static const char MAX_WATT_STR[] PROGMEM = "max watt : ";          
+          static const char MAX_C_STR[] PROGMEM =    "c rating : ";
+          static const char MAH_STR[] PROGMEM =      "mah      : ";
+          static const char MAX_RPM_STR[] PROGMEM =  "max rpm  : ";          
+          static const char MAX_TEMP_STR[] PROGMEM = "max temp : ";
+          static const char MIN_RSSI_STR[] PROGMEM = "min rssi : ";         
 
           uint8_t statCol = settings.COLS/2 - (strlen_P(TIME_STR)+7)/2;
           OSD.printP(statCol, ++middle_infos_y, TIME_STR);
           OSD.printTime( statCol+strlen_P(TIME_STR), middle_infos_y, total_time);  
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 1, "a" );           
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 2, "a" );
+          OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" );           
           OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
           OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, "mah" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );  
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" );
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );            
           OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, tempSymbol);
-          OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );          
+          if(settings.m_RSSIchannel > -1)
+          {
+            OSD.printInt16P( statCol, ++middle_infos_y, MIN_RSSI_STR, MinRSSI, 0, "db");                    
+          }
         }
         else
         {
@@ -748,25 +797,25 @@ void loop(){
           if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
           {
             ESC_STAT_STR = ESCSymbol;
-          }
-          static const char ESC_RPM_STR[] PROGMEM =  " max rpm : ";
-          static const char ESC_A_STR[] PROGMEM =    " max a   : ";
-          static const char ESC_TEMP_STR[] PROGMEM = " max temp: ";
+          }          
+          static const char ESC_A_STR[] PROGMEM =    " max a   : ";          
           static const char ESC_MINV_STR[] PROGMEM = " min v   : ";
+          static const char ESC_RPM_STR[] PROGMEM =  " max rpm : ";
+          static const char ESC_TEMP_STR[] PROGMEM = " max temp: ";
           static const char ESC_MAH_STR[] PROGMEM =  " mah     : ";
           
-          uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;
+          uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;                    
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[statPage-1], 2, "a"); 
+
+          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[statPage-1], 2, "v");
+
           OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[statPage-1], 1, "kr");
           
           OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[statPage-1], 2, "a"); 
-          
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[statPage-1], 0, tempSymbol);
-          
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[statPage-1], 2, "v");
+          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[statPage-1], 0, tempSymbol);                    
           
           OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
           OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[statPage-1], 0, "mah"); 
@@ -819,7 +868,7 @@ void loop(){
           if(settings.m_wattMeter > 0)
           {
             const int16_t wattPercentage = 20; //95% of max
-            uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)(current * 10);            
+            uint32_t Watts = (uint32_t)LipoVoltage * (uint32_t)current;            
             int16_t tempWatt = (int16_t)(Watts/1000);
             if(settings.m_displaySymbols == 1 && settings.m_IconSettings[WATT_ICON] == 1)
             {
@@ -869,7 +918,7 @@ void loop(){
           else
           #endif
           {
-            OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, "a", 2, AMPSp);
+            OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current/10, 1, "a", 2, AMPSp);
           }
         }
         
@@ -1013,49 +1062,7 @@ void loop(){
           }
           #endif
           OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
-        }
-        
-        #ifndef IMPULSERC_VTX
-        #ifdef VTX_POWER_KNOB
-        //OSD.printInt16(0, settings.ROWS/2, vTxPowerKnobChannel, 0);
-        if(vTxPowerKnobChannel > -1 && vTxPowerKnobLastPPM == -1) vTxPowerKnobLastPPM = AuxChanVals[vTxPowerKnobChannel]+1000;                 
-        if(vTxPowerKnobChannel > -1 && ((AuxChanVals[vTxPowerKnobChannel]+1000 != vTxPowerKnobLastPPM) || vTxPowerActive))
-        {          
-          if((!vTxPowerActive || AuxChanVals[vTxPowerKnobChannel]+1000 != vTxPowerKnobLastPPM) && armed == 0)
-          {
-            vTxPowerTime = _millis;
-            vTxPowerActive = true;
-            vTxPowerKnobLastPPM = AuxChanVals[vTxPowerKnobChannel]+1000;
-            if(_millis - _StartupTime > 5000 && !logoDone) 
-            {
-              logoDone = true;
-              cleanScreen();
-            }
-          }
-          else 
-          {
-            if(_millis - vTxPowerTime > 1000 || armed > 0)
-            {
-              vTxPowerActive = false;
-              cleanScreen();
-            }
-          }
-          if(vTxPowerActive)
-          {              
-            static const char VTX_POWER_STATE[] PROGMEM = "vtx power:";
-            OSD.printP(settings.COLS/2 - strlen_P(VTX_POWER_STATE)/2, settings.ROWS/2, VTX_POWER_STATE);
-            char suffix[] = "mw";
-            uint8_t maxMWmult = 60;            
-            if(vTxType > 2)
-            {
-              maxMWmult = 80;              
-            }
-            int16_t currentVTXPower = ((vTxPowerKnobLastPPM/(int16_t)20)*(int16_t)maxMWmult)/(int16_t)10;          
-            OSD.printInt16(settings.COLS/2 - 2, settings.ROWS/2+1, currentVTXPower, 0, suffix, 1);
-          }
-        }
-        #endif
-        #endif
+        }                
 
         #ifdef CROSSHAIR
         if(settings.m_crossHair && (logoDone || armed > 0) && !vTxPowerActive)
@@ -1068,15 +1075,19 @@ void loop(){
         #endif
 
         #ifdef RSSI_
-        if(settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
-        {                             
-          int16_t rssiVal = AuxChanVals[settings.m_RSSIchannel];
+        int16_t rssiVal;
+        if(settings.m_RSSIchannel > -1)
+        {
+          rssiVal = AuxChanVals[settings.m_RSSIchannel];
           if(rssiVal > 100)
           {
             rssiVal = rssiFilter.ProcessValue(rssiVal);
             while(rssiVal > 100) rssiVal /= 10;          
           }
-
+          if(MinRSSI > rssiVal && armedOnce) MinRSSI = rssiVal;
+        }
+        if(settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
+        {                                       
           //OSD.printInt16(0, settings.ROWS/2, rssiVal, 0, "db", 1);
 
           if(rssiVal < 45 && timer1sec)
