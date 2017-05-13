@@ -12,7 +12,7 @@
 
 The version on the flyduino page is very basic. Some people like that. This one can do more:
 
-* Read the following or simply watch this: https://www.youtube.com/watch?v=XR2UEFcM3bA
+* **Read the following or simply watch this:** https://www.youtube.com/watch?v=XR2UEFcM3bA
 * **Fully customizeable OSD - make it look like you want:**
   * You can change the position of each OSD item and setup if/when it will be displayed in the KISS OSD CONFIG TOOL.
   * You can make the OSD more or less busy using a digital volume (DV) dial on your radio. You can change the order the OSD items are displayed in the KISS OSD CONFIG TOOL.
