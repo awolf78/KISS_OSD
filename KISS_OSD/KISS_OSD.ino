@@ -323,6 +323,8 @@ static bool vTxPowerActive = false;
 static int8_t vTxPowerKnobChannel = -1;
 static int16_t vTxPowerKnobLastPPM = -1;
 static unsigned long vTxPowerTime = 0;
+static int16_t checksumDebug = 0;
+static int16_t bufMinusOne = 0;
 
 enum _SETTING_MODES 
 {
@@ -530,6 +532,9 @@ void loop(){
       OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS-2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;
+      /*OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
+      OSD.printInt16(0, settings.ROWS/2+1, bufMinusOne, 0);
+      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);*/
       return;
     }
 
