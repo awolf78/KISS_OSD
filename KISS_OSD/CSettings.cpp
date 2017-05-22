@@ -43,7 +43,7 @@ void CSettings::LoadDefaults()
   m_activeBattery = 0;
   m_batWarningPercent = 25; //25% by default
   FixBatWarning();
-  m_DVchannel = 0; //AUX1 default
+  m_DVchannel = 1; //AUX1 default
   m_tempUnit = 0; //°C default
   m_lastMAH = 0;
   m_fontSize = 1;
@@ -302,17 +302,21 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     {
       m_vTxMaxPower = 0;
     }
+    if(ver < 0x12)
+    {
+      m_DVchannel++;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x11) //first start of OSD - or older version
+  if(settingsVer < 0x12) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x11);
+    EEPROM.update(0x01,0x12);
   }
   else
   {
@@ -447,7 +451,8 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
   {
     for(i=0; i<DISPLAY_DV_SIZE; i++)
     {
-      dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
+      if(m_DVchannel > 0) dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
+      else dv_ppms[i] = m_DISPLAY_DV[i] * -1;
     }
   }
 }

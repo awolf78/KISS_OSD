@@ -231,7 +231,7 @@ static int16_t maxTemps[4] = {0, 0, 0, 0};
 static int16_t ESCVoltage[4] = {0, 0, 0, 0};
 static int16_t minVoltage[4] = {10000, 10000, 10000, 10000};
 static int16_t ESCmAh[4] = {0, 0, 0, 0};
-static int16_t  AuxChanVals[4] = {0, 0, 0, 0};
+static int16_t  AuxChanVals[5] = {0, 0, 0, 0, 0};
 static unsigned long start_time = 0;
 static unsigned long time = 0;
 static unsigned long old_time = 0;
@@ -315,7 +315,7 @@ static boolean moveItems = false;
 static uint8_t moveSelected = 0;
 static unsigned long startMoveTime = 0;
 static boolean setupNickname = false;
-static const uint8_t charTable[] = { 0x20, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70,
+static const char charTable[] = { 0x20, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70,
                                      0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x30, 0x31, 0x32, 0x33, 0x34,
                                      0x35, 0x36, 0x37, 0x38, 0x39
                                    };
@@ -335,11 +335,12 @@ static int16_t versionProto = 0;
 static unsigned long _StartupTime = 0;
 extern void* MainMenu();
 
-uint8_t findCharPos(uint8_t charToFind)
+uint8_t findCharPos(char charToFind)
 {
-  if (charToFind == 0x00) return 1;
+  if (charToFind > 0x7A || charToFind < 0x20 || (charToFind > 0x20 && charToFind < 0x61)) return 1;
   uint8_t i = 0;
   while (charTable[i] != charToFind && i < charTableSize) i++;
+  if(i >= charTableSize) return 1;
   return i;
 }
 

@@ -36,12 +36,12 @@ boolean ReadTelemetry()
     {
       uint32_t checksum = 0;
       uint8_t i;
-      for (i = 2; i < minBytes; i++) {
+      for (i = STARTCOUNT; i < minBytes; i++) {
         checksum += serialBuf[i];
       }
       checksum = (uint32_t)checksum / (minBytes - 3);
 
-      if (checksum == serialBuf[recBytes - 1])
+      if ((checksum == serialBuf[recBytes - 1] && protoVersion < 109) || (kissProtocolCRC8(serialBuf, STARTCOUNT, minBytes-1) == serialBuf[recBytes - 1] && protoVersion > 108))
       {
 
         throttle = ((serialBuf[STARTCOUNT] << 8) | serialBuf[1 + STARTCOUNT]) / 10;
@@ -73,7 +73,7 @@ boolean ReadTelemetry()
         {
           if (armed > 0 && current_armed == 0)
           {
-            total_time = total_time + (millis() - start_time);
+            if(start_time > 0) total_time = total_time + (millis() - start_time);
             start_time = 0;
             triggerCleanScreen = true;
             if (settings.m_batWarning > 0)
@@ -123,7 +123,7 @@ boolean ReadTelemetry()
             voltDev++;
           }
           uint8_t i2 = i * 2;
-          AuxChanVals[i] = ((serialBuf[8 + i2 + STARTCOUNT] << 8) | serialBuf[9 + i2 + STARTCOUNT]);
+          AuxChanVals[i+1] = ((serialBuf[8 + i2 + STARTCOUNT] << 8) | serialBuf[9 + i2 + STARTCOUNT]);
         }
 
         if (voltDev != 0)
@@ -132,32 +132,6 @@ boolean ReadTelemetry()
           LipoVoltage = (int16_t)tmp32;
         }
         LipoVoltage += settings.m_voltCorrect * 10;
-
-        /*motorKERPM[0] = ((serialBuf[91+STARTCOUNT]<<8) | serialBuf[92+STARTCOUNT])/(MAGNETPOLECOUNT/2);
-          motorKERPM[1] = ((serialBuf[101+STARTCOUNT]<<8) | serialBuf[102+STARTCOUNT])/(MAGNETPOLECOUNT/2);
-          motorKERPM[2] = ((serialBuf[111+STARTCOUNT]<<8) | serialBuf[112+STARTCOUNT])/(MAGNETPOLECOUNT/2);
-          motorKERPM[3] = ((serialBuf[121+STARTCOUNT]<<8) | serialBuf[122+STARTCOUNT])/(MAGNETPOLECOUNT/2);
-
-          motorCurrent[0] = ((serialBuf[87+STARTCOUNT]<<8) | serialBuf[88+STARTCOUNT]);
-          motorCurrent[1] = ((serialBuf[97+STARTCOUNT]<<8) | serialBuf[98+STARTCOUNT]);
-          motorCurrent[2] = ((serialBuf[107+STARTCOUNT]<<8) | serialBuf[108+STARTCOUNT]);
-          motorCurrent[3] = ((serialBuf[117+STARTCOUNT]<<8) | serialBuf[118+STARTCOUNT]);
-
-
-          ESCTemps[0] = ((serialBuf[83+STARTCOUNT]<<8) | serialBuf[84+STARTCOUNT]);
-          ESCTemps[1] = ((serialBuf[93+STARTCOUNT]<<8) | serialBuf[94+STARTCOUNT]);
-          ESCTemps[2] = ((serialBuf[103+STARTCOUNT]<<8) | serialBuf[104+STARTCOUNT]);
-          ESCTemps[3] = ((serialBuf[113+STARTCOUNT]<<8) | serialBuf[114+STARTCOUNT]);
-
-          ESCmAh[0] = ((serialBuf[89+STARTCOUNT]<<8) | serialBuf[90+STARTCOUNT]);
-          ESCmAh[1] = ((serialBuf[99+STARTCOUNT]<<8) | serialBuf[100+STARTCOUNT]);
-          ESCmAh[2] = ((serialBuf[109+STARTCOUNT]<<8) | serialBuf[110+STARTCOUNT]);
-          ESCmAh[3] = ((serialBuf[119+STARTCOUNT]<<8) | serialBuf[120+STARTCOUNT]);
-
-          AuxChanVals[0] = ((serialBuf[8+STARTCOUNT]<<8) | serialBuf[9+STARTCOUNT]);
-          AuxChanVals[1] = ((serialBuf[10+STARTCOUNT]<<8) | serialBuf[11+STARTCOUNT]);
-          AuxChanVals[2] = ((serialBuf[12+STARTCOUNT]<<8) | serialBuf[13+STARTCOUNT]);
-          AuxChanVals[3] = ((serialBuf[14+STARTCOUNT]<<8) | serialBuf[15+STARTCOUNT]);*/
 
         current = (uint16_t)(motorCurrent[0] + motorCurrent[1] + motorCurrent[2] + motorCurrent[3]);
 
@@ -233,7 +207,7 @@ boolean ReadTelemetry()
             MinBat = LipoVoltage;
           }
           MaxAmps = findMax(MaxAmps, current);
-          tmp32 = (uint32_t)MaxAmps * 100 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
+          tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
           MaxC = (int16_t) tmp32;
           tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
           MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
@@ -333,7 +307,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
       uint8_t index = 0;
       uint8_t i;
       
-      if ((getCheckSum(serialBuf, STARTCOUNT, stopByte) == serialBuf[recBytes - 1]) || (kissProtocolCRC8(serialBuf, STARTCOUNT, stopByte) == serialBuf[recBytes - 1] && protoVersion > 108))
+      if ((getCheckSum(serialBuf, STARTCOUNT, stopByte) == serialBuf[recBytes - 1] && protoVersion < 109) || (kissProtocolCRC8(serialBuf, STARTCOUNT, stopByte) == serialBuf[recBytes - 1] && protoVersion > 108))
       {
         if (!skipValues)
         {
@@ -352,7 +326,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
 #ifndef IMPULSERC_VTX
               if (protoVersion > 106 && serialBuf[154 + STARTCOUNT] > 0 && ((serialBuf[154 + STARTCOUNT] & 0x0F) == 0x06))
               {
-                vTxPowerKnobChannel = (int8_t)(serialBuf[154 + STARTCOUNT] >> 4) - 1;
+                vTxPowerKnobChannel = (int8_t)(serialBuf[154 + STARTCOUNT] >> 4);
               }
 #endif
               break;

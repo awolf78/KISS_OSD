@@ -4,6 +4,7 @@ static uint8_t activeVTXMenuItem = 0;
 static uint8_t activeOrderMenuItem = 0;
 static uint8_t activeResetMenuItem = 0;
 static uint8_t activeIconsMenuItem = 0;
+static uint8_t activeOSDItemsMenuItem = 0;
 static bool selectedOrder = false;
 static uint8_t activeOrderMenuSelectedItem = 199;
 static uint8_t confirmIndex = 0;
@@ -133,6 +134,18 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
   return menuItem; 
 }
 
+static const char DISPLAY_OSD_ITEMS_STR[][12] PROGMEM = { "callsign   ",
+                                                        "timer      ",
+                                                        "throttle   ",
+                                                        "amps       ",
+                                                        "voltage    ",
+                                                        "mah        ",
+                                                        "esc rpm    ",
+                                                        "esc amps   ",
+                                                        "esc temp   ",
+                                                        "rssi       " };
+static const char WATT_ORDER_STR[] PROGMEM =            "wattmeter  ";
+
 void* ChangeOrder()
 {
   OSD.topOffset = 2;
@@ -191,45 +204,54 @@ void* ChangeOrder()
   static const uint8_t ORDER_MENU_ITEMS = CSettings::DISPLAY_DV_SIZE+1;
   activeOrderMenuItem = checkMenuItem(activeOrderMenuItem, ORDER_MENU_ITEMS);
   
-  static const char TIMER_ORDER_STR[] PROGMEM =         "timer      ";
-  static const char VOLTAGE_ORDER_STR[] PROGMEM =       "voltage    ";
-  static const char THROTTLE_ORDER_STR[] PROGMEM =      "throttle   ";
-  static const char MAH_ORDER_STR[] PROGMEM =           "mah        ";
-  static const char NICKNAME_ORDER_STR[] PROGMEM =      "nickname   ";
-  static const char AMPS_ORDER_STR[] PROGMEM =          "amps       ";
-  static const char ESC_TEMP_ORDER_STR[] PROGMEM =      "esc temp   ";
-  static const char ESC_VOLTAGE_ORDER_STR[] PROGMEM =   "esc voltage";
-  static const char ESC_RPM_ORDER_STR[] PROGMEM =       "esc rpm    ";
-  static const char RSSI_ORDER_STR[] PROGMEM =          "rssi       ";
-//static const char BACK_STR[] PROGMEM =                "back";
-
-  static const char WATT_ORDER_STR[] PROGMEM =          "wattmeter  ";
-
-  char *orderItems[CSettings::DISPLAY_DV_SIZE];
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_NICKNAME]] = NICKNAME_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_TIMER]] = TIMER_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_RC_THROTTLE]] = THROTTLE_ORDER_STR;
-  if(settings.m_wattMeter) orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = WATT_ORDER_STR;
-  else orderItems[settings.m_DISPLAY_DV[DISPLAY_COMB_CURRENT]] = AMPS_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE]] = VOLTAGE_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION]] = MAH_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_KRPM]] = ESC_RPM_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_CURRENT]] = ESC_VOLTAGE_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE]] = ESC_TEMP_ORDER_STR;
-  orderItems[settings.m_DISPLAY_DV[DISPLAY_RSSI]] = RSSI_ORDER_STR;
-  
   uint8_t startRow = 0;
-  uint8_t startCol = settings.COLS/2 - strlen_P(ESC_VOLTAGE_ORDER_STR)/2;
+  uint8_t startCol = settings.COLS/2 - strlen_P(DISPLAY_OSD_ITEMS_STR[0])/2;
   static const char ORDER_TITLE_STR[] PROGMEM = "order menu";
   OSD.printP(settings.COLS/2 - strlen_P(ORDER_TITLE_STR)/2, ++startRow, ORDER_TITLE_STR);
   for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
   {
-    if(i == activeOrderMenuSelectedItem) OSD.blink1sec(); 
-    OSD.printP( startCol, ++startRow, orderItems[i], activeOrderMenuItem );
+    if(i == activeOrderMenuSelectedItem) OSD.blink1sec();
+    if(settings.m_wattMeter && reverseLUT[i] == DISPLAY_COMB_CURRENT) OSD.printP( startCol, ++startRow, WATT_ORDER_STR, activeOrderMenuItem );
+    else OSD.printP( startCol, ++startRow, DISPLAY_OSD_ITEMS_STR[reverseLUT[i]], activeOrderMenuItem );
   }  
   OSD.printP( startCol, ++startRow, BACK_STR, activeOrderMenuItem );
   
   return (void*)ChangeOrder;
+}
+
+void* SetOSDItems()
+{
+  OSD.topOffset = 2;
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT) && activeOSDItemsMenuItem < CSettings::DISPLAY_DV_SIZE)
+  {
+    settingChanged |= checkCode(settings.m_DISPLAY_DV[activeOSDItemsMenuItem], 1, 0, 1);        
+  }
+
+  if((code &  inputChecker.ROLL_RIGHT) && activeOSDItemsMenuItem == CSettings::DISPLAY_DV_SIZE)
+  {
+    activeOSDItemsMenuItem = 0;
+    cleanScreen();
+    OSD.topOffset = 3;
+    settings.SetupPPMs(DV_PPMs);
+    return (void*)MainMenu;
+  }
+
+  static const uint8_t SET_OSD_MENU_ITEMS = CSettings::DISPLAY_DV_SIZE+1;
+  activeOSDItemsMenuItem = checkMenuItem(activeOSDItemsMenuItem, SET_OSD_MENU_ITEMS);
+  
+  uint8_t startRow = 0;
+  uint8_t startCol = settings.COLS/2 - strlen_P(DISPLAY_OSD_ITEMS_STR[0])/2;
+  static const char SET_OSD_ITEMS_TITLE_STR[] PROGMEM = "set items menu";
+  OSD.printP(settings.COLS/2 - strlen_P(SET_OSD_ITEMS_TITLE_STR)/2, ++startRow, SET_OSD_ITEMS_TITLE_STR);
+  for(uint8_t i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
+  {
+    OSD.printP( startCol, ++startRow, DISPLAY_OSD_ITEMS_STR[i], activeOSDItemsMenuItem );
+    OSD.print(fixStr(": "));
+    OSD.print( fixStr(ON_OFF_STR[settings.m_DISPLAY_DV[i]]) );
+  }  
+  OSD.printP( startCol, ++startRow, BACK_STR, activeOSDItemsMenuItem );
+  
+  return (void*)SetOSDItems;
 }
 
 void* BatteryMenu()
@@ -409,17 +431,40 @@ void* IconsMenu()
   return (void*)IconsMenu;
 }
 
-
+static uint8_t oldDVOrderPos[CSettings::DISPLAY_DV_SIZE] =  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+static uint8_t oldOSDItemsSel[CSettings::DISPLAY_DV_SIZE] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
 void* DisplayMenu()
 {
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
   {
     bool gogglechanged, symbolChanged;
+    uint8_t oldDVChannel = settings.m_DVchannel;
     switch(activeDisplayMenuItem)
     {
       case 0:
-        settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 3);
+        settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 4);
+        if(settings.m_DVchannel != oldDVChannel && oldDVChannel < 2 && settings.m_DVchannel < 2)
+        {
+          uint8_t i;
+          if(oldDVChannel == 0)
+          {
+            for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
+            {
+              oldOSDItemsSel[i] = settings.m_DISPLAY_DV[i];
+              settings.m_DISPLAY_DV[i] = oldDVOrderPos[i];             
+            }            
+          }
+          else
+          {
+            for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
+            {
+              oldDVOrderPos[i] = settings.m_DISPLAY_DV[i];
+              settings.m_DISPLAY_DV[i] = oldOSDItemsSel[i];             
+            }            
+          }
+          settings.SetupPPMs(DV_PPMs);
+        }
       break;
       case 1:
         settingChanged |= checkCode(settings.m_RSSIchannel, 1, -1, 3);
@@ -477,9 +522,16 @@ void* DisplayMenu()
   OSD.printP( settings.COLS/2 - strlen_P(DISPLAY_TITLE_STR)/2, ++startRow, DISPLAY_TITLE_STR );
   
   OSD.printP( startCol, ++startRow, DV_CHANNEL_STR, activeDisplayMenuItem );
-  OSD.print( fixStr("aux") );
-  uint8_t tempCol = startCol + strlen_P(DV_CHANNEL_STR) + 4;
-  OSD.printInt16(tempCol, startRow, settings.m_DVchannel+1, 0, 1 );
+  if(settings.m_DVchannel == 0)
+  {
+    OSD.print( fixStr("fixed") );
+  }
+  else
+  {
+    OSD.print( fixStr("aux") );
+    uint8_t tempCol = startCol + strlen_P(DV_CHANNEL_STR) + 4;
+    OSD.printInt16(tempCol, startRow, settings.m_DVchannel, 0, 1, " " );
+  }
 
   OSD.printP( startCol, ++startRow, RSSI_CHANNEL_STR, activeDisplayMenuItem );
   if(settings.m_RSSIchannel < 0)
@@ -748,17 +800,15 @@ void* MainMenu()
         return (void*)MainMenu; 
       break;
       case 4:
-      if(code &  inputChecker.ROLL_RIGHT)
-      {
         cleanScreen();
         menuActive = false;
         shiftOSDactive = true;
         return (void*)MainMenu;
-      }
       break;
       case 5:
         cleanScreen();
-        return (void*)ChangeOrder;
+        if(settings.m_DVchannel == 0) return (void*)SetOSDItems;
+        else return (void*)ChangeOrder;
       break;      
       case 6:
         cleanScreen();
@@ -787,7 +837,7 @@ void* MainMenu()
   static const char NICKNAME_STR[] PROGMEM =        "callsign";
   static const char MOVE_ITEMS_STR[] PROGMEM =      "move items";
   static const char CENTER_OSD_STR[] PROGMEM =      "center osd";
-  static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";  
+  static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";  static const char SET_OSD_ITEMS_STR[] PROGMEM = "set items";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
   static const char SAVE_STR[] PROGMEM =            "save";
@@ -805,7 +855,8 @@ void* MainMenu()
   OSD.printP( startCol, ++startRow, NICKNAME_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, MOVE_ITEMS_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CENTER_OSD_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );  
+  if(settings.m_DVchannel == 0) OSD.printP( startCol, ++startRow, SET_OSD_ITEMS_STR, activeMenuItem );  
+  else OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, SAVE_STR, activeMenuItem );

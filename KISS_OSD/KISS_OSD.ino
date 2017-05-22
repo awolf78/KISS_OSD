@@ -203,7 +203,7 @@ static int16_t maxTemps[4] = {0,0,0,0};
 static int16_t ESCVoltage[4] = {0,0,0,0};
 static int16_t minVoltage[4] = {10000,10000,10000,10000};
 static int16_t ESCmAh[4] = {0,0,0,0};
-static int16_t  AuxChanVals[4] = {0,0,0,0};
+static int16_t  AuxChanVals[5] = {0,0,0,0,0};
 static unsigned long start_time = 0;
 static unsigned long time = 0;
 static unsigned long old_time = 0;
@@ -399,19 +399,7 @@ void loop(){
   unsigned long _millis = millis();
 
 #ifdef IMPULSERC_VTX
-  /*if(oldvTxBand != vTxBand || oldvTxChannel != vTxChannel || changevTxTime > 0)
-  {
-    if(changevTxTime == 0)
-    {
-      changevTxTime = millis();
-      oldvTxBand = vTxBand;
-      oldvTxChannel = vTxChannel;
-    }
-  }
-  else
-  {*/
     vtx_process_state(_millis, vTxBand, vTxChannel);
-  //}
 #endif
   
   /*if(!OSD.status()) //trying to revive MAX7456 if it got a voltage hickup
@@ -489,7 +477,9 @@ void loop(){
     {
       if(!fcSettingChanged || menuActive)
       {
-        NewSerial.write(0x20); // request telemetry
+        uint8_t requestTelemetry = 0x20;
+        if(protoVersion > 108) requestTelemetry = 0x13;
+        NewSerial.write(requestTelemetry);
       }
       telemetryReceived = ReadTelemetry();
       if(!telemetryReceived) 
@@ -525,6 +515,9 @@ void loop(){
 
     while (!OSD.notInVSync());
 
+    /*OSD.printInt16(0, settings.ROWS/2, armed, 0);
+    OSD.printInt16(0, settings.ROWS/2+1, vTxPowerActive, 0);*/
+    
     if(fcNotConnectedCount > 500)
     {
       cleanScreen();
@@ -785,7 +778,7 @@ void loop(){
           OSD.printTime( statCol+strlen_P(TIME_STR), middle_infos_y, total_time);  
           OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 2, "a" );
           OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" );           
+          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" ); //OSD.printInt16( OSD.cursorRow()+1, middle_infos_y, settings.m_maxWatts, 1, "w)", 0, 0, "(" );          
           OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
           OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, "mah" );
           OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );            
@@ -1083,7 +1076,7 @@ void loop(){
         int16_t rssiVal;
         if(settings.m_RSSIchannel > -1)
         {
-          rssiVal = AuxChanVals[settings.m_RSSIchannel];
+          rssiVal = AuxChanVals[settings.m_RSSIchannel+1];
           if(rssiVal > 100)
           {
             rssiVal = rssiFilter.ProcessValue(rssiVal);
