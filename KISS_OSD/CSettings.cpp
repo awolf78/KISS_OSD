@@ -43,7 +43,7 @@ void CSettings::LoadDefaults()
   m_activeBattery = 0;
   m_batWarningPercent = 25; //25% by default
   FixBatWarning();
-  m_DVchannel = 1; //AUX1 default
+  m_DVchannel = 0; //AUX1 default
   m_tempUnit = 0; //°C default
   m_lastMAH = 0;
   m_fontSize = 1;
@@ -298,13 +298,9 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_OSDItems[ESC2voltage][0]++;
       m_OSDItems[ESC3voltage][0]++;
     }
-    if(ver < 0x11)
-    {
-      m_vTxMaxPower = 0;
-    }
     if(ver < 0x12)
     {
-      m_DVchannel++;
+      m_vTxMaxPower = 0;
     }
   }
 }
@@ -440,7 +436,7 @@ void CSettings::WriteLastMAH()
 void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 {
   uint8_t i;
-  if(all)
+  if(all && m_DVchannel < 4)
   {
     for(i=0; i<DISPLAY_DV_SIZE; i++)
     {
@@ -451,7 +447,7 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
   {
     for(i=0; i<DISPLAY_DV_SIZE; i++)
     {
-      if(m_DVchannel > 0) dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
+      if(m_DVchannel < 4) dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
       else dv_ppms[i] = m_DISPLAY_DV[i] * -1;
     }
   }

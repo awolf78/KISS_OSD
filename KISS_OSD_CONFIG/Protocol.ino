@@ -142,10 +142,10 @@ boolean ReadTelemetry()
          ESCmAh[2] = ((serialBuf[109+STARTCOUNT]<<8) | serialBuf[110+STARTCOUNT]);
          ESCmAh[3] = ((serialBuf[119+STARTCOUNT]<<8) | serialBuf[120+STARTCOUNT]);        
 
-         AuxChanVals[1] = ((serialBuf[8+STARTCOUNT]<<8) | serialBuf[9+STARTCOUNT]);
-         AuxChanVals[2] = ((serialBuf[10+STARTCOUNT]<<8) | serialBuf[11+STARTCOUNT]);
-         AuxChanVals[3] = ((serialBuf[12+STARTCOUNT]<<8) | serialBuf[13+STARTCOUNT]);
-         AuxChanVals[4] = ((serialBuf[14+STARTCOUNT]<<8) | serialBuf[15+STARTCOUNT]);
+         AuxChanVals[0] = ((serialBuf[8+STARTCOUNT]<<8) | serialBuf[9+STARTCOUNT]);
+         AuxChanVals[1] = ((serialBuf[10+STARTCOUNT]<<8) | serialBuf[11+STARTCOUNT]);
+         AuxChanVals[2] = ((serialBuf[12+STARTCOUNT]<<8) | serialBuf[13+STARTCOUNT]);
+         AuxChanVals[3] = ((serialBuf[14+STARTCOUNT]<<8) | serialBuf[15+STARTCOUNT]);
          
          current = (uint16_t)(motorCurrent[0]+motorCurrent[1]+motorCurrent[2]+motorCurrent[3])/10;
          

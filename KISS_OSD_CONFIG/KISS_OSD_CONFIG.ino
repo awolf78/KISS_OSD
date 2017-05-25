@@ -327,6 +327,7 @@ static unsigned long timer1secTime = 0;
 static uint8_t currentDVItem = 0;
 static uint16_t fcNotConnectedCount = 0;
 static uint8_t serialBuf[512];
+static bool activeOSDItems[] = { true, true, true, true, true, true, true, true, true, true, true };
 
 #ifdef DEBUG
 static int16_t versionProto = 0;
@@ -557,16 +558,18 @@ void loop() {
       if (code & inputChecker.YAW_LEFT)
       {
         OSD_ITEM_BLINK[moveSelected] = false;
-        if (moveSelected == CSettings::OSD_ITEMS_SIZE - 1)
+        moveSelected++;        
+        if (moveSelected == CSettings::OSD_ITEMS_SIZE)
         {
           moveSelected = 0;
-        }
-        else
-        {
-          moveSelected++;
-        }
-        OSD_ITEM_BLINK[moveSelected] = true;
+        }       
       }
+       while(settings.m_DVchannel == 4 && !activeOSDItems[moveSelected])
+      {
+        moveSelected++;
+        if (moveSelected == CSettings::OSD_ITEMS_SIZE) moveSelected = 0;       
+      }
+      OSD_ITEM_BLINK[moveSelected] = true;
       uint8_t moveCount = 1;
       uint8_t oldMoveSelected = moveSelected;
       if (moveSelected > STOPW)
@@ -794,13 +797,16 @@ void loop() {
     uint8_t CurrentMargin      = 0;
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
     {
+      activeOSDItems[THROTTLE] = true;
       if (OSD_ITEM_BLINK[THROTTLE]) OSD.blink1sec();
       itemLengthOK[THROTTLE] = OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, 1, "%", 2, THROTTLEp);
       //ESCmarginTop = 1;
     }
+    else activeOSDItems[THROTTLE] = false;
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
     {
+      activeOSDItems[NICKNAME] = true;
       uint8_t nickBlanks = 0;
       itemLengthOK[NICKNAME] = OSD.checkPrintLength(settings.m_OSDItems[NICKNAME][0], settings.m_OSDItems[NICKNAME][1], (uint8_t)strlen(settings.m_nickname), nickBlanks, NICKNAMEp);
       if (OSD_ITEM_BLINK[NICKNAME] && timer1sec)
@@ -812,9 +818,11 @@ void loop() {
         OSD.print( fixStr(settings.m_nickname) );
       }
     }
+    else activeOSDItems[NICKNAME] = false;
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
+      activeOSDItems[AMPS] = true;
       if(settings.m_wattMeter == 0)
       {
         if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
@@ -857,15 +865,19 @@ void loop() {
         }
       }
     }
+    else activeOSDItems[AMPS] = false;
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
     {
+      activeOSDItems[VOLTAGE] = true;
       if (OSD_ITEM_BLINK[VOLTAGE]) OSD.blink1sec();
       itemLengthOK[VOLTAGE] = OSD.printInt16( settings.m_OSDItems[VOLTAGE][0], settings.m_OSDItems[VOLTAGE][1], LipoVoltage / 10, 1, 1, "v", 1, VOLTAGEp);
     }
+    else activeOSDItems[VOLTAGE] = false;
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
     {
+      activeOSDItems[MAH] = true;
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
       {
         uint8_t batCount = (LipoMAH + previousMAH) / settings.m_batSlice;
@@ -900,6 +912,7 @@ void loop() {
         itemLengthOK[MAH] = OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH + previousMAH, 0, 1, "mah", 0, MAHp);
       }
     }
+    else activeOSDItems[MAH] = false;
 
     if (settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
     {
@@ -910,8 +923,10 @@ void loop() {
       ESCSymbol[0] = 0x00;
     }
 
+    bool displayAnyESCData = false;
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
     {
+      displayAnyESCData = true;
       static char KR[4];
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
       {
@@ -975,6 +990,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
     {
+      displayAnyESCData = true;
       static char ampESC[] = { 'a', 0x7E, 0x00};
       ampESC[1] = ESCSymbol[0];
       if (OSD_ITEM_BLINK[ESC1]) OSD.blink1sec();
@@ -990,6 +1006,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
     {
+      displayAnyESCData = true;
       static char tempESC[] = { tempSymbol[0], 0x7E, 0x00};
       tempESC[0] = tempSymbol[0];
       tempESC[1] = ESCSymbol[0];
@@ -1003,8 +1020,11 @@ void loop() {
       itemLengthOK[ESC4temp] = OSD.printInt16(settings.m_OSDItems[ESC4temp][0], settings.m_OSDItems[ESC4temp][1] - TMPmargin, ESCTemps[3], 0, 1, tempSymbol, 1, ESC4temp, ESCSymbol);
     }
 
+    for(i=ESC1; i<RSSI_; i++) activeOSDItems[i] = displayAnyESCData;
+
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER])
     {
+      activeOSDItems[STOPW] = true;
       char stopWatchStr[] = { 0x00, 0x00 };
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
       {
@@ -1026,9 +1046,11 @@ void loop() {
       if (OSD_ITEM_BLINK[STOPW]) OSD.blink1sec();
       OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
     }
+    else activeOSDItems[STOPW] = false;
 
     if((settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || moveItems)
     {
+      activeOSDItems[RSSI_] = true;
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
       {
         static char rssiIcon[] = { 0x14, 0x17, 0x00 };
@@ -1043,6 +1065,7 @@ void loop() {
         if (OSD_ITEM_BLINK[RSSI_] && timer1sec) OSD.printSpaces(3);
       }
     }
+    else activeOSDItems[RSSI_] = false;
 
     if(settings.m_crossHair && !moveItems && !shiftOSDactive)
     {

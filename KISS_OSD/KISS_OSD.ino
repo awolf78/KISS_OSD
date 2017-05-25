@@ -285,7 +285,7 @@ static uint32_t LastLoopTime = 0;
 static boolean dShotEnabled = false;
 static boolean logoDone = false;
 static uint8_t protoVersion = 0;
-static uint8_t failSafeState = 0;
+static uint8_t failSafeState = 10;
 extern void ReadFCSettings(boolean skipValues);
 
 typedef void* (*fptr)();
@@ -580,7 +580,7 @@ void loop(){
         ReviveOSD();
       }
       
-      if(armed == 0 && settings.m_lastMAH > 0)
+      if(settings.m_lastMAH > 0)
       {
         static const char LAST_BATTERY_STR[] PROGMEM = "continue last battery?";
         OSD.printP(settings.COLS/2 - strlen_P(LAST_BATTERY_STR)/2, settings.ROWS/2 - 1, LAST_BATTERY_STR);
@@ -596,7 +596,7 @@ void loop(){
           settings.m_lastMAH = 0;
           cleanScreen();
         }
-        if(code & inputChecker.ROLL_LEFT)
+        if(code & inputChecker.ROLL_LEFT || armed > 0)
         {
           settings.m_lastMAH = 0;
           settings.WriteLastMAH();
@@ -1076,7 +1076,7 @@ void loop(){
         int16_t rssiVal;
         if(settings.m_RSSIchannel > -1)
         {
-          rssiVal = AuxChanVals[settings.m_RSSIchannel+1];
+          rssiVal = AuxChanVals[settings.m_RSSIchannel];
           if(rssiVal > 100)
           {
             rssiVal = rssiFilter.ProcessValue(rssiVal);

@@ -123,7 +123,7 @@ boolean ReadTelemetry()
             voltDev++;
           }
           uint8_t i2 = i * 2;
-          AuxChanVals[i+1] = ((serialBuf[8 + i2 + STARTCOUNT] << 8) | serialBuf[9 + i2 + STARTCOUNT]);
+          AuxChanVals[i] = ((serialBuf[8 + i2 + STARTCOUNT] << 8) | serialBuf[9 + i2 + STARTCOUNT]);
         }
 
         if (voltDev != 0)
@@ -326,7 +326,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
 #ifndef IMPULSERC_VTX
               if (protoVersion > 106 && serialBuf[154 + STARTCOUNT] > 0 && ((serialBuf[154 + STARTCOUNT] & 0x0F) == 0x06))
               {
-                vTxPowerKnobChannel = (int8_t)(serialBuf[154 + STARTCOUNT] >> 4);
+                vTxPowerKnobChannel = (int8_t)(serialBuf[154 + STARTCOUNT] >> 4) - 1;
               }
 #endif
               break;

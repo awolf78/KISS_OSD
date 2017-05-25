@@ -444,10 +444,10 @@ void* DisplayMenu()
     {
       case 0:
         settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 4);
-        if(settings.m_DVchannel != oldDVChannel && oldDVChannel < 2 && settings.m_DVchannel < 2)
+        if(settings.m_DVchannel != oldDVChannel && oldDVChannel > 2 && settings.m_DVchannel > 2)
         {
           uint8_t i;
-          if(oldDVChannel == 0)
+          if(oldDVChannel == 4)
           {
             for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
             {
@@ -522,7 +522,7 @@ void* DisplayMenu()
   OSD.printP( settings.COLS/2 - strlen_P(DISPLAY_TITLE_STR)/2, ++startRow, DISPLAY_TITLE_STR );
   
   OSD.printP( startCol, ++startRow, DV_CHANNEL_STR, activeDisplayMenuItem );
-  if(settings.m_DVchannel == 0)
+  if(settings.m_DVchannel == 4)
   {
     OSD.print( fixStr("fixed") );
   }
@@ -530,7 +530,7 @@ void* DisplayMenu()
   {
     OSD.print( fixStr("aux") );
     uint8_t tempCol = startCol + strlen_P(DV_CHANNEL_STR) + 4;
-    OSD.printInt16(tempCol, startRow, settings.m_DVchannel, 0, 1, " " );
+    OSD.printInt16(tempCol, startRow, settings.m_DVchannel+1, 0, 1, " " );
   }
 
   OSD.printP( startCol, ++startRow, RSSI_CHANNEL_STR, activeDisplayMenuItem );
@@ -807,7 +807,7 @@ void* MainMenu()
       break;
       case 5:
         cleanScreen();
-        if(settings.m_DVchannel == 0) return (void*)SetOSDItems;
+        if(settings.m_DVchannel == 4) return (void*)SetOSDItems;
         else return (void*)ChangeOrder;
       break;      
       case 6:
@@ -855,7 +855,7 @@ void* MainMenu()
   OSD.printP( startCol, ++startRow, NICKNAME_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, MOVE_ITEMS_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CENTER_OSD_STR, activeMenuItem );
-  if(settings.m_DVchannel == 0) OSD.printP( startCol, ++startRow, SET_OSD_ITEMS_STR, activeMenuItem );  
+  if(settings.m_DVchannel == 4) OSD.printP( startCol, ++startRow, SET_OSD_ITEMS_STR, activeMenuItem );  
   else OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
