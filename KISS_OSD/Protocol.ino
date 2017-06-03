@@ -487,4 +487,67 @@ void SendFCSettings(uint8_t sMode)
     NewSerial.write(serialBuf[i]);
   }
 }
+
+boolean sendPidsAndRates()
+{
+  if(fcSettingsReceived && protoVersion >= 106)
+  {
+    uint8_t index = 0;
+    serialBuf2[index++] = (byte)((p_roll & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(p_roll & 0x00FF);
+    serialBuf2[index++] = (byte)((p_pitch & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(p_pitch & 0x00FF);
+    serialBuf2[index++] = (byte)((p_yaw & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(p_yaw & 0x00FF);
+    serialBuf2[index++] = (byte)((i_roll & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(i_roll & 0x00FF);
+    serialBuf2[index++] = (byte)((i_pitch & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(i_pitch & 0x00FF);
+    serialBuf2[index++] = (byte)((i_yaw & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(i_yaw & 0x00FF);
+    serialBuf2[index++] = (byte)((d_roll & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(d_roll & 0x00FF);
+    serialBuf2[index++] = (byte)((d_pitch & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(d_pitch & 0x00FF);
+    serialBuf2[index++] = (byte)((d_yaw & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(d_yaw & 0x00FF);
+    serialBuf2[index++] = (byte)((rcrate_roll & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rcrate_roll & 0x00FF);
+    serialBuf2[index++] = (byte)((rcrate_pitch & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rcrate_pitch & 0x00FF);
+    serialBuf2[index++] = (byte)((rcrate_yaw & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rcrate_yaw & 0x00FF);
+    serialBuf2[index++] = (byte)((rate_roll & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rate_roll & 0x00FF);
+    serialBuf2[index++] = (byte)((rate_pitch & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rate_pitch & 0x00FF);
+    serialBuf2[index++] = (byte)((rate_yaw & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rate_yaw & 0x00FF);
+    serialBuf2[index++] = (byte)((rccurve_roll & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rccurve_roll & 0x00FF);
+    serialBuf2[index++] = (byte)((rccurve_pitch & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rccurve_pitch & 0x00FF);
+    serialBuf2[index++] = (byte)((rccurve_yaw & 0xFF00) >> 8);
+    serialBuf2[index++] = (byte)(rccurve_yaw & 0x00FF);
+
+    double checksum = 0.0;
+    double dataCount = 0.0;
+    for(i=0;i<index;i++)
+    {
+     checksum += serialBuf2[i];
+     dataCount++;
+    }
+    checksum = checksum/dataCount;
+
+    NewSerial.write(0x12);  // Send pids and rates
+    NewSerial.write(index); // Packet size
+    for(i=0;i<=index;i++)
+    {
+      NewSerial.write(serialBuf2[i]);
+    }
+    NewSerial.write(floor(checksum)); // CheckSum
+    return true;
+  }
+  return false;
+}
 #endif
