@@ -267,18 +267,30 @@ enum _ROLL_PITCH_YAW
   _YAW
 };
 
+
+struct _FC_FILTERS
+{
+  uint8_t lpf_frq;
+  uint8_t yawFilterCut;
+  uint8_t notchFilterEnabledR;
+  int16_t notchFilterCenterR;
+  int16_t notchFilterCutR;
+  uint8_t notchFilterEnabledP;
+  int16_t notchFilterCenterP;
+  int16_t notchFilterCutP;
+} fc_filters;
+
+struct _FC_TPA
+{
+  int16_t tpa[3];
+  uint8_t customTPAEnabled;
+  uint8_t ctpa_bp1;
+  uint8_t ctpa_bp2;
+  uint8_t ctpa_infl[4];
+} fc_tpa;
+
 static int16_t pid_p[3], pid_i[3], pid_d[3], rcrate[3], rate[3], rccurve[3];
-//static int16_t p_roll = 0;
-//static int16_t p_pitch, p_yaw, p_tpa, i_roll, i_pitch, i_yaw, i_tpa, d_roll, d_pitch, d_yaw, d_tpa;
-static int16_t tpa[3];
 static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
-static uint8_t customTPAEnabled;
-static uint8_t ctpa_infl[4];
-static uint8_t ctpa_bp1, ctpa_bp2;//, ctpa_infl0, ctpa_infl1, ctpa_infl2, ctpa_infl3;
-static int16_t lpf_frq;
-static uint8_t notchFilterEnabledR, notchFilterEnabledP;
-static int16_t notchFilterCenterR, notchFilterCutR, notchFilterCenterP, notchFilterCutP;
-static int16_t yawFilterCut;
 static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
@@ -464,7 +476,7 @@ void loop(){
         {
           if(pid_p[i] < 0 || pid_i[i] < 0 || pid_d[i] < 0 || 
             rcrate[i] < 0 || rate[i] < 0 || rccurve[i] < 0 ||
-            tpa[i] < 0)
+            fc_tpa.tpa[i] < 0)
           {
             fcSettingsReceived = false;
             settingMode = 0;

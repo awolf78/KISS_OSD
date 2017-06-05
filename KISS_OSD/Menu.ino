@@ -116,6 +116,14 @@ boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int
   return changed;
 }
 
+boolean checkCode(uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+{
+  int16_t tempValue = value;
+  boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
+  value = (uint16_t) tempValue;
+  return changed;
+}
+
 uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
 {
   if((code &  inputChecker.PITCH_UP) && menuItem > 0)
@@ -287,7 +295,7 @@ void* TPAMenu()
   static const char TPA_DESC_STR1[] PROGMEM = "tpa p : "; 
   static const char TPA_DESC_STR2[] PROGMEM = "tpa i : "; 
   static const char TPA_DESC_STR3[] PROGMEM = "tpa d : ";
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_TPA], activeTPAMenuItem,  tpa[0], tpa[1], tpa[2], TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_TPA], activeTPAMenuItem,  fc_tpa.tpa[0], fc_tpa.tpa[1], fc_tpa.tpa[2], TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
 }
 
 void* FilterMenu()
@@ -295,28 +303,28 @@ void* FilterMenu()
   switch(activeFilterMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(lpf_frq, 1, 0, 6);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6);
     break;
     case 1:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(yawFilterCut, 10, 0, 97);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.yawFilterCut, 10, 0, 97);
     break;
     case 2:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterEnabledR, 1, 0, 1);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.notchFilterEnabledR, 1, 0, 1);
     break;
     case 3:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCenterR, 10, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.notchFilterCenterR, 10, 0, 490);
     break;
     case 4:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCutR, 10, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.notchFilterCutR, 10, 0, 490);
     break;
     case 5:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterEnabledP, 1, 0, 1);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.notchFilterEnabledP, 1, 0, 1);
     break;
     case 6:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCenterP, 10, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.notchFilterCenterP, 10, 0, 490);
     break;
     case 7:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(notchFilterCutP, 10, 0, 490);
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.notchFilterCutP, 10, 0, 490);
     break;        
     case 8:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -365,16 +373,16 @@ void* FilterMenu()
   OSD.printP(settings.COLS/2 - strlen_P(FILTER_MENU_TITLE_STR)/2, ++startRow, FILTER_MENU_TITLE_STR);
   
   OSD.printP( startCol, ++startRow, LPF_STR, activeFilterMenuItem);
-  OSD.print( fixPStr(LPF_FRQ_STR[lpf_frq]) );
-  OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, yawFilterCut, 0, activeFilterMenuItem, "", 1);
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) );
+  OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, fc_filters.yawFilterCut, 0, activeFilterMenuItem, "", 1);
   OSD.printP( startCol, ++startRow, NOTCH_ROLL_STR, activeFilterMenuItem);
-  OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledR]) );
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CENTER_STR, notchFilterCenterR, 0, activeFilterMenuItem, "hz", 1);
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CUTOFF_STR, notchFilterCutR, 0, activeFilterMenuItem, "hz", 1);
+  OSD.print( fixStr(ON_OFF_STR[fc_filters.notchFilterEnabledR]) );
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CENTER_STR, fc_filters.notchFilterCenterR, 0, activeFilterMenuItem, "hz", 1);
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CUTOFF_STR, fc_filters.notchFilterCutR, 0, activeFilterMenuItem, "hz", 1);
   OSD.printP( startCol, ++startRow, NOTCH_PITCH_STR, activeFilterMenuItem);
-  OSD.print( fixStr(ON_OFF_STR[notchFilterEnabledP]) );
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, notchFilterCenterP, 0, activeFilterMenuItem, "hz", 1); 
-  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, notchFilterCutP, 0, activeFilterMenuItem, "hz", 1);
+  OSD.print( fixStr(ON_OFF_STR[fc_filters.notchFilterEnabledP]) );
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, fc_filters.notchFilterCenterP, 0, activeFilterMenuItem, "hz", 1); 
+  OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, fc_filters.notchFilterCutP, 0, activeFilterMenuItem, "hz", 1);
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeFilterMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeFilterMenuItem);
   
@@ -386,25 +394,25 @@ void* CustomTPAMenu()
   switch(activeCustomTPAMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_TPA] |= checkCode(customTPAEnabled, 1, 0, 1);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.customTPAEnabled, 1, 0, 1);
     break;
     case 1:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[0], 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.ctpa_infl[0], 10, 0, 100);
     break;
     case 2:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp1, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.ctpa_bp1, 10, 0, 100);
     break;
     case 3:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[1], 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.ctpa_infl[1], 10, 0, 100);
     break;
     case 4:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_bp2, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.ctpa_bp2, 10, 0, 100);
     break;
     case 5:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[2], 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.ctpa_infl[2], 10, 0, 100);
     break;
     case 6:
-      fcSettingModeChanged[FC_TPA] |= checkCode(ctpa_infl[3], 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(fc_tpa.ctpa_infl[3], 10, 0, 100);
     break;
     case 7:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -442,19 +450,19 @@ void* CustomTPAMenu()
   OSD.printP(settings.COLS/2 - strlen_P(CUSTOM_TPA_TITLE_STR)/2, ++startRow, CUSTOM_TPA_TITLE_STR);
   
   OSD.printP( startCol, ++startRow, CSTM_TPA_ACTIVE_STR, activeCustomTPAMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[customTPAEnabled]) );
+  OSD.print( fixStr(ON_OFF_STR[fc_tpa.customTPAEnabled]) );
   
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, ctpa_infl[0], 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, fc_tpa.ctpa_infl[0], 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_ONE_STR, ctpa_bp1, 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_ONE_STR, fc_tpa.ctpa_bp1, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP1_STR, ctpa_infl[1], 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP1_STR, fc_tpa.ctpa_infl[1], 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_TWO_STR, ctpa_bp2, 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, BREAKPOINT_TWO_STR, fc_tpa.ctpa_bp2, 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP2_STR, ctpa_infl[2], 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_BP2_STR, fc_tpa.ctpa_infl[2], 0, activeCustomTPAMenuItem, "%", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_MAX_STR, ctpa_infl[3], 0, activeCustomTPAMenuItem, "%", 1 );
+  OSD.printIntArrow( startCol, ++startRow, INFLUENCE_MAX_STR, fc_tpa.ctpa_infl[3], 0, activeCustomTPAMenuItem, "%", 1 );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeCustomTPAMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeCustomTPAMenuItem );

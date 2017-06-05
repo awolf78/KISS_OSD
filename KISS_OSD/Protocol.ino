@@ -141,7 +141,7 @@ boolean ReadTelemetry()
         // Data sanity check. Return false if we get invalid data
         for (i = 0; i < 4; i++)
         {
-          if (ESCTemps[i] < -50 || ESCTemps[i] > 100 ||
+          if (ESCTemps[i] < -50 || ESCTemps[i] > 130 ||
               motorCurrent[i] < 0 || motorCurrent[i] > 10000 ||
               motorKERPM[i] < 0 || motorKERPM[i] > 500 ||
               ESCVoltage[i] < 0 || ESCVoltage[i] > 10000 ||
@@ -314,7 +314,6 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
           switch (sMode)
           {
             case FC_SETTINGS:
-              //protoVersion = serialBuf[92 + STARTCOUNT];
               if (serialBuf[73 + STARTCOUNT] > 0)
               {
                 armOnYaw = false;
@@ -362,37 +361,17 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               oldvTxHighPower = vTxHighPower;
               break;
             case FC_FILTERS:
-              lpf_frq = serialBuf[index + STARTCOUNT];
-              index++;
-              yawFilterCut = (int16_t)serialBuf[index + STARTCOUNT];
-              index++;
-              notchFilterEnabledR = serialBuf[index + STARTCOUNT];
-              index++;
-              notchFilterCenterR = ((serialBuf[index + STARTCOUNT] << 8) | serialBuf[index + 1 + STARTCOUNT]);
-              index += 2;
-              notchFilterCutR = ((serialBuf[index + STARTCOUNT] << 8) | serialBuf[index + 1 + STARTCOUNT]);
-              index += 2;
-              notchFilterEnabledP = serialBuf[index + STARTCOUNT];
-              index++;
-              notchFilterCenterP = ((serialBuf[index + STARTCOUNT] << 8) | serialBuf[index + 1 + STARTCOUNT]);
-              index += 2;
-              notchFilterCutP = ((serialBuf[index + STARTCOUNT] << 8) | serialBuf[index + 1 + STARTCOUNT]);
+              memcpy(&fc_filters, &serialBuf[STARTCOUNT], sizeof(fc_filters));
+              fc_filters.notchFilterCenterR = (uint16_t)((uint16_t)fc_filters.notchFilterCenterR >> 8) | ((uint16_t)fc_filters.notchFilterCenterR << 8);
+              fc_filters.notchFilterCutR = (uint16_t)((uint16_t)fc_filters.notchFilterCutR >> 8) | ((uint16_t)fc_filters.notchFilterCutR << 8);
+              fc_filters.notchFilterCenterP = (uint16_t)((uint16_t)fc_filters.notchFilterCenterP >> 8) | ((uint16_t)fc_filters.notchFilterCenterP << 8);
+              fc_filters.notchFilterCutP = (uint16_t)((uint16_t)fc_filters.notchFilterCutP >> 8) | ((uint16_t)fc_filters.notchFilterCutP << 8);
               break;
             case FC_TPA:
+              memcpy(&fc_tpa, &serialBuf[STARTCOUNT], sizeof(fc_tpa));
               for (i = 0; i < 3; i++)
               {
-                tpa[i] = ((serialBuf[index + STARTCOUNT + i * 2] << 8) | serialBuf[index + 1 + STARTCOUNT + i * 2]);
-              }
-              index = 6;
-              customTPAEnabled = serialBuf[index + STARTCOUNT];
-              index++;
-              ctpa_bp1 = serialBuf[index + STARTCOUNT];
-              index++;
-              ctpa_bp2 = serialBuf[index + STARTCOUNT];
-              index++;
-              for (i = 0; i < 4; i++)
-              {
-                ctpa_infl[i] = serialBuf[index + STARTCOUNT + i];
+                fc_tpa.tpa[i] = (uint16_t)((uint16_t)fc_tpa.tpa[i] >> 8) | ((uint16_t)fc_tpa.tpa[i] << 8);
               }
               break;
           }
@@ -412,7 +391,6 @@ void SendFCSettings(uint8_t sMode)
   {
     case FC_SETTINGS:
       return;
-      break;
     case FC_RATES:
       for (i = 0; i < 3; i++)
       {
@@ -445,33 +423,33 @@ void SendFCSettings(uint8_t sMode)
       serialBuf[STARTCOUNT + index++] = (byte)((vTxHighPower & 0xFF00) >> 8);
       serialBuf[STARTCOUNT + index++] = (byte)(vTxHighPower & 0x00FF);
       break;
-    case FC_FILTERS:
-      serialBuf[STARTCOUNT + index++] = lpf_frq;
-      serialBuf[STARTCOUNT + index++] = (byte) yawFilterCut;
-      serialBuf[STARTCOUNT + index++] = (byte) notchFilterEnabledR;
-      serialBuf[STARTCOUNT + index++] = (byte)((notchFilterCenterR & 0xFF00) >> 8);
-      serialBuf[STARTCOUNT + index++] = (byte)(notchFilterCenterR & 0x00FF);
-      serialBuf[STARTCOUNT + index++] = (byte)((notchFilterCutR & 0xFF00) >> 8);
-      serialBuf[STARTCOUNT + index++] = (byte)(notchFilterCutR & 0x00FF);
-      serialBuf[STARTCOUNT + index++] = (byte) notchFilterEnabledP;
-      serialBuf[STARTCOUNT + index++] = (byte)((notchFilterCenterP & 0xFF00) >> 8);
-      serialBuf[STARTCOUNT + index++] = (byte)(notchFilterCenterP & 0x00FF);
-      serialBuf[STARTCOUNT + index++] = (byte)((notchFilterCutP & 0xFF00) >> 8);
-      serialBuf[STARTCOUNT + index++] = (byte)(notchFilterCutP & 0x00FF);
+    case FC_FILTERS:      
+      serialBuf[STARTCOUNT + index++] = fc_filters.lpf_frq;
+      serialBuf[STARTCOUNT + index++] = (byte) fc_filters.yawFilterCut;
+      serialBuf[STARTCOUNT + index++] = (byte) fc_filters.notchFilterEnabledR;
+      serialBuf[STARTCOUNT + index++] = (byte)((fc_filters.notchFilterCenterR & 0xFF00) >> 8);
+      serialBuf[STARTCOUNT + index++] = (byte)(fc_filters.notchFilterCenterR & 0x00FF);
+      serialBuf[STARTCOUNT + index++] = (byte)((fc_filters.notchFilterCutR & 0xFF00) >> 8);
+      serialBuf[STARTCOUNT + index++] = (byte)(fc_filters.notchFilterCutR & 0x00FF);
+      serialBuf[STARTCOUNT + index++] = (byte) fc_filters.notchFilterEnabledP;
+      serialBuf[STARTCOUNT + index++] = (byte)((fc_filters.notchFilterCenterP & 0xFF00) >> 8);
+      serialBuf[STARTCOUNT + index++] = (byte)(fc_filters.notchFilterCenterP & 0x00FF);
+      serialBuf[STARTCOUNT + index++] = (byte)((fc_filters.notchFilterCutP & 0xFF00) >> 8);
+      serialBuf[STARTCOUNT + index++] = (byte)(fc_filters.notchFilterCutP & 0x00FF);
       break;
     case FC_TPA:
       for (i = 0; i < 3; i++)
       {
-        serialBuf[STARTCOUNT + i * 2] = (byte)((tpa[i] & 0xFF00) >> 8);
-        serialBuf[STARTCOUNT + i * 2 + 1] = (byte)(tpa[i] & 0x00FF);
+        serialBuf[STARTCOUNT + i * 2] = (byte)((fc_tpa.tpa[i] & 0xFF00) >> 8);
+        serialBuf[STARTCOUNT + i * 2 + 1] = (byte)(fc_tpa.tpa[i] & 0x00FF);
       }
       index = 6;
-      serialBuf[STARTCOUNT + index++] = (byte)customTPAEnabled;
-      serialBuf[STARTCOUNT + index++] = (byte)ctpa_bp1;
-      serialBuf[STARTCOUNT + index++] = (byte)ctpa_bp2;
+      serialBuf[STARTCOUNT + index++] = (byte)fc_tpa.customTPAEnabled;
+      serialBuf[STARTCOUNT + index++] = (byte)fc_tpa.ctpa_bp1;
+      serialBuf[STARTCOUNT + index++] = (byte)fc_tpa.ctpa_bp2;
       for (i = 0; i < 4; i++)
       {
-        serialBuf[STARTCOUNT + i + index] = (byte)ctpa_infl[i];
+        serialBuf[STARTCOUNT + i + index] = (byte)fc_tpa.ctpa_infl[i];
       }
       index += 4;
       break;
