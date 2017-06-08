@@ -17,6 +17,7 @@ int16_t CMeanFilter::ProcessValue(const int16_t value)
   #ifdef NEW_FILTER
   uint8_t newPos = m_bufPos % m_maxCount;
   m_bufPos++;
+  if(m_bufPos == 250) m_bufPos = 0;
   m_buf[newPos] = value;  
   m_accValue = (uint32_t)m_buf[newPos] * (uint32_t)m_maxCount;
   uint8_t count = m_maxCount;

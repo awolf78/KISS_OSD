@@ -22,6 +22,9 @@ bool CSettings::cleanEEPROM()
     byte readB = EEPROM.read(i);    
     if(readB != check) cleaned = false;
   }
+  #ifdef FORCE_CLEAN_EEPROM
+  cleaned = false;
+  #endif
   if(!cleaned)
   {
     for(i=0; i<EEPROM.length(); i++) EEPROM.update(i,0);
@@ -35,6 +38,97 @@ bool CSettings::cleanEEPROM()
 
 void CSettings::LoadDefaults()
 {
+  #ifdef STEELE_PDB
+  m_batWarning = 0;
+  m_batMAH[0] = 1300; //1300 mAh by default
+  m_batMAH[1] = 1500; //1500 mAh by default
+  m_batMAH[2] = 1800; //1800 mAh by default
+  m_batMAH[3] = 2250; //2250 mAh by default
+  m_activeBattery = 0;
+  m_batWarningPercent = 25; //25% by default
+  FixBatWarning();
+  m_DVchannel = 4; //fixed positions
+  m_tempUnit = 1; //°F default
+  m_lastMAH = 0;
+  m_fontSize = 1;
+  m_displaySymbols = 1;
+  m_vTxChannel = 4; // Raceband 5 @ 25mW default
+  m_vTxBand = 4;
+  m_vTxPower = 0;
+  m_xOffset = 0; // Center OSD offsets
+  m_yOffset = 3;
+  m_stats = 2;
+  m_DISPLAY_DV[DISPLAY_NICKNAME] = 0;
+  m_DISPLAY_DV[DISPLAY_TIMER] = 0;
+  m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 0;
+  m_DISPLAY_DV[DISPLAY_COMB_CURRENT] = 1;
+  m_DISPLAY_DV[DISPLAY_LIPO_VOLTAGE] = 1;
+  m_DISPLAY_DV[DISPLAY_MA_CONSUMPTION] = 1;
+  m_DISPLAY_DV[DISPLAY_ESC_KRPM] = 0;
+  m_DISPLAY_DV[DISPLAY_ESC_CURRENT] = 0;
+  m_DISPLAY_DV[DISPLAY_ESC_TEMPERATURE] = 0;
+  m_DISPLAY_DV[DISPLAY_RSSI] = 0;
+  uint8_t i;
+  for(i=0; i < NICKNAME_STR_SIZE; i++)
+  {
+    m_nickname[i] = 0x00;
+  }
+  m_OSDItems[ESC1kr][0] = 0;
+  m_OSDItems[ESC1kr][1] = 2;
+  m_OSDItems[ESC1voltage][0] = 0;
+  m_OSDItems[ESC1voltage][1] = 2;
+  m_OSDItems[ESC1temp][0] = 0;
+  m_OSDItems[ESC1temp][1] = 2;
+  m_OSDItems[ESC2kr][0] = COLS-1;
+  m_OSDItems[ESC2kr][1] = 2;
+  m_OSDItems[ESC2voltage][0] = COLS;
+  m_OSDItems[ESC2voltage][1] = 2;
+  m_OSDItems[ESC2temp][0] = COLS;
+  m_OSDItems[ESC2temp][1] = 2;
+  m_OSDItems[ESC3kr][0] = COLS-1;
+  m_OSDItems[ESC3kr][1] = ROWS-2;
+  m_OSDItems[ESC3voltage][0] = COLS;
+  m_OSDItems[ESC3voltage][1] = ROWS-2;
+  m_OSDItems[ESC3temp][0] = COLS;
+  m_OSDItems[ESC3temp][1] = ROWS-2;
+  m_OSDItems[ESC4kr][0] = 0;
+  m_OSDItems[ESC4kr][1] = ROWS-2;
+  m_OSDItems[ESC4voltage][0] = 0;
+  m_OSDItems[ESC4voltage][1] = ROWS-2;
+  m_OSDItems[ESC4temp][0] = 0;
+  m_OSDItems[ESC4temp][1] = ROWS-2;
+  m_OSDItems[VOLTAGE][0] = 0;
+  m_OSDItems[VOLTAGE][1] = 0;
+  m_OSDItems[AMPS][0] = COLS/2-2;
+  m_OSDItems[AMPS][1] = 0;
+  m_OSDItems[THROTTLE][0] = 0;
+  m_OSDItems[THROTTLE][1] = ROWS-4;
+  m_OSDItems[STOPW][0] = COLS/2 - 3;
+  m_OSDItems[STOPW][1] = ROWS - 2;
+  m_OSDItems[NICKNAME][0] = COLS/2 - 4;
+  m_OSDItems[NICKNAME][1] = ROWS - 1;
+  m_OSDItems[MAH][0] = COLS - 1;
+  m_OSDItems[MAH][1] = 0;
+  m_OSDItems[RSSIp][0] = COLS/4;
+  m_OSDItems[RSSIp][1] = ROWS - 1;
+  m_goggle = 0; //0 = fatshark, 1 = headplay
+  m_wattMeter = 0;
+  m_Moustache = 1;
+  m_voltWarning = 0;
+  m_minVolts = 148;
+  m_airTimer = 1;
+  m_voltCorrect = 0;
+  m_crossHair = 0;
+  m_RSSIchannel = -1;
+  for(i=0; i<ICON_SETTINGS_SIZE; i++)
+  {
+    m_IconSettings[i] = 1;  
+  }
+  m_IconSettings[MAH_ICON] = 0;
+  m_vTxMaxPower = 0;
+
+  #else
+  
   m_batWarning = 1; //on by default
   m_batMAH[0] = 1300; //1300 mAh by default
   m_batMAH[1] = 1500; //1500 mAh by default
@@ -121,6 +215,7 @@ void CSettings::LoadDefaults()
     m_IconSettings[i] = 1;  
   }
   m_vTxMaxPower = 0;
+  #endif
 }
 
 void CSettings::fixColBorders()

@@ -494,6 +494,9 @@ void* DisplayMenu()
         settingChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
       break;
       case 8:
+        settingChanged |= checkCode(settings.m_stats, 1, 0, 2);
+      break;
+      case 9:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeDisplayMenuItem = 0;
@@ -503,7 +506,7 @@ void* DisplayMenu()
       break;
     }
   }
-  static const uint8_t DISPLAY_MENU_ITEMS = 9;
+  static const uint8_t DISPLAY_MENU_ITEMS = 10;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
@@ -514,6 +517,7 @@ void* DisplayMenu()
   static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
   static const char BEERMUG_STR[] PROGMEM =         "watt meter : ";
   static const char CROSSHAIR_STR[] PROGMEM =       "crosshair  : ";
+  static const char STATISTICS_STR[] PROGMEM =      "statistics : ";
 //static const char BACK_STR[] PROGMEM =            "back";
   
   uint8_t startRow = 1;
@@ -564,12 +568,16 @@ void* DisplayMenu()
   OSD.print( fixPStr(GOGGLES_STR[settings.m_goggle]) );
 
   OSD.printP( startCol, ++startRow, BEERMUG_STR, activeDisplayMenuItem );
-  static char ON_OFF_BEER_STR[][8] = { "off    ", "on     ", "beermug" };
-  OSD.print( fixStr(ON_OFF_BEER_STR[settings.m_wattMeter]) );
+  static const char ON_OFF_BEER_STR[][8] PROGMEM = { "off    ", "on     ", "beermug" };
+  OSD.print( fixPStr(ON_OFF_BEER_STR[settings.m_wattMeter]) );
 
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeDisplayMenuItem );
-  static const char ON_OFF_STR_CROSS[][4] = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
-  OSD.print( fixStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
+  static const char ON_OFF_STR_CROSS[][4] PROGMEM = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
+  OSD.print( fixPStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
+
+  OSD.printP( startCol, ++startRow, STATISTICS_STR, activeDisplayMenuItem );
+  static const char ON_OFF_STAT_STR[][7] PROGMEM = { "off   ", "on    ", "hidden" };
+  OSD.print( fixPStr(ON_OFF_STAT_STR[settings.m_stats]) );
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeDisplayMenuItem );
   
@@ -845,8 +853,8 @@ void* MainMenu()
   
   uint8_t startRow = 0;
   uint8_t startCol = settings.COLS/2 - strlen_P(CHANGE_ORDER_STR)/2;
-  OSD.setCursor( settings.COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
-  OSD.print( fixStr(KISS_OSD_VER) );
+  OSD.setCursor( settings.COLS/2 - strlen_P(KISS_OSD_VER)/2, ++startRow );
+  OSD.print( fixPStr(KISS_OSD_VER) );
   static const char MAIN_TITLE_STR[] PROGMEM = "main menu";
   OSD.printP( settings.COLS/2 - strlen_P(MAIN_TITLE_STR)/2, ++startRow, MAIN_TITLE_STR );
   

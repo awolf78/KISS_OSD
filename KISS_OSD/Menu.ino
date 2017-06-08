@@ -722,13 +722,16 @@ void* vTxMenu()
 #else
 void* vTxMenu()
 {
+  int16_t maxWatt = 600;
+  if(settings.m_vTxMaxPower > 0) maxWatt = settings.m_vTxMaxPower;
+  else if(vTxType == 3) maxWatt = 800;
   switch(activeVTXMenuItem)
   {
     case 0:
-      if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxLowPower, 10, 5, 800);
+      if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxLowPower, 10, 5, maxWatt);
     break;
     case 1:
-      if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 25, 25, 800);
+      if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 25, 25, maxWatt);
     break;
     case 2:
       fcSettingModeChanged[FC_VTX] |= checkCode(vTxBand, 1, 0, 4);
@@ -933,8 +936,8 @@ void* MainMenu()
   
   uint8_t startRow = 0;
   uint8_t startCol = settings.COLS/2 - strlen_P(SYMBOLS_SIZE_STR)/2;
-  OSD.setCursor( settings.COLS/2 - strlen(KISS_OSD_VER)/2, ++startRow );
-  OSD.print( fixStr(KISS_OSD_VER) );
+  OSD.setCursor( settings.COLS/2 - strlen_P(KISS_OSD_VER)/2, ++startRow );
+  OSD.print( fixPStr(KISS_OSD_VER) );
   static const char MAIN_TITLE_STR[] PROGMEM = "main menu";
   OSD.printP( settings.COLS/2 - strlen_P(MAIN_TITLE_STR)/2, ++startRow, MAIN_TITLE_STR );
   
@@ -949,8 +952,8 @@ void* MainMenu()
   OSD.print( fixStr(ON_OFF_STR[settings.m_airTimer]) );
   #ifdef CROSSHAIR
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeMenuItem );
-  static const char ON_OFF_STR_CROSS[][4] = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
-  OSD.print( fixStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
+  static const char ON_OFF_STR_CROSS[][4] PROGMEM = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
+  OSD.print( fixPStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
   #endif
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CANCEL_STR, activeMenuItem );

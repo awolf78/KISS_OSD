@@ -18,7 +18,7 @@ public:
   
   
 private:
-  static const uint16_t YAW_LONG_DELAY = 3000;
+  static const uint16_t YAW_LONG_DELAY = 2000;
   static const uint16_t ROLL_PITCH_DELAY = 1250;
   static const uint16_t SPEEDUP = 1000;
   static const uint16_t MAXSPEED = 250;

@@ -69,8 +69,6 @@ static const uint8_t BAT_MAH_INCREMENT = 50;
 //#define SIMULATE_VALUES
 static bool doItOnce = true;
 
-const char KISS_OSD_VER[] = "kiss osd v2.4";
-
 #include <SPI.h>
 #include "MAX7456.h"
 #include "MyMAX7456.h"
@@ -82,8 +80,14 @@ const char KISS_OSD_VER[] = "kiss osd v2.4";
 #include "CMeanFilter.h"
 #include "Config.h"
 
+#ifdef STEELE_PDB
+static const char KISS_OSD_VER[] PROGMEM = "steele osd v2.4";
+#else
+static const char KISS_OSD_VER[] PROGMEM = "kiss osd v2.4";
+#endif
 
-#ifdef IMPULSERC_VTX
+
+#if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
 const uint8_t osdChipSelect          =            10;
 #else
 const uint8_t osdChipSelect          =            6;
@@ -166,7 +170,7 @@ void setupMAX7456()
   OSD.setTextArea(settings.COLS, settings.ROWS);
   OSD.setSwitchingTime( 5 ); 
   OSD.display();
-#ifdef IMPULSERC_VTX
+#if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
   delay(100);
   MAX7456Setup();
 #endif
@@ -337,6 +341,7 @@ static int16_t vTxPowerKnobLastPPM = -1;
 static unsigned long vTxPowerTime = 0;
 static int16_t checksumDebug = 0;
 static int16_t bufMinusOne = 0;
+static bool statsActive = false;
 
 enum _SETTING_MODES 
 {
@@ -521,14 +526,90 @@ void loop(){
         else fcNotConnectedCount++;
       }
       else fcNotConnectedCount = 0;
-    }
-
-    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
+    }    
 
     while (!OSD.notInVSync());
 
     /*OSD.printInt16(0, settings.ROWS/2, armed, 0);
     OSD.printInt16(0, settings.ROWS/2+1, vTxPowerActive, 0);*/
+
+    #ifdef SHOW_KISS_LOGO
+    if(!logoDone && armed == 0 && !menuActive && !armedOnce && settings.m_IconSettings[KISS_ICON] == 1)
+    {
+      #ifdef STEELE_PDB
+      uint8_t logoCol = settings.COLS/2-3;
+      uint8_t logoRow = settings.ROWS/2-2;
+      static const char impulseRC_logo[][7] PROGMEM = { { 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0x00 },
+                                                        { 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0x00 },
+                                                        { 0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0x00 },
+                                                        { 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0x00 } };
+      for(i=0; i<4; i++)
+      {
+        OSD.setCursor(logoCol, logoRow);
+        OSD.print(fixPStr(impulseRC_logo[i]));
+        logoRow++;            
+      }
+      // This was for the big logo
+      /*static const char impulseRC_logo2[][17] = { { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xCC, 0xCD, 0xCE, 0xCF, 0x00 },
+                                                  { 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xED, 0xEE, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0x00 } };
+      logoCol = settings.COLS/2-8;
+      for(i=0; i<2; i++)
+      {
+        OSD.setCursor(logoCol, logoRow);
+        OSD.print(impulseRC_logo2[i]);
+        logoRow++;            
+      }*/
+      static const char impulseRC_logo2[][13] PROGMEM = { { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0x00 },
+                                                          { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xED, 0x00 } };
+      logoCol = settings.COLS/2-6;
+      for(i=0; i<2; i++)
+      {
+        OSD.setCursor(logoCol, logoRow);
+        OSD.print(fixPStr(impulseRC_logo2[i]));
+        logoRow++;            
+      }        
+      logoCol = settings.COLS/2-2;
+      OSD.setCursor(logoCol, logoRow);
+      static const char mustache[] PROGMEM = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
+      OSD.print(fixPStr(mustache));
+      #else
+      uint8_t logoCol = 11;
+      uint8_t logoRow = 5;
+      OSD.setCursor(logoCol, logoRow);
+      static const char kiss_logo1[] PROGMEM = { 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0x00 };
+      static const char kiss_logo2[] PROGMEM = { 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xC1, 0xC2, 0x00 };
+      static const char kiss_logo3[] PROGMEM = { 0xC3, 0xC4, 0xC5, 0xC6, 0x00 };
+      OSD.print(fixPStr(kiss_logo1));
+      logoRow++;
+      logoCol--;
+      OSD.setCursor(logoCol, logoRow);
+      OSD.print(fixPStr(kiss_logo2));
+      logoRow++;
+      logoCol -= 2;
+      OSD.setCursor(logoCol, logoRow);
+      OSD.print(fixPStr(kiss_logo3));
+      if(dShotEnabled)
+      {
+        static const char DShot_logo1[] PROGMEM = { 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0x00 };
+        static const char DShot_logo2[] PROGMEM = { 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0x00 };
+        OSD.print(fixPStr(DShot_logo1));
+        logoRow++;
+        logoCol += 4;
+        OSD.setCursor(logoCol, logoRow);
+        OSD.print(fixPStr(DShot_logo2));
+      }
+      #endif
+      if(_StartupTime > 0 && _millis - _StartupTime > 60000)
+      {
+        logoDone = true;
+        cleanScreen();
+      }
+    }
+    #else
+    logoDone = true;
+    #endif
+
+    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
     
     if(fcNotConnectedCount > 500)
     {
@@ -586,6 +667,12 @@ void loop(){
       }
       
       code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
+
+      if(code & inputChecker.ROLL_RIGHT) 
+      {
+        logoDone = true;
+        cleanScreen();
+      }
       
       if(armed == 0 && code & inputChecker.YAW_LONG_LEFT && code & inputChecker.ROLL_LEFT && code & inputChecker.PITCH_DOWN)
       {
@@ -754,8 +841,27 @@ void loop(){
       }
       #endif
       #endif
-      
+
       if(!vTxPowerActive && DV_change_time == 0 && armed == 0 && armedOnce) 
+      {
+        if(settings.m_stats == 1) statsActive = true;
+        if(settings.m_stats == 2)
+        {
+          if(code & inputChecker.ROLL_RIGHT) 
+          {
+            cleanScreen();
+            statsActive = false;
+          }
+          if(code & inputChecker.ROLL_LEFT) 
+          {
+            cleanScreen();
+            statsActive = true;
+          }
+        }        
+      }
+      else statsActive = false;
+      
+      if(statsActive) 
       {
         if(code & inputChecker.PITCH_UP && statPage > 0)
         {
@@ -1195,44 +1301,6 @@ void loop(){
           DV_change_time = 0;
           cleanScreen();
         }
-
-        #ifdef SHOW_KISS_LOGO
-        if(!logoDone && armed == 0 && !menuActive && !armedOnce && settings.m_IconSettings[KISS_ICON] == 1)
-        {
-          uint8_t logoCol = 11;
-          uint8_t logoRow = 5;
-          OSD.setCursor(logoCol, logoRow);
-          static const char kiss_logo1[] = { 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0x00 };
-          static const char kiss_logo2[] = { 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xC1, 0xC2, 0x00 };
-          static const char kiss_logo3[] = { 0xC3, 0xC4, 0xC5, 0xC6, 0x00 };
-          OSD.print(kiss_logo1);
-          logoRow++;
-          logoCol--;
-          OSD.setCursor(logoCol, logoRow);
-          OSD.print(kiss_logo2);
-          logoRow++;
-          logoCol -= 2;
-          OSD.setCursor(logoCol, logoRow);
-          OSD.print(kiss_logo3);
-          if(dShotEnabled)
-          {
-            static const char DShot_logo1[] = { 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0x00 };
-            static const char DShot_logo2[] = { 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0x00 };
-            OSD.print(DShot_logo1);
-            logoRow++;
-            logoCol += 4;
-            OSD.setCursor(logoCol, logoRow);
-            OSD.print(DShot_logo2);
-          }
-          if(_StartupTime > 0 && _millis - _StartupTime > 60000)
-          {
-            logoDone = true;
-            cleanScreen();
-          }
-        }
-        #else
-        logoDone = true;
-        #endif
 
         if(symbolOnOffChanged)
         {

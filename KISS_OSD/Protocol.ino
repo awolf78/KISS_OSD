@@ -67,6 +67,7 @@ boolean ReadTelemetry()
           armedOnce = true;
           last_Aux_Val = AuxChanVals[settings.m_DVchannel];
           DV_change_time = 0;
+          statsActive = false;
         }
         // switch armed => disarmed
         else

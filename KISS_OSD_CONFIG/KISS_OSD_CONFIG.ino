@@ -65,8 +65,6 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 //#define PROTODEBUG
 #define KISS_OSD_CONFIG
 
-const char KISS_OSD_VER[] = "kiss osd config v2.4";
-
 #include <SPI.h>
 #include "MAX7456.h"
 #include "Max7456Config.h"
@@ -77,7 +75,13 @@ const char KISS_OSD_VER[] = "kiss osd config v2.4";
 #include "fixFont.h"
 #include "Config.h"
 
-#ifdef IMPULSERC_VTX
+#ifdef STEELE_PDB
+static const char KISS_OSD_VER[] PROGMEM = "steele osd config v2.4";
+#else
+static const char KISS_OSD_VER[] PROGMEM = "kiss osd config v2.4";
+#endif
+
+#if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
 const uint8_t osdChipSelect          =            10;
 #else
 const uint8_t osdChipSelect          =            6;
@@ -157,7 +161,7 @@ void setupMAX7456()
   OSD.setSwitchingTime( 5 );   
   OSD.setCharEncoding( MAX7456_ASCII );  
   OSD.display();
-#ifdef IMPULSERC_VTX
+#if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
   delay(100);
   MAX7456Setup();
 #endif
@@ -408,6 +412,7 @@ void loop() {
 
     while (!OSD.notInVSync());
 
+    #ifndef UPDATE_FONT_ONLY
     if (fcNotConnectedCount > 500)
     {
       static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
@@ -416,6 +421,7 @@ void loop() {
       fcNotConnectedCount = 0;
       return;
     }
+    #endif
 
 #ifdef IMPULSERC_VTX
     /*if(changevTxTime > 0)
@@ -635,9 +641,13 @@ void loop() {
     {
       static const char FONT_COMPLETE_STR[] PROGMEM = "font updated";
       OSD.printP(settings.COLS / 2 - strlen_P(FONT_COMPLETE_STR) / 2, settings.ROWS / 2, FONT_COMPLETE_STR);
+      #ifdef UPDATE_FONT_ONLY
+      while(1) delay(1000);
+      #else
       delay(3000);
       updateFontComplete = false;
       cleanScreen();
+      #endif
     }
 
     if (updateFont)
@@ -1048,7 +1058,7 @@ void loop() {
     }
     else activeOSDItems[STOPW] = false;
 
-    if((settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || moveItems)
+    if((settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || (moveItems && settings.m_DVchannel < 4))
     {
       activeOSDItems[RSSI_] = true;
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)

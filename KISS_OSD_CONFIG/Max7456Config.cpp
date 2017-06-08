@@ -1,7 +1,10 @@
 #include "Max7456Config.h"
-#include "fontCompressed.h"
 #include "Config.h"
-
+#ifdef STEELE_PDB
+#include "fontCompressedSteelePDB.h"
+#else
+#include "fontCompressed.h"
+#endif
 
 class Flashbits {
 public:

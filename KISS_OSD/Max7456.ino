@@ -1,4 +1,4 @@
-#ifdef IMPULSERC_VTX
+#if defined(IMPULSERC_VTX) || defined(STEELE_PDB)
 #ifndef MAX7456RESET
 # define MAX7456RESET  9         // RESET                     
 #endif
