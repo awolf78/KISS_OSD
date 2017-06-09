@@ -79,6 +79,9 @@ static bool doItOnce = true;
 #include "fixFont.h"
 #include "CMeanFilter.h"
 #include "Config.h"
+#ifdef ADVANCED_STATS
+#include "CStatGenerator.h"
+#endif
 
 #ifdef STEELE_PDB
 static const char KISS_OSD_VER[] PROGMEM = "steele osd v2.4";
@@ -185,7 +188,7 @@ static int16_t  yaw = 0;
 static int16_t angleX = 0;
 static int16_t angleY = 0;
 static uint16_t current = 0;
-static int8_t armed = 0;
+static volatile int8_t armed = 0;
 static int8_t idleTime = 0;
 static int16_t LipoVoltage = 0;
 static volatile int16_t LipoMAH = 0;
@@ -342,6 +345,10 @@ static unsigned long vTxPowerTime = 0;
 static int16_t checksumDebug = 0;
 static int16_t bufMinusOne = 0;
 static bool statsActive = false;
+#ifdef ADVANCED_STATS
+static const uint8_t STAT_GENERATOR_SIZE = 6;
+CStatGenerator statGenerators[STAT_GENERATOR_SIZE] = { CStatGenerator(5,20), CStatGenerator(21,40), CStatGenerator(41,60), CStatGenerator(61,80), CStatGenerator(81,100), CStatGenerator(95,100) };
+#endif
 
 enum _SETTING_MODES 
 {
@@ -532,7 +539,31 @@ void loop(){
 
     /*OSD.printInt16(0, settings.ROWS/2, armed, 0);
     OSD.printInt16(0, settings.ROWS/2+1, vTxPowerActive, 0);*/
-
+    if(settings.m_lastMAH > 0)
+    {
+      static const char LAST_BATTERY_STR[] PROGMEM = "continue last battery?";
+      OSD.printP(settings.COLS/2 - strlen_P(LAST_BATTERY_STR)/2, settings.ROWS/2 - 1, LAST_BATTERY_STR);
+      
+      static const char ROLL_RIGHT_STR[] PROGMEM = "roll right to confirm";
+      OSD.printP(settings.COLS/2 - strlen_P(ROLL_RIGHT_STR)/2, settings.ROWS/2, ROLL_RIGHT_STR);
+      static const char ARM_CANCEL_STR[] PROGMEM = "roll left to cancel";
+      OSD.printP(settings.COLS/2 - strlen_P(ARM_CANCEL_STR)/2, settings.ROWS/2 + 1, ARM_CANCEL_STR);
+              
+      if(code & inputChecker.ROLL_RIGHT)
+      {
+        previousMAH = settings.m_lastMAH;
+        settings.m_lastMAH = 0;
+        cleanScreen();
+      }
+      if(code & inputChecker.ROLL_LEFT || armed > 0)
+      {
+        settings.m_lastMAH = 0;
+        settings.WriteLastMAH();
+        cleanScreen();
+      }  
+      return;
+    }
+      
     #ifdef SHOW_KISS_LOGO
     if(!logoDone && armed == 0 && !menuActive && !armedOnce && settings.m_IconSettings[KISS_ICON] == 1)
     {
@@ -677,31 +708,6 @@ void loop(){
       if(armed == 0 && code & inputChecker.YAW_LONG_LEFT && code & inputChecker.ROLL_LEFT && code & inputChecker.PITCH_DOWN)
       {
         ReviveOSD();
-      }
-      
-      if(settings.m_lastMAH > 0)
-      {
-        static const char LAST_BATTERY_STR[] PROGMEM = "continue last battery?";
-        OSD.printP(settings.COLS/2 - strlen_P(LAST_BATTERY_STR)/2, settings.ROWS/2 - 1, LAST_BATTERY_STR);
-        
-        static const char ROLL_RIGHT_STR[] PROGMEM = "roll right to confirm";
-        OSD.printP(settings.COLS/2 - strlen_P(ROLL_RIGHT_STR)/2, settings.ROWS/2, ROLL_RIGHT_STR);
-        static const char ARM_CANCEL_STR[] PROGMEM = "roll left to cancel";
-        OSD.printP(settings.COLS/2 - strlen_P(ARM_CANCEL_STR)/2, settings.ROWS/2 + 1, ARM_CANCEL_STR);
-                
-        if(code & inputChecker.ROLL_RIGHT)
-        {
-          previousMAH = settings.m_lastMAH;
-          settings.m_lastMAH = 0;
-          cleanScreen();
-        }
-        if(code & inputChecker.ROLL_LEFT || armed > 0)
-        {
-          settings.m_lastMAH = 0;
-          settings.WriteLastMAH();
-          cleanScreen();
-        }  
-        return;
       }
       
       if(batterySelect || (!menuActive && !armOnYaw && yaw > 1900 && armed == 0))
@@ -867,8 +873,13 @@ void loop(){
         {
           statPage--;
           cleanScreen();
-        }
-        if(code & inputChecker.PITCH_DOWN && statPage < 4)
+        }        
+        #ifdef ADVANCED_STATS
+        uint8_t maxPages = 5;
+        #else
+        uint8_t maxPages = 4;
+        #endif
+        if(code & inputChecker.PITCH_DOWN && statPage < maxPages)
         {
           statPage++;
           cleanScreen();
@@ -876,65 +887,106 @@ void loop(){
         uint8_t middle_infos_y     = 1;    
         static const char STATS_STR[] PROGMEM = "stats ";
         OSD.printInt16P( settings.COLS/2 - (strlen_P(STATS_STR)+4)/2, middle_infos_y, STATS_STR, statPage+1, 0);
+        #ifdef ADVANCED_STATS
+        OSD.print( fixStr("/6") );
+        #else
         OSD.print( fixStr("/5") );
+        #endif
         middle_infos_y++;
+        uint8_t statCol, j;
         
-        if(statPage == 0)
+        switch(statPage)
         {
-          static const char TIME_STR[] PROGMEM =     "time     : ";
-          static const char MAX_AMP_STR[] PROGMEM =  "max amps : ";
-          static const char MIN_V_STR[] PROGMEM =    "min v    : ";
-          static const char MAX_WATT_STR[] PROGMEM = "max watt : ";          
-          static const char MAX_C_STR[] PROGMEM =    "c rating : ";
-          static const char MAH_STR[] PROGMEM =      "mah      : ";
-          static const char MAX_RPM_STR[] PROGMEM =  "max rpm  : ";          
-          static const char MAX_TEMP_STR[] PROGMEM = "max temp : ";
-          static const char MIN_RSSI_STR[] PROGMEM = "min rssi : ";         
-
-          uint8_t statCol = settings.COLS/2 - (strlen_P(TIME_STR)+7)/2;
-          OSD.printP(statCol, ++middle_infos_y, TIME_STR);
-          OSD.printTime( statCol+strlen_P(TIME_STR), middle_infos_y, total_time);  
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 2, "a" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" ); //OSD.printInt16( OSD.cursorRow()+1, middle_infos_y, settings.m_maxWatts, 1, "w)", 0, 0, "(" );          
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
-          OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, "mah" );
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );            
-          OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, tempSymbol);
-          if(settings.m_RSSIchannel > -1)
-          {
-            OSD.printInt16P( statCol, ++middle_infos_y, MIN_RSSI_STR, MinRSSI, 0, "db");                    
-          }
-        }
-        else
-        {
-          static char ESC_STAT_STR1[] = "esc";
-          char* ESC_STAT_STR = ESC_STAT_STR1;
-          if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
-          {
-            ESC_STAT_STR = ESCSymbol;
-          }          
-          static const char ESC_A_STR[] PROGMEM =    " max a   : ";          
-          static const char ESC_MINV_STR[] PROGMEM = " min v   : ";
-          static const char ESC_RPM_STR[] PROGMEM =  " max rpm : ";
-          static const char ESC_TEMP_STR[] PROGMEM = " max temp: ";
-          static const char ESC_MAH_STR[] PROGMEM =  " mah     : ";
-          
-          uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;                    
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[statPage-1], 2, "a"); 
-
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[statPage-1], 2, "v");
-
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[statPage-1], 1, "kr");
-          
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[statPage-1], 0, tempSymbol);                    
-          
-          OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, statPage, 0);
-          OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[statPage-1], 0, "mah"); 
+          case 0:
+            static const char TIME_STR[] PROGMEM =     "time     : ";
+            static const char MAX_AMP_STR[] PROGMEM =  "max amps : ";
+            static const char MIN_V_STR[] PROGMEM =    "min v    : ";
+            static const char MAX_WATT_STR[] PROGMEM = "max watt : ";          
+            static const char MAX_C_STR[] PROGMEM =    "c rating : ";
+            static const char MAH_STR[] PROGMEM =      "mah      : ";
+            static const char MAX_RPM_STR[] PROGMEM =  "max rpm  : ";          
+            static const char MAX_TEMP_STR[] PROGMEM = "max temp : ";
+            static const char MIN_RSSI_STR[] PROGMEM = "min rssi : ";         
+  
+            statCol = settings.COLS/2 - (strlen_P(TIME_STR)+7)/2;
+            OSD.printP(statCol, ++middle_infos_y, TIME_STR);
+            OSD.printTime( statCol+strlen_P(TIME_STR), middle_infos_y, total_time);  
+            OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 2, "a" );
+            OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );
+            OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" ); //OSD.printInt16( OSD.cursorRow()+1, middle_infos_y, settings.m_maxWatts, 1, "w)", 0, 0, "(" );          
+            OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
+            OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, "mah" );
+            OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );            
+            OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, tempSymbol);
+            if(settings.m_RSSIchannel > -1)
+            {
+              OSD.printInt16P( statCol, ++middle_infos_y, MIN_RSSI_STR, MinRSSI, 0, "db");                    
+            }
+          break;
+          case 1:
+          #ifdef ADVANCED_STATS
+            static const char STAT_GEN_STRS[][17] PROGMEM  = { {"5-20   thr avg: "},                                                               
+                                                               {"21-40  thr avg: "},                                                                      
+                                                               {"41-60  thr avg: "},                                                               
+                                                               {"61-80  thr avg: "},
+                                                               {"81-100 thr avg: "},
+                                                               {"95-100 thr avg: "},
+                                                               {"5-20   thr max: "},
+                                                               {"21-40  thr max: "},
+                                                               {"41-60  thr max: "},          
+                                                               {"61-80  thr max: "} };          
+  
+            statCol = settings.COLS/2 - (strlen_P(STAT_GEN_STRS[0])+7)/2;
+            j = 0;
+            for(i=0; i<MAX_SETTING_MODES; i++)
+            {
+              OSD.printInt16P( statCol, ++middle_infos_y, STAT_GEN_STRS[j], statGenerators[i].GetAverage(), 2, "a" );
+              j++;
+            }
+            for(i=0; i<4; i++)
+            {
+              OSD.printInt16P( statCol, ++middle_infos_y, STAT_GEN_STRS[j], statGenerators[i].m_Max, 2, "a" );
+              j++;
+            }
+          break;
+          #endif
+          case 2:
+          case 3:
+          case 4:
+          case 5:
+            static char ESC_STAT_STR1[] = "esc";
+            char* ESC_STAT_STR = ESC_STAT_STR1;
+            if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
+            {
+              ESC_STAT_STR = ESCSymbol;
+            }          
+            static const char ESC_A_STR[] PROGMEM =    " max a   : ";          
+            static const char ESC_MINV_STR[] PROGMEM = " min v   : ";
+            static const char ESC_RPM_STR[] PROGMEM =  " max rpm : ";
+            static const char ESC_TEMP_STR[] PROGMEM = " max temp: ";
+            static const char ESC_MAH_STR[] PROGMEM =  " mah     : ";
+            
+            uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;
+            #ifdef ADVANCED_STATS
+            uint8_t ESCnumber = statPage - 1;
+            #else
+            uint8_t ESCnumber = statPage;
+            #endif                    
+            OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[ESCnumber-1], 2, "a"); 
+  
+            OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[ESCnumber-1], 2, "v");
+  
+            OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[ESCnumber-1], 1, "kr");
+            
+            OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[ESCnumber-1], 0, tempSymbol);                    
+            
+            OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[ESCnumber-1], 0, "mah"); 
+          break;
         }
      }
      else 

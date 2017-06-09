@@ -345,6 +345,7 @@ void CSettings::ReadSettingsInternal()
   }
   m_vTxMaxPower = ReadInt16_t(pos, pos+1);
   pos += 2;
+  m_stats = EEPROM.read(pos);
   
   m_lastMAH = ReadInt16_t(251, 252);
   m_maxWatts = ReadInt16_t(253, 254);
@@ -393,9 +394,14 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_OSDItems[ESC2voltage][0]++;
       m_OSDItems[ESC3voltage][0]++;
     }
-    if(ver < 0x12)
+    if(ver < 0x13)
     {
       m_vTxMaxPower = 0;
+      #ifdef STEELE_PDB
+      m_stats = 2;
+      #else
+      m_stats = 1;
+      #endif
     }
   }
 }
@@ -403,11 +409,11 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x12) //first start of OSD - or older version
+  if(settingsVer < 0x13) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x12);
+    EEPROM.update(0x01,0x13);
   }
   else
   {
@@ -512,6 +518,7 @@ void CSettings::WriteSettings()
   }
   WriteInt16_t(pos, pos+1, m_vTxMaxPower);
   pos += 2;
+  EEPROM.update(pos, (byte)m_stats);
 
   WriteInt16_t(253, 254, m_maxWatts);
 }

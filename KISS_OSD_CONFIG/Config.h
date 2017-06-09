@@ -13,7 +13,7 @@
 
 //#define UPDATE_FONT_ONLY
 //#define FORCE_CLEAN_EEPROM
-#define STEELE_PDB
+//#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
 
 // vTx config

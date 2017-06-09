@@ -220,6 +220,12 @@ boolean ReadTelemetry()
             maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
             minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
           }
+          #ifdef ADVANCED_STATS
+          for(i=0; i<STAT_GENERATOR_SIZE; i++)
+          {
+            statGenerators[i].StoreValue(current, throttle);
+          }
+          #endif
         }
       }
       else

@@ -14,6 +14,7 @@ static uint8_t activeNotchMenuItem = 0;
 static uint8_t activeVTXMenuItem = 0;
 static uint8_t activeFilterMenuItem = 0;
 static uint8_t activeCustomTPAMenuItem = 0;
+static uint8_t activeLPFMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
@@ -22,7 +23,7 @@ static const int16_t RATE_STEP = 50;
 
 static const char SAVE_EXIT_STR[] PROGMEM = "save+exit";
 static const char BACK_STR[] PROGMEM =      "back";
-static const char ON_OFF_STR[][4] = { "off", "on " };
+static const char ON_OFF_STR[][4] PROGMEM = { "off", "on " };
 static const char ROLL_STR[] PROGMEM =  "roll  ";
 static const char PITCH_STR[] PROGMEM = "pitch ";
 static const char YAW_STR[] PROGMEM =   "yaw   ";
@@ -298,6 +299,74 @@ void* TPAMenu()
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_TPA], activeTPAMenuItem,  fc_tpa.tpa[0], fc_tpa.tpa[1], fc_tpa.tpa[2], TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
 }
 
+static const char LPF_FRQ_STR[][9] PROGMEM = { {"off     "}, 
+                                               {"high    "}, 
+                                               {"med high"}, 
+                                               {"medium  "}, 
+                                               {"med low "},
+                                               {"low     "},
+                                               {"very low"}, 
+                                               {"advanced"} };
+
+void* LPFMenu()
+{
+  switch(activeLPFMenuItem)
+  {
+    case 0:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6); //FIXME settingMode and filtersetting
+    break;
+    case 1:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6); //FIXME settingMode and filtersetting
+    break;
+    case 2:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6); //FIXME settingMode and filtersetting
+    break;     
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeLPFMenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+      }
+    case 4:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activeLPFMenuItem = 0;
+        return (void*)FilterMenu;
+      }
+    break;
+  }
+
+  static const uint8_t LPF_MENU_ITEMS = 5;
+  activeLPFMenuItem = checkMenuItem(activeLPFMenuItem, LPF_MENU_ITEMS);
+  
+  static const char LPF_ROLL_PITCH_STR[] PROGMEM =     "roll/pitch lpf : ";
+  static const char LPF_YAW_STR[] PROGMEM =            "yaw lpf        : ";
+  static const char LPF_DTERM_STROLL_STR[] PROGMEM =   "dterm lpf      : ";
+//static const char SAVE_EXIT_STR[] PROGMEM =          "save+exit";
+//static const char BACK_STR[] PROGMEM =               "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(LPF_ROLL_PITCH_STR)+8)/2;
+  static const char LPF_MENU_TITLE_STR[] PROGMEM = "advanced lpf menu";
+  OSD.printP(settings.COLS/2 - strlen_P(LPF_MENU_TITLE_STR)/2, ++startRow, LPF_MENU_TITLE_STR);
+  
+  OSD.printP( startCol, ++startRow, LPF_ROLL_PITCH_STR, activeLPFMenuItem);
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) ); //FIXME filtersetting
+
+  OSD.printP( startCol, ++startRow, LPF_YAW_STR, activeLPFMenuItem);
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) ); //FIXME filtersetting
+
+  OSD.printP( startCol, ++startRow, LPF_DTERM_STROLL_STR, activeLPFMenuItem);
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) ); //FIXME filtersetting
+  
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeLPFMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeLPFMenuItem);
+  
+  return (void*)LPFMenu;
+}
+
 void* FilterMenu()
 {
   switch(activeFilterMenuItem)
@@ -345,7 +414,7 @@ void* FilterMenu()
 
   static const uint8_t FILTER_MENU_ITEMS = 10;
   activeFilterMenuItem = checkMenuItem(activeFilterMenuItem, FILTER_MENU_ITEMS);
-  
+
   static const char LPF_STR[] PROGMEM =                 "lpf      : ";
   static const char YAW_FLTR_STR[] PROGMEM =            "yaw fltr strength:";
   static const char NOTCH_ROLL_STR[] PROGMEM =          "notch roll fltr  :";
@@ -357,16 +426,6 @@ void* FilterMenu()
 //static const char SAVE_EXIT_STR[] PROGMEM =           "save+exit";
 //static const char BACK_STR[] PROGMEM =                "back";
   
-  static const char LPF1_STR[] PROGMEM = "off ";
-  static const char LPF2_STR[] PROGMEM = "high    ";
-  static const char LPF3_STR[] PROGMEM = "med high";
-  static const char LPF4_STR[] PROGMEM = "medium  ";
-  static const char LPF5_STR[] PROGMEM = "med low ";
-  static const char LPF6_STR[] PROGMEM = "low     ";
-  static const char LPF7_STR[] PROGMEM = "very low";
-  static const char LPF8_STR[] PROGMEM = "advanced";
-  static const char* LPF_FRQ_STR[] = { LPF1_STR, LPF2_STR, LPF3_STR, LPF4_STR, LPF5_STR, LPF6_STR, LPF7_STR, LPF8_STR };
-  
   uint8_t startRow = 1;
   uint8_t startCol = settings.COLS/2 - (strlen_P(YAW_FLTR_STR)+8)/2;
   static const char FILTER_MENU_TITLE_STR[] PROGMEM = "filter menu";
@@ -376,11 +435,11 @@ void* FilterMenu()
   OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) );
   OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, fc_filters.yawFilterCut, 0, activeFilterMenuItem, "", 1);
   OSD.printP( startCol, ++startRow, NOTCH_ROLL_STR, activeFilterMenuItem);
-  OSD.print( fixStr(ON_OFF_STR[fc_filters.notchFilterEnabledR]) );
+  OSD.print( fixPStr(ON_OFF_STR[fc_filters.notchFilterEnabledR]) );
   OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CENTER_STR, fc_filters.notchFilterCenterR, 0, activeFilterMenuItem, "hz", 1);
   OSD.printIntArrow( startCol, ++startRow, NOTCH_ROLL_CUTOFF_STR, fc_filters.notchFilterCutR, 0, activeFilterMenuItem, "hz", 1);
   OSD.printP( startCol, ++startRow, NOTCH_PITCH_STR, activeFilterMenuItem);
-  OSD.print( fixStr(ON_OFF_STR[fc_filters.notchFilterEnabledP]) );
+  OSD.print( fixPStr(ON_OFF_STR[fc_filters.notchFilterEnabledP]) );
   OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CENTER_STR, fc_filters.notchFilterCenterP, 0, activeFilterMenuItem, "hz", 1); 
   OSD.printIntArrow( startCol, ++startRow, NOTCH_PITCH_CUTOFF_STR, fc_filters.notchFilterCutP, 0, activeFilterMenuItem, "hz", 1);
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeFilterMenuItem );
@@ -450,7 +509,7 @@ void* CustomTPAMenu()
   OSD.printP(settings.COLS/2 - strlen_P(CUSTOM_TPA_TITLE_STR)/2, ++startRow, CUSTOM_TPA_TITLE_STR);
   
   OSD.printP( startCol, ++startRow, CSTM_TPA_ACTIVE_STR, activeCustomTPAMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[fc_tpa.customTPAEnabled]) );
+  OSD.print( fixPStr(ON_OFF_STR[fc_tpa.customTPAEnabled]) );
   
   OSD.printIntArrow( startCol, ++startRow, INFLUENCE_ZERO_STR, fc_tpa.ctpa_infl[0], 0, activeCustomTPAMenuItem, "%", 1 );
 
@@ -620,12 +679,12 @@ void* BatteryMenu()
   OSD.printP( startCol, ++startRow, SELECT_BATTERY_STR, activeBatteryMenuItem );
   
   OSD.printP( startCol, ++startRow, BATTERY_WARNING_STR, activeBatteryMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.m_batWarning]) );
   
   OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, activeBatteryMenuItem, "%", true );
 
   OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.m_voltWarning]) );
 
   OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, activeBatteryMenuItem, "v", 1 );
 
@@ -701,10 +760,7 @@ void* vTxMenu()
   static const char VTX_TITLE_STR[] PROGMEM = "vtx menu";
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
-  static const char _25MW_STR[] PROGMEM =   "25mw ";
-  static const char _200MW_STR[] PROGMEM =  "200mw";
-  static const char _500MW_STR[] PROGMEM =  "500mw";
-  static const char* VTX_POWERS_STR[] = { _25MW_STR, _200MW_STR, _500MW_STR };
+  static const char VTX_POWERS_STR[][6] PROGMEM = { {"25mw "}, {"200mw"}, {"500mw"} };
   OSD.printP( startCol, ++startRow, VTX_POWER_STR, activeVTXMenuItem );
   OSD.print( fixPStr(VTX_POWERS_STR[settings.m_vTxPower]) );
 
@@ -947,9 +1003,9 @@ void* MainMenu()
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.m_displaySymbols]) );
   OSD.printP( startCol, ++startRow, AIR_TIMER_STR, activeMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_airTimer]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.m_airTimer]) );
   #ifdef CROSSHAIR
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeMenuItem );
   static const char ON_OFF_STR_CROSS[][4] PROGMEM = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };

@@ -22,12 +22,13 @@
 #define NEW_FILTER
 #define FAILSAFE
 #define VTX_POWER_KNOB
+#define ADVANCED_STATS
 
 
 
 // INTERNALS - DO NOT CHANGE
 //=============================
-#define STEELE_PDB
+//#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
 
 
