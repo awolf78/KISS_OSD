@@ -537,6 +537,21 @@ void loop(){
 
     while (!OSD.notInVSync());
 
+    if(fcNotConnectedCount > 500)
+    {
+      cleanScreen();
+      static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
+      OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS-2, FC_NOT_CONNECTED_STR);
+      triggerCleanScreen = true;
+      fcNotConnectedCount = 0;
+      /*OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
+      OSD.printInt16(0, settings.ROWS/2+1, bufMinusOne, 0);
+      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);*/
+      return;
+    }
+
+    if(telemetryReceived) code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
+
     /*OSD.printInt16(0, settings.ROWS/2, armed, 0);
     OSD.printInt16(0, settings.ROWS/2+1, vTxPowerActive, 0);*/
     if(settings.m_lastMAH > 0)
@@ -640,20 +655,7 @@ void loop(){
     logoDone = true;
     #endif
 
-    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
-    
-    if(fcNotConnectedCount > 500)
-    {
-      cleanScreen();
-      static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
-      OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS-2, FC_NOT_CONNECTED_STR);
-      triggerCleanScreen = true;
-      fcNotConnectedCount = 0;
-      /*OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
-      OSD.printInt16(0, settings.ROWS/2+1, bufMinusOne, 0);
-      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);*/
-      return;
-    }
+    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;    
 
     #ifdef FAILSAFE
     if(armedOnce && failSafeState > 9)
@@ -695,9 +697,7 @@ void loop(){
       else
       {
         tempSymbol[0] = fixChar(0xB0);
-      }
-      
-      code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
+      }      
 
       if(code & inputChecker.ROLL_RIGHT) 
       {
