@@ -1,7 +1,11 @@
-static uint8_t serialBuf[256];
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
+#ifndef KISS_OSD_CONFIG
+static uint8_t serialBuf[256];
+#else
+static const uint8_t protoVersion = 108;
+#endif
 #ifdef NEW_FILTER
 const uint8_t filterCount = 10;
 const uint8_t filterCount2 = 10;
@@ -49,8 +53,6 @@ boolean ReadTelemetry()
         pitch = 1000 + ((serialBuf[4 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
         yaw = 1000 + ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[7 + STARTCOUNT]);
         LipoVoltage = ((serialBuf[17 + STARTCOUNT] << 8) | serialBuf[18 + STARTCOUNT]);
-        angleX = ((serialBuf[31 + STARTCOUNT] << 8) | serialBuf[32 + STARTCOUNT]) / 100;
-        angleY = ((serialBuf[33 + STARTCOUNT] << 8) | serialBuf[34 + STARTCOUNT]) / 100;
 
 
         int8_t current_armed = serialBuf[16 + STARTCOUNT];
@@ -67,7 +69,9 @@ boolean ReadTelemetry()
           armedOnce = true;
           last_Aux_Val = AuxChanVals[settings.m_DVchannel];
           DV_change_time = 0;
+          #ifndef KISS_OSD_CONFIG
           statsActive = false;
+          #endif
         }
         // switch armed => disarmed
         else
@@ -136,8 +140,9 @@ boolean ReadTelemetry()
 
         current = (uint16_t)(motorCurrent[0] + motorCurrent[1] + motorCurrent[2] + motorCurrent[3]);
 
+        #ifndef KISS_OSD_CONFIG
         failSafeState = serialBuf[41 + STARTCOUNT];
-
+        #endif
 
         // Data sanity check. Return false if we get invalid data
         for (i = 0; i < 4; i++)
@@ -187,6 +192,7 @@ boolean ReadTelemetry()
         }
         lastTempUnit = settings.m_tempUnit;
 
+        
         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
         current = ampTotalFilter.ProcessValue(current);
         for (i = 0; i < 4; i++)
@@ -195,6 +201,7 @@ boolean ReadTelemetry()
           motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
         }
 
+        #ifndef KISS_OSD_CONFIG
         if (armedOnce)
         {
           MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
@@ -220,13 +227,27 @@ boolean ReadTelemetry()
             maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
             minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
           }
+          #if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
+          if(armed > 0)
+          {
+          #endif
           #ifdef ADVANCED_STATS
           for(i=0; i<STAT_GENERATOR_SIZE; i++)
           {
             statGenerators[i].StoreValue(current, throttle);
           }
           #endif
+          #ifdef ADVANCED_ESC_STATS
+          for(i=0; i<4; i++)
+          {
+            ESCstatGenerators[i].StoreValue(motorCurrent[i], throttle);
+          }
+          #endif
+          #if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
+          }
+          #endif
         }
+        #endif
       }
       else
       {

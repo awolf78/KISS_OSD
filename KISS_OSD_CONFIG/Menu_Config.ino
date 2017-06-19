@@ -5,6 +5,7 @@ static uint8_t activeOrderMenuItem = 0;
 static uint8_t activeResetMenuItem = 0;
 static uint8_t activeIconsMenuItem = 0;
 static uint8_t activeOSDItemsMenuItem = 0;
+static uint8_t activeRSSIMenuItem = 0;
 static bool selectedOrder = false;
 static uint8_t activeOrderMenuSelectedItem = 199;
 static uint8_t confirmIndex = 0;
@@ -431,6 +432,67 @@ void* IconsMenu()
   return (void*)IconsMenu;
 }
 
+
+void* RSSIMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeRSSIMenuItem)
+    {
+      case 0:
+        settingChanged |= checkCode(settings.m_RSSIchannel, 1, -1, 3);
+      break;
+      case 1:
+        settingChanged |= checkCode(settings.m_RSSImax, 10, -1001, 1000);
+      break;
+      case 2:
+        settingChanged |= checkCode(settings.m_RSSImin, 10, -1001, 1000);
+      break;
+      case 3:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          activeRSSIMenuItem = 0;          
+          cleanScreen();
+          return (void*)DisplayMenu;
+        }
+      break;
+    }
+  }
+  static const uint8_t RSSI_MENU_ITEMS = 4;
+  activeRSSIMenuItem = checkMenuItem(activeRSSIMenuItem, RSSI_MENU_ITEMS);
+  
+  static const char RSSI_CHANNEL_STR[] PROGMEM =    "rssi channel: ";
+  static const char RSSI_MAX_PPM_STR[] PROGMEM =    "rssi max ppm: ";
+  static const char RSSI_MIN_PPM_STR[] PROGMEM =    "rssi min ppm: ";
+//static const char BACK_STR[] PROGMEM =            "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(RSSI_CHANNEL_STR)+6)/2;
+  static const char RSSI_TITLE_STR[] PROGMEM = "rssi config menu";
+  OSD.printP( settings.COLS/2 - strlen_P(RSSI_TITLE_STR)/2, ++startRow, RSSI_TITLE_STR );
+  
+  OSD.printP( startCol, ++startRow, RSSI_CHANNEL_STR, activeRSSIMenuItem );
+  if(settings.m_RSSIchannel < 0)
+  {
+    OSD.print( fixStr("off") );
+  }
+  else
+  {
+    OSD.print( fixStr("aux") );
+    uint8_t tempCol = startCol + strlen_P(RSSI_CHANNEL_STR) + 4;
+    OSD.printInt16(tempCol, startRow, settings.m_RSSIchannel+1, 0, 1 );
+  }
+
+  OSD.printIntArrow( startCol, ++startRow, RSSI_MAX_PPM_STR, settings.m_RSSImax+1000, 0, 0, activeRSSIMenuItem, "", 1);
+
+  OSD.printIntArrow( startCol, ++startRow, RSSI_MIN_PPM_STR, settings.m_RSSImin+1000, 0, 0, activeRSSIMenuItem, "", 1);
+  
+  OSD.printP( startCol, ++startRow, BACK_STR, activeRSSIMenuItem );
+  
+  return (void*)RSSIMenu;
+}
+
+
 static uint8_t oldDVOrderPos[CSettings::DISPLAY_DV_SIZE] =  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 static uint8_t oldOSDItemsSel[CSettings::DISPLAY_DV_SIZE] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 
@@ -467,7 +529,11 @@ void* DisplayMenu()
         }
       break;
       case 1:
-        settingChanged |= checkCode(settings.m_RSSIchannel, 1, -1, 3);
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          cleanScreen();
+          return (void*)RSSIMenu;          
+        }
       break;
       case 2:
         settingChanged |= checkCode(settings.m_tempUnit, 1, 0, 1);
@@ -510,7 +576,7 @@ void* DisplayMenu()
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
   static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
-  static const char RSSI_CHANNEL_STR[] PROGMEM =    "rssi chan. : ";
+  static const char RSSI_MENU_STR[] PROGMEM =       "rssi";
   static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit : ";
   static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons";
@@ -537,17 +603,7 @@ void* DisplayMenu()
     OSD.printInt16(tempCol, startRow, settings.m_DVchannel+1, 0, 1, " " );
   }
 
-  OSD.printP( startCol, ++startRow, RSSI_CHANNEL_STR, activeDisplayMenuItem );
-  if(settings.m_RSSIchannel < 0)
-  {
-    OSD.print( fixStr("off") );
-  }
-  else
-  {
-    OSD.print( fixStr("aux") );
-    uint8_t tempCol = startCol + strlen_P(RSSI_CHANNEL_STR) + 4;
-    OSD.printInt16(tempCol, startRow, settings.m_RSSIchannel+1, 0, 1 );
-  }
+  OSD.printP( startCol, ++startRow, RSSI_MENU_STR, activeDisplayMenuItem );
     
   OSD.printP( startCol, ++startRow, TEMP_UNIT_STR, activeDisplayMenuItem);
   static const char tempSymbols[][2] = { {0xB0,0x00} , {0xB1, 0x00}};

@@ -79,7 +79,7 @@ static bool doItOnce = true;
 #include "fixFont.h"
 #include "CMeanFilter.h"
 #include "Config.h"
-#ifdef ADVANCED_STATS
+#if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
 #include "CStatGenerator.h"
 #endif
 
@@ -347,7 +347,10 @@ static int16_t bufMinusOne = 0;
 static bool statsActive = false;
 #ifdef ADVANCED_STATS
 static const uint8_t STAT_GENERATOR_SIZE = 6;
-CStatGenerator statGenerators[STAT_GENERATOR_SIZE] = { CStatGenerator(5,20), CStatGenerator(21,40), CStatGenerator(41,60), CStatGenerator(61,80), CStatGenerator(81,100), CStatGenerator(95,100) };
+CStatGenerator statGenerators[STAT_GENERATOR_SIZE] = { CStatGenerator(5,20), CStatGenerator(20,40), CStatGenerator(40,60), CStatGenerator(60,80), CStatGenerator(80,100), CStatGenerator(95,100) };
+#endif
+#ifdef ADVANCED_ESC_STATS
+CStatGenerator ESCstatGenerators[4] = { CStatGenerator(90,100), CStatGenerator(90,100), CStatGenerator(90,100), CStatGenerator(90,100) };
 #endif
 
 enum _SETTING_MODES 
@@ -543,6 +546,7 @@ void loop(){
       static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
       OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS-2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
+      logoDone = true;
       fcNotConnectedCount = 0;
       /*OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
       OSD.printInt16(0, settings.ROWS/2+1, bufMinusOne, 0);
@@ -655,7 +659,14 @@ void loop(){
     logoDone = true;
     #endif
 
-    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;    
+    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
+
+#ifdef IMPULSERC_VTX
+      vtx_flash_led(1);
+#endif
+#ifdef STEELE_PDB
+      steele_flash_led(_millis, 1);
+#endif
 
     #ifdef FAILSAFE
     if(armedOnce && failSafeState > 9)
@@ -672,10 +683,6 @@ void loop(){
       cleanScreen();
     }
     #endif
-
-#ifdef IMPULSERC_VTX
-      vtx_flash_led(1);
-#endif
 
       #ifdef DEBUG
       vTxType = 2;
@@ -894,12 +901,16 @@ void loop(){
         #endif
         middle_infos_y++;
         uint8_t statCol, j;
+        int16_t avgTotal = 0;
         
         switch(statPage)
         {
           case 0:
             static const char TIME_STR[] PROGMEM =     "time     : ";
             static const char MAX_AMP_STR[] PROGMEM =  "max amps : ";
+            #ifdef ADVANCED_ESC_STATS
+            static const char MAX_AVG_STR[] PROGMEM =  "max avg  : ";
+            #endif
             static const char MIN_V_STR[] PROGMEM =    "min v    : ";
             static const char MAX_WATT_STR[] PROGMEM = "max watt : ";          
             static const char MAX_C_STR[] PROGMEM =    "c rating : ";
@@ -912,6 +923,10 @@ void loop(){
             OSD.printP(statCol, ++middle_infos_y, TIME_STR);
             OSD.printTime( statCol+strlen_P(TIME_STR), middle_infos_y, total_time);  
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_AMP_STR, MaxAmps, 2, "a" );
+            #ifdef ADVANCED_ESC_STATS
+            for(i=0; i<4; i++) avgTotal += ESCstatGenerators[i].GetAverage();
+            OSD.printInt16P( statCol, ++middle_infos_y, MAX_AVG_STR, avgTotal, 2, "a" );
+            #endif
             OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" ); //OSD.printInt16( OSD.cursorRow()+1, middle_infos_y, settings.m_maxWatts, 1, "w)", 0, 0, "(" );          
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
@@ -926,15 +941,15 @@ void loop(){
           case 1:
           #ifdef ADVANCED_STATS
             static const char STAT_GEN_STRS[][17] PROGMEM  = { {"5-20   thr avg: "},                                                               
-                                                               {"21-40  thr avg: "},                                                                      
-                                                               {"41-60  thr avg: "},                                                               
-                                                               {"61-80  thr avg: "},
-                                                               {"81-100 thr avg: "},
+                                                               {"20-40  thr avg: "},                                                                      
+                                                               {"40-60  thr avg: "},                                                               
+                                                               {"60-80  thr avg: "},
+                                                               {"80-100 thr avg: "},
                                                                {"95-100 thr avg: "},
                                                                {"5-20   thr max: "},
-                                                               {"21-40  thr max: "},
-                                                               {"41-60  thr max: "},          
-                                                               {"61-80  thr max: "} };          
+                                                               {"20-40  thr max: "},
+                                                               {"40-60  thr max: "},          
+                                                               {"60-80  thr max: "} };          
   
             statCol = settings.COLS/2 - (strlen_P(STAT_GEN_STRS[0])+7)/2;
             j = 0;
@@ -960,11 +975,14 @@ void loop(){
             {
               ESC_STAT_STR = ESCSymbol;
             }          
-            static const char ESC_A_STR[] PROGMEM =    " max a   : ";          
-            static const char ESC_MINV_STR[] PROGMEM = " min v   : ";
-            static const char ESC_RPM_STR[] PROGMEM =  " max rpm : ";
-            static const char ESC_TEMP_STR[] PROGMEM = " max temp: ";
-            static const char ESC_MAH_STR[] PROGMEM =  " mah     : ";
+            static const char ESC_A_STR[] PROGMEM         =  " max a   : ";
+            #ifdef ADVANCED_ESC_STATS
+            static const char ESC_AVG_MAX_A_STR[] PROGMEM =  " avg max : ";
+            #endif          
+            static const char ESC_MINV_STR[] PROGMEM      =  " min v   : ";
+            static const char ESC_RPM_STR[] PROGMEM       =  " max rpm : ";
+            static const char ESC_TEMP_STR[] PROGMEM      =  " max temp: ";
+            static const char ESC_MAH_STR[] PROGMEM       =  " mah     : ";            
             
             uint8_t startCol = settings.COLS/2 - (strlen_P(ESC_RPM_STR)+strlen(ESC_STAT_STR)+7)/2;
             #ifdef ADVANCED_STATS
@@ -973,7 +991,12 @@ void loop(){
             uint8_t ESCnumber = statPage;
             #endif                    
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[ESCnumber-1], 2, "a"); 
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[ESCnumber-1], 2, "a");
+
+            #ifdef ADVANCED_ESC_STATS
+            OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_AVG_MAX_A_STR, ESCstatGenerators[ESCnumber-1].GetAverage(), 2, "a");
+            #endif
   
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
             OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[ESCnumber-1], 2, "v");
@@ -985,7 +1008,7 @@ void loop(){
             OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[ESCnumber-1], 0, tempSymbol);                    
             
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[ESCnumber-1], 0, "mah"); 
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[ESCnumber-1], 0, "mah");             
           break;
         }
      }
@@ -1250,7 +1273,12 @@ void loop(){
           if(rssiVal > 100)
           {
             rssiVal = rssiFilter.ProcessValue(rssiVal);
-            while(rssiVal > 100) rssiVal /= 10;          
+            if(settings.m_RSSImax > -1001 && settings.m_RSSImin > -1001)
+            {
+              int16_t rssiMin = settings.m_RSSImin+1000;
+              rssiVal = ((rssiVal+1000)-rssiMin)/((settings.m_RSSImax+1000)-rssiMin);
+            }
+            else while(rssiVal > 100) rssiVal /= 10;          
           }
           if(MinRSSI > rssiVal && armedOnce) MinRSSI = rssiVal;
         }

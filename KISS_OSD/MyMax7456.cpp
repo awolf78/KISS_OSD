@@ -106,7 +106,7 @@ void CMyMax7456::printInt16(uint8_t col, uint8_t row, char *key, int16_t value, 
   }
   else
   {
-    print(key);
+    print(fixStr(key));
     printInternal(suffix, blanks);
   }
   blinkActive = false;

@@ -73,6 +73,7 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 #include "CSettings.h"
 #include "CStickInput.h"
 #include "fixFont.h"
+#include "CMeanFilter.h"
 #include "Config.h"
 
 #ifdef STEELE_PDB

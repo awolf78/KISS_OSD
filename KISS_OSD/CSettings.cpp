@@ -126,6 +126,8 @@ void CSettings::LoadDefaults()
   }
   m_IconSettings[MAH_ICON] = 0;
   m_vTxMaxPower = 0;
+  m_RSSImax = -1001;
+  m_RSSImin = -1001;
 
   #else
   
@@ -215,6 +217,8 @@ void CSettings::LoadDefaults()
     m_IconSettings[i] = 1;  
   }
   m_vTxMaxPower = 0;
+  m_RSSImax = -1001;
+  m_RSSImin = -1001;
   #endif
 }
 
@@ -346,6 +350,11 @@ void CSettings::ReadSettingsInternal()
   m_vTxMaxPower = ReadInt16_t(pos, pos+1);
   pos += 2;
   m_stats = EEPROM.read(pos);
+  pos++;
+  m_RSSImax = ReadInt16_t(pos, pos+1);
+  pos += 2;
+  m_RSSImin = ReadInt16_t(pos, pos+1);
+  pos += 2;
   
   m_lastMAH = ReadInt16_t(251, 252);
   m_maxWatts = ReadInt16_t(253, 254);
@@ -356,19 +365,13 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
   if(ver >= 0x09)
   {
     ReadSettingsInternal();
-    if(ver < 0x0A)
+    if(ver < 0x0D)
     {
       m_wattMeter = 1;
       m_Moustache = 1;
-      m_maxWatts = 2500;
-    }
-    if(ver < 0x0B)
-    {
+      m_maxWatts = 2500;    
       m_voltWarning = 0;
       m_minVolts = 148;
-    } 
-    if(ver < 0x0D)
-    {
       m_IconSettings[PROPS_ICON] = 1;
       m_airTimer = 1;
       m_voltCorrect = 0;
@@ -403,17 +406,22 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_stats = 1;
       #endif
     }
+    if(ver < 0x14)
+    {
+      m_RSSImax = -1001;
+      m_RSSImin = -1001;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x13) //first start of OSD - or older version
+  if(settingsVer < 0x14) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x13);
+    EEPROM.update(0x01,0x14);
   }
   else
   {
@@ -519,6 +527,11 @@ void CSettings::WriteSettings()
   WriteInt16_t(pos, pos+1, m_vTxMaxPower);
   pos += 2;
   EEPROM.update(pos, (byte)m_stats);
+  pos++;
+  WriteInt16_t(pos, pos+1, m_RSSImax);
+  pos += 2;
+  WriteInt16_t(pos, pos+1, m_RSSImin);
+  pos += 2;
 
   WriteInt16_t(253, 254, m_maxWatts);
 }

@@ -6,7 +6,7 @@
 //#define FORCE_NTSC
 //#define FORCE_PAL
 
-
+#define NEW_FILTER
 
 // INTERNALS - DO NOT CHANGE
 //=============================

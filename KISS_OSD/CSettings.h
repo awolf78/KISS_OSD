@@ -113,6 +113,7 @@ class CSettings
   volatile int16_t m_voltCorrect;
   volatile uint8_t m_crossHair;
   volatile int8_t m_RSSIchannel;
+  volatile int16_t m_RSSImax, m_RSSImin;
   static const uint8_t ICON_SETTINGS_SIZE = 7;
   volatile uint8_t m_IconSettings[ICON_SETTINGS_SIZE];
   volatile uint8_t m_oldDisplaySymbols;

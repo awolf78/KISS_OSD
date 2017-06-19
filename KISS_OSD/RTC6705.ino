@@ -159,3 +159,35 @@ void vtx_process_state(uint32_t currentMillis, uint8_t band, uint8_t channel)
 }
 
 #endif
+
+
+#if defined(STEELE_PDB) && !defined(STEELE_PDB_OVERRIDE)
+#define LED      PINB0
+#define LED_PORT PORTB
+#define LED_DDR  DDRB
+
+#define SET(x,y) (x|=(1<<y))
+#define TOGGLE(x,y) (x^=(1<<y))
+
+
+static int16_t ledToggle = -1;
+static unsigned long lastToggle = 0;
+
+void steele_flash_led(unsigned long currentMillis, uint8_t count)
+{
+  if(ledToggle == -1)
+  {
+    LED_DDR |= (1 << LED);
+    SET(LED_PORT, LED);
+    ledToggle = 10;
+  }
+  if (ledToggle == 0)
+    ledToggle = count * 2;
+  if (ledToggle > 0 && (currentMillis - lastToggle) > 150)
+  {
+    TOGGLE(LED_PORT, LED);
+    lastToggle = currentMillis;
+    ledToggle--;
+  }
+}
+#endif
