@@ -15,6 +15,7 @@ static uint8_t activeVTXMenuItem = 0;
 static uint8_t activeFilterMenuItem = 0;
 static uint8_t activeCustomTPAMenuItem = 0;
 static uint8_t activeLPFMenuItem = 0;
+static uint8_t activeMAHCorrectionMenuItem = 0;
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
@@ -117,7 +118,7 @@ boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int
   return changed;
 }
 
-boolean checkCode(uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+boolean checkCode(volatile uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
   int16_t tempValue = value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
@@ -152,7 +153,7 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
 
 static char emptySuffix[][3] = { "", "", "" };
 
-void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, int16_t &item1, int16_t &item2, int16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, const char *itemDescription1 = 0, const char *itemDescription2 = 0, const char *itemDescription3 = 0, char (*suffix)[3] = NULL, uint8_t dec = 3)
+void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint16_t &item1, uint16_t &item2, uint16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, const char *itemDescription1 = 0, const char *itemDescription2 = 0, const char *itemDescription3 = 0, char (*suffix)[3] = NULL, uint8_t dec = 3)
 {
   switch(active3MenuItem)
   {
@@ -604,6 +605,66 @@ void* TuneMenu()
 }
 
 
+#ifdef MAH_CORRECTION
+void* MAHCorrectionMenu()
+{
+  switch(activeMAHCorrectionMenuItem)
+  {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      settingChanged |= checkCode(settings.m_ESCCorrection[activeMAHCorrectionMenuItem], 10, 50, 200);
+    break;
+    case 4:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        menuActive = false;
+        menuWasActive = true;
+        activeMAHCorrectionMenuItem = 0;
+      }
+    break;
+    case 5:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activeMAHCorrectionMenuItem = 0;
+        return (void*)BatteryMenu;
+      }
+    break;
+  }
+
+  static const uint8_t MAH_MENU_ITEMS = 6;
+  
+  activeMAHCorrectionMenuItem = checkMenuItem(activeMAHCorrectionMenuItem, MAH_MENU_ITEMS);
+
+  static char ESC_STR1[] = "esc";
+  char* ESC_STAT_STR = ESC_STR1;
+  if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
+  {
+    ESC_STAT_STR = ESCSymbol;
+  }
+
+  static const char ESC_MAH_STR[] PROGMEM = " mah : ";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen(ESC_STAT_STR)+2+strlen_P(ESC_MAH_STR)+3)/2;
+  static const char MAH_TITLE_STR[] PROGMEM = "mah correction menu";
+  OSD.printP(settings.COLS/2 - strlen_P(MAH_TITLE_STR)/2, ++startRow, MAH_TITLE_STR);
+  
+  for(uint8_t i=0; i<4; i++)
+  {
+    OSD.printInt16( startCol, ++startRow, ESC_STAT_STR, i+1, 0, "", 0, activeMAHCorrectionMenuItem);
+    OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, startRow, ESC_MAH_STR, settings.m_ESCCorrection[i], 2);
+  }
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMAHCorrectionMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeMAHCorrectionMenuItem );
+  
+  return (void*)MAHCorrectionMenu;
+  
+}
+#endif
+
 
 void* BatteryMenu()
 {
@@ -636,10 +697,25 @@ void* BatteryMenu()
     case 5:
       settingChanged |= checkCode(settings.m_voltCorrect, 1, -10, 10);
     break;
+    #ifdef MAH_CORRECTION
     case 6:
-      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        return (void*)MAHCorrectionMenu;
+      }
     break;
     case 7:
+    #else
+    case 6:
+    #endif
+      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+    break;
+    #ifdef MAH_CORRECTION
+    case 8:
+    #else
+    case 7:
+    #endif
       if(code &  inputChecker.ROLL_RIGHT)
       {
         menuActive = false;
@@ -648,7 +724,11 @@ void* BatteryMenu()
         settings.UpdateMaxWatt(settings.m_maxWatts);
       }
     break;
+    #ifdef MAH_CORRECTION
+    case 9:
+    #else
     case 8:
+    #endif
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -658,7 +738,11 @@ void* BatteryMenu()
       }
     break;
   }
+  #ifdef MAH_CORRECTION
+  static const uint8_t BATTERY_MENU_ITEMS = 10;
+  #else
   static const uint8_t BATTERY_MENU_ITEMS = 9;
+  #endif
   activeBatteryMenuItem = checkMenuItem(activeBatteryMenuItem, BATTERY_MENU_ITEMS);
   
   static const char SELECT_BATTERY_STR[] PROGMEM =  "select battery ";
@@ -667,6 +751,9 @@ void* BatteryMenu()
   static const char VOLTAGE_WARN_STR[] PROGMEM =    "volt. warning: ";
   static const char MIN_VOLT_STR[] PROGMEM =        "min voltage  : ";
   static const char VOLT_CORRECT_STR[] PROGMEM =    "voltage corr : ";
+  #ifdef MAH_CORRECTION
+  static const char MAH_CORRECT_STR[] PROGMEM =     "mah correction ";
+  #endif
   static const char MAX_BEER_WATT_STR[] PROGMEM =   "wattmeter max: ";
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
 //static const char BACK_STR[] PROGMEM =            "back";
@@ -686,6 +773,10 @@ void* BatteryMenu()
   OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
   OSD.print( fixPStr(ON_OFF_STR[settings.m_voltWarning]) );
 
+  #ifdef MAH_CORRECTION
+  OSD.printP( startCol, ++startRow, MAH_CORRECT_STR, activeBatteryMenuItem );
+  #endif
+  
   OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, activeBatteryMenuItem, "v", 1 );
 
   OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, activeBatteryMenuItem, "v", 1 );

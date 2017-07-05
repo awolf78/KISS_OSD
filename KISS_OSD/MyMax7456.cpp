@@ -3,7 +3,7 @@
 #include "CSettings.h"
 #include "Config.h"
 
-extern volatile boolean timer1sec;
+extern boolean timer1sec;
 
 //#define COMPRESSED_FONT
 

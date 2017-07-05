@@ -93,7 +93,7 @@ void MAX7456Setup(void)
   uint8_t spi_junk;
   spi_junk=SPSR;
   spi_junk=SPDR;
-  //delay(100);
+  delay(100);
 
   // force soft reset on Max7456
   digitalWrite(MAX7456SELECT,LOW);

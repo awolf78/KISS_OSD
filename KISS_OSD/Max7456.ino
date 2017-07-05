@@ -93,7 +93,7 @@ void MAX7456Setup(void)
   uint8_t spi_junk;
   spi_junk=SPSR;
   spi_junk=SPDR;
-  //delay(100);
+  delay(100);
 
   // force soft reset on Max7456
   digitalWrite(MAX7456SELECT,LOW);
@@ -101,10 +101,10 @@ void MAX7456Setup(void)
   delay(100);
 
   // set all rows to same charactor black/white level
-  /*uint8_t x;
+  uint8_t x;
   for(x = 0; x < settings.ROWS; x++) {
     MAX7456_Send(MAX7456ADD_RB0+x, BWBRIGHTNESS);
-  }*/
+  }
 
   // make sure the Max7456 is enabled
   spi_transfer(VM0_reg);

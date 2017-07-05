@@ -7,6 +7,8 @@ KISS FC OSD v2.x
 by Alexander Wolf (awolf78@gmx.de)
 for everyone who loves KISS
 
+This is free and unencumbered software released into the public domain.
+
 Anyone is free to copy, modify, publish, use, compile, sell, or
 distribute this software, either in source code form or as a compiled
 binary, for any purpose, commercial or non-commercial, and by any
@@ -107,12 +109,12 @@ CStickInput inputChecker;
 CSettings settings;
 static int16_t DV_PPMs[CSettings::DISPLAY_DV_SIZE];
 
-static volatile uint8_t vTxType = 0;
-static volatile uint8_t vTxChannel = 0; 
-static volatile uint8_t oldvTxChannel = 0;
-static volatile uint8_t oldvTxBand = 0;
-static volatile uint8_t vTxBand = 0;
-static volatile int16_t vTxLowPower, vTxHighPower, oldvTxLowPower, oldvTxHighPower;
+static uint8_t vTxType = 0;
+static uint8_t vTxChannel = 0; 
+static uint8_t oldvTxChannel = 0;
+static uint8_t oldvTxBand = 0;
+static uint8_t vTxBand = 0;
+static uint16_t vTxLowPower, vTxHighPower, oldvTxLowPower, oldvTxHighPower;
 const uint8_t VTX_BAND_COUNT = 5;
 const uint8_t VTX_CHANNEL_COUNT = 8;
 static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
@@ -125,7 +127,7 @@ static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM
 static const char bandSymbols[VTX_BAND_COUNT][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
 
 #ifdef IMPULSERC_VTX
-static volatile uint8_t vTxPower;
+static uint8_t vTxPower;
 //static unsigned long changevTxTime = 0;
 
 void setvTxSettings()
@@ -181,35 +183,33 @@ void setupMAX7456()
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
 }
 
-static int16_t  throttle = 0;
-static int16_t  roll = 0;
-static int16_t  pitch = 0;
-static int16_t  yaw = 0;
-static int16_t angleX = 0;
-static int16_t angleY = 0;
+static uint8_t  throttle = 0;
+static uint16_t  roll = 0;
+static uint16_t  pitch = 0;
+static uint16_t  yaw = 0;
 static uint16_t current = 0;
-static volatile int8_t armed = 0;
-static int8_t idleTime = 0;
-static int16_t LipoVoltage = 0;
-static volatile int16_t LipoMAH = 0;
-static volatile int16_t  previousMAH = 0;
-static int16_t totalMAH = 0;
-static int16_t MaxAmps = 0;
-static int16_t MaxC    = 0;
-static int16_t MaxRPMs = 0;
-static int16_t MaxWatt = 0;
-static int16_t MaxTemp = 0;
-static int16_t MinBat = 0;
-static int16_t MinRSSI = 100;
-static int16_t motorKERPM[4] = {0,0,0,0};
-static int16_t maxKERPM[4] = {0,0,0,0};
-static int16_t motorCurrent[4] = {0,0,0,0};
-static int16_t maxCurrent[4] = {0,0,0,0};
-static int16_t ESCTemps[4] = {0,0,0,0};
-static int16_t maxTemps[4] = {0,0,0,0};
-static int16_t ESCVoltage[4] = {0,0,0,0};
-static int16_t minVoltage[4] = {10000,10000,10000,10000};
-static int16_t ESCmAh[4] = {0,0,0,0};
+static uint8_t armed = 0;
+static uint16_t LipoVoltage = 0;
+static uint16_t LipoMAH = 0;
+static uint16_t  previousMAH = 0;
+static uint16_t totalMAH = 0;
+static uint16_t statMAH = 0;
+static uint16_t MaxAmps = 0;
+static uint8_t  MaxC    = 0;
+static uint16_t MaxRPMs = 0;
+static uint16_t MaxWatt = 0;
+static uint8_t  MaxTemp = 0;
+static uint16_t MinBat = 0;
+static uint8_t  MinRSSI = 100;
+static uint16_t motorKERPM[4] = {0,0,0,0};
+static uint16_t maxKERPM[4] = {0,0,0,0};
+static uint16_t motorCurrent[4] = {0,0,0,0};
+static uint16_t maxCurrent[4] = {0,0,0,0};
+static uint16_t ESCTemps[4] = {0,0,0,0};
+static uint16_t maxTemps[4] = {0,0,0,0};
+static uint16_t ESCVoltage[4] = {0,0,0,0};
+static uint16_t minVoltage[4] = {10000,10000,10000,10000};
+static uint16_t ESCmAh[4] = {0,0,0,0};
 static int16_t  AuxChanVals[5] = {0,0,0,0,0};
 static unsigned long start_time = 0;
 static unsigned long time = 0;
@@ -221,7 +221,7 @@ static boolean armedOnce = false;
 static boolean showBat = false;
 static boolean settingChanged = false;
 static uint8_t statPage = 0;
-static volatile bool flipOnce = true;
+static bool flipOnce = true;
 #ifdef NEW_FILTER
 CMeanFilter rssiFilter(10);
 #else
@@ -229,7 +229,7 @@ CMeanFilter rssiFilter(7);
 #endif
 
 
-int16_t findMax4(int16_t maxV, int16_t *values, int16_t length) 
+uint16_t findMax4(uint16_t maxV, uint16_t *values, uint8_t length) 
 {
   for(uint8_t i = 0; i < length; i++) 
   {
@@ -242,7 +242,7 @@ int16_t findMax4(int16_t maxV, int16_t *values, int16_t length)
 }
 
 
-int16_t findMax(int16_t maxV, int16_t newVal) 
+uint16_t findMax(uint16_t maxV, uint16_t newVal) 
 {
   if(newVal > maxV) {
     return newVal;
@@ -250,7 +250,7 @@ int16_t findMax(int16_t maxV, int16_t newVal)
   return maxV;
 }
 
-int16_t findMin(int16_t minV, int16_t newVal) 
+uint16_t findMin(uint16_t minV, uint16_t newVal) 
 {
   if(newVal < minV) {
     return newVal;
@@ -280,24 +280,24 @@ struct _FC_FILTERS
   uint8_t lpf_frq;
   uint8_t yawFilterCut;
   uint8_t notchFilterEnabledR;
-  int16_t notchFilterCenterR;
-  int16_t notchFilterCutR;
+  uint16_t notchFilterCenterR;
+  uint16_t notchFilterCutR;
   uint8_t notchFilterEnabledP;
-  int16_t notchFilterCenterP;
-  int16_t notchFilterCutP;
+  uint16_t notchFilterCenterP;
+  uint16_t notchFilterCutP;
 } fc_filters;
 
 struct _FC_TPA
 {
-  int16_t tpa[3];
+  uint16_t tpa[3];
   uint8_t customTPAEnabled;
   uint8_t ctpa_bp1;
   uint8_t ctpa_bp2;
   uint8_t ctpa_infl[4];
 } fc_tpa;
 
-static int16_t pid_p[3], pid_i[3], pid_d[3], rcrate[3], rate[3], rccurve[3];
-static int16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
+static uint16_t pid_p[3], pid_i[3], pid_d[3], rcrate[3], rate[3], rccurve[3];
+static uint16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
 static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
@@ -313,6 +313,7 @@ static char ESCSymbol[] = {0x7E, 0x00};
 static const char crossHairSymbol[] = {0x11, 0x00};
 static uint8_t code = 0;
 static boolean menuActive = false;
+static boolean menuDisabled = false;
 static boolean menuWasActive = false;
 static boolean fcSettingChanged = false;
 static void* activePage = NULL;
@@ -326,13 +327,11 @@ static char wattMeterSymbol[] = { 0xD7, 0xD8, 0x00 };
 static bool angleYpositive = true;*/
 static uint8_t krSymbol[4] = { 0x9C, 0x9C, 0x9C, 0x9C };
 static unsigned long krTime[4] = { 0, 0, 0, 0 };
-volatile bool timer1sec = false;
-volatile bool timer40Hz = false;
+bool timer1sec = false;
+bool timer40Hz = false;
 static unsigned long timer1secTime = 0;
 static uint8_t currentDVItem = 0;
 static bool symbolOnOffChanged = false;
-static int16_t bufminus1 = 0;
-static int16_t checkCalced = 0;
 static uint16_t fcNotConnectedCount = 0;
 static bool telemetryReceived = false;
 static bool batWarnSymbol = true;
@@ -342,8 +341,6 @@ static bool vTxPowerActive = false;
 static int8_t vTxPowerKnobChannel = -1;
 static int16_t vTxPowerKnobLastPPM = -1;
 static unsigned long vTxPowerTime = 0;
-static int16_t checksumDebug = 0;
-static int16_t bufMinusOne = 0;
 static bool statsActive = false;
 #ifdef ADVANCED_STATS
 static const uint8_t STAT_GENERATOR_SIZE = 6;
@@ -375,13 +372,12 @@ extern void* MainMenu();
 static char iconPrintBuf1[] = { 0x00, 0x00, 0x00 };
 static char iconPrintBuf2[] = { 0x00, 0x00, 0x00 };
 
-void getIconPos(int16_t value, int16_t maxValue, uint8_t steps, char &iconPos1, char &iconPos2, char inc = 1)
+void getIconPos(uint16_t value, uint16_t maxValue, uint8_t steps, char &iconPos1, char &iconPos2, char inc = 1)
 {
   if(value > maxValue) value = maxValue;
-  if(value < 0) return;
-  int16_t halfMax = maxValue / 2;
-  int16_t stepValue = (int16_t)(maxValue / (int16_t)(steps));
-  int16_t tempValue1 = 0;
+  uint16_t halfMax = maxValue / 2;
+  uint16_t stepValue = (uint16_t)(maxValue / (uint16_t)(steps));
+  uint16_t tempValue1 = 0;
   if(value > halfMax) tempValue1 = value - halfMax;
   value -= tempValue1;
   iconPos1 += ((char)(value / stepValue)) * inc; 
@@ -444,6 +440,13 @@ void loop(){
     timer1secTime = _millis;
     timer1sec = !timer1sec;
   }
+
+#ifdef IMPULSERC_VTX
+      if(timer1sec) vtx_flash_led(1);
+#endif
+#if defined(STEELE_PDB) && !defined(STEELE_PDB_OVERRIDE)
+      if(timer1sec) steele_flash_led(_millis, 1);
+#endif
   
   if(micros()-LastLoopTime > 10000)
   { 
@@ -465,7 +468,7 @@ void loop(){
       if(fcSettingModeChanged[i]) fcSettingChanged = true;
     }
     
-    if(!fcSettingsReceived)
+    if(!fcSettingsReceived && !menuDisabled)
     {
       if(settingMode >= MAX_SETTING_MODES) settingMode = 0;
       if(fcNotConnectedCount % 10 == 0) 
@@ -485,7 +488,7 @@ void loop(){
         settingMode++;
         if(settingMode < MAX_SETTING_MODES) fcSettingsReceived = false;
       }
-      if(settingMode == MAX_SETTING_MODES)
+      /*if(settingMode == MAX_SETTING_MODES)
       {
         for(i=0; i<3; i++)
         {
@@ -498,7 +501,7 @@ void loop(){
             return;
           }  
         }
-      }
+      }*/
     }
     else
     {
@@ -664,7 +667,7 @@ void loop(){
 #ifdef IMPULSERC_VTX
       vtx_flash_led(1);
 #endif
-#ifdef STEELE_PDB
+#if defined(STEELE_PDB) && !defined(STEELE_PDB_OVERRIDE)
       steele_flash_led(_millis, 1);
 #endif
 
@@ -777,7 +780,7 @@ void loop(){
         }
       }
       
-      if(armed == 0 && ((code &  inputChecker.YAW_LONG_LEFT) || menuActive))
+      if(armed == 0 && ((code &  inputChecker.YAW_LONG_LEFT) || menuActive) && !menuDisabled)
       {
         if(!menuActive)
         {
@@ -855,25 +858,31 @@ void loop(){
       #endif
       #endif
 
+      //OSD.printInt16(0, settings.ROWS/2, settings.m_stats, 0);
       if(!vTxPowerActive && DV_change_time == 0 && armed == 0 && armedOnce) 
       {
-        if(settings.m_stats == 1) statsActive = true;
-        if(settings.m_stats == 2)
+        switch(settings.m_stats)
         {
-          if(code & inputChecker.ROLL_RIGHT) 
-          {
-            cleanScreen();
-            statsActive = false;
-          }
-          if(code & inputChecker.ROLL_LEFT) 
-          {
-            cleanScreen();
+          case 1:
             statsActive = true;
-          }
-        }        
+          break;
+          case 2:
+            if(code & inputChecker.ROLL_RIGHT) 
+            {
+              cleanScreen();
+              statsActive = false;
+            }
+            if(code & inputChecker.ROLL_LEFT) 
+            {
+              cleanScreen();
+              statsActive = true;
+            }
+          break;
+        }       
       }
       else statsActive = false;
-      
+
+      statMAH = LipoMAH+previousMAH;
       if(statsActive) 
       {
         if(code & inputChecker.PITCH_UP && statPage > 0)
@@ -930,13 +939,14 @@ void loop(){
             OSD.printInt16P( statCol, ++middle_infos_y, MIN_V_STR, MinBat, 2, "v" );
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_WATT_STR, MaxWatt, 1, "w" ); //OSD.printInt16( OSD.cursorRow()+1, middle_infos_y, settings.m_maxWatts, 1, "w)", 0, 0, "(" );          
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_C_STR, MaxC, 0, "c");
-            OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, LipoMAH+previousMAH, 0, "mah" );
+            OSD.printInt16P( statCol, ++middle_infos_y, MAH_STR, statMAH, 0, "mah" );
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_RPM_STR, MaxRPMs, 1, "kr" );            
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, tempSymbol);
             if(settings.m_RSSIchannel > -1)
             {
               OSD.printInt16P( statCol, ++middle_infos_y, MIN_RSSI_STR, MinRSSI, 0, "db");                    
             }
+            OSD.printInt16( 0, 1, LipoVoltage, 2, "v");
           break;
           case 1:
           #ifdef ADVANCED_STATS
@@ -1298,7 +1308,7 @@ void loop(){
             #ifdef _RSSI_ICON
             if(settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
             {
-              const int16_t maxRSSIvalue = 50;
+              const uint8_t maxRSSIvalue = 50;
               iconPrintBuf1[0] = 0x12;
               iconPrintBuf1[1] = 0x15;
               rssiVal -= 30;

@@ -86,7 +86,7 @@ boolean checkCode(int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxV
   return changed;
 }
 
-boolean checkCode(volatile int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+boolean checkCode(uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
   int16_t value2 = value;
   boolean changed = checkCode(value2, STEP, minVal, maxVal);
@@ -94,7 +94,7 @@ boolean checkCode(volatile int16_t &value, int16_t STEP, int16_t minVal = 0, int
   return changed;
 }
 
-boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+boolean checkCode(uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
   int16_t tempValue = value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
@@ -102,7 +102,7 @@ boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int
   return changed;
 }
 
-boolean checkCode(volatile int8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+boolean checkCode(int8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
   int16_t tempValue = value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);

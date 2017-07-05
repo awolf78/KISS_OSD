@@ -21,9 +21,10 @@
 #define STOPWATCH_ICON
 #define NEW_FILTER
 #define FAILSAFE
-#define VTX_POWER_KNOB
+//#define VTX_POWER_KNOB
 //#define ADVANCED_STATS
 #define ADVANCED_ESC_STATS
+//#define MAH_CORRECTION
 
 
 

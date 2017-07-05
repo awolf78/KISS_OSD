@@ -128,6 +128,12 @@ void CSettings::LoadDefaults()
   m_vTxMaxPower = 0;
   m_RSSImax = -1001;
   m_RSSImin = -1001;
+  #ifdef MAH_CORRECTION
+  for(i=0; i<4; i++)
+  {
+    m_ESCCorrection[i] = 100;
+  }
+  #endif
 
   #else
   
@@ -219,6 +225,13 @@ void CSettings::LoadDefaults()
   m_vTxMaxPower = 0;
   m_RSSImax = -1001;
   m_RSSImin = -1001;
+  #ifdef MAH_CORRECTION
+  for(i=0; i<4; i++)
+  {
+    m_ESCCorrection[i] = 100;
+  }
+  #endif
+  
   #endif
 }
 
@@ -355,6 +368,15 @@ void CSettings::ReadSettingsInternal()
   pos += 2;
   m_RSSImin = ReadInt16_t(pos, pos+1);
   pos += 2;
+  #ifdef MAH_CORRECTION
+  for(i=0; i<4; i++)
+  {
+    m_ESCCorrection[i] = EEPROM.read(pos);
+    pos++;
+  }
+  #else
+  pos +=4;
+  #endif
   
   m_lastMAH = ReadInt16_t(251, 252);
   m_maxWatts = ReadInt16_t(253, 254);
@@ -411,17 +433,26 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_RSSImax = -1001;
       m_RSSImin = -1001;
     }
+    #ifdef MAH_CORRECTION
+    if(ver < 0x15)
+    {
+      for(uint8_t i=0; i<4; i++)
+      {
+        m_ESCCorrection[i] = 100;
+      }      
+    }
+    #endif
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x14) //first start of OSD - or older version
+  if(settingsVer < 0x15) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x14);
+    EEPROM.update(0x01,0x15);
   }
   else
   {
@@ -532,6 +563,15 @@ void CSettings::WriteSettings()
   pos += 2;
   WriteInt16_t(pos, pos+1, m_RSSImin);
   pos += 2;
+  #ifdef MAH_CORRECTION
+  for(i=0; i<4; i++)
+  {
+    EEPROM.update(pos, (byte)m_ESCCorrection[i]);
+    pos++;
+  }
+  #else
+  pos += 4;
+  #endif
 
   WriteInt16_t(253, 254, m_maxWatts);
 }

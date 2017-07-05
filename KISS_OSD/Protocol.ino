@@ -109,10 +109,15 @@ boolean ReadTelemetry()
         }
         armed = current_armed;
 
+        #ifdef MAH_CORRECTION
+        LipoMAH = 0;
+        #else
         LipoMAH =       ((serialBuf[148 + STARTCOUNT] << 8) | serialBuf[149 + STARTCOUNT]);
-
+        #endif
+        
         uint32_t tmp32 = 0;
         uint8_t voltDev = 0;
+        current = 0;
         for (i = 0; i < 4; i++)
         {
           uint8_t i10 = i * 10;
@@ -120,7 +125,17 @@ boolean ReadTelemetry()
           motorCurrent[i] = ((serialBuf[87 + i10 + STARTCOUNT] << 8) | serialBuf[88 + i10 + STARTCOUNT]);
           ESCTemps[i] = ((serialBuf[83 + i10 + STARTCOUNT] << 8) | serialBuf[84 + i10 + STARTCOUNT]);
           ESCmAh[i] = ((serialBuf[89 + i10 + STARTCOUNT] << 8) | serialBuf[90 + i10 + STARTCOUNT]);
-          int16_t tempVoltage = ((serialBuf[85 + i10 + STARTCOUNT] << 8) | serialBuf[86 + i10 + STARTCOUNT]);
+          #ifdef MAH_CORRECTION
+          uint32_t temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.m_ESCCorrection[i];
+          temp /= (uint32_t)100;
+          ESCmAh[i] = (uint16_t)temp;
+          LipoMAH += ESCmAh[i];
+          temp = (uint32_t)motorCurrent[i] * (uint32_t)settings.m_ESCCorrection[i];
+          temp /= (uint32_t)100;
+          motorCurrent[i] = (uint16_t)temp;
+          #endif
+          current += (uint16_t)motorCurrent[i];
+          uint16_t tempVoltage = ((serialBuf[85 + i10 + STARTCOUNT] << 8) | serialBuf[86 + i10 + STARTCOUNT]);
           if (tempVoltage > 5) // the ESC's read the voltage better then the FC
           {
             ESCVoltage[i] = tempVoltage;
@@ -134,11 +149,9 @@ boolean ReadTelemetry()
         if (voltDev != 0)
         {
           tmp32 = tmp32 / (uint32_t)voltDev;
-          LipoVoltage = (int16_t)tmp32;
+          LipoVoltage = (uint16_t)tmp32;
         }
         LipoVoltage += settings.m_voltCorrect * 10;
-
-        current = (uint16_t)(motorCurrent[0] + motorCurrent[1] + motorCurrent[2] + motorCurrent[3]);
 
         #ifndef KISS_OSD_CONFIG
         failSafeState = serialBuf[41 + STARTCOUNT];
@@ -147,21 +160,19 @@ boolean ReadTelemetry()
         // Data sanity check. Return false if we get invalid data
         for (i = 0; i < 4; i++)
         {
-          if (ESCTemps[i] < -50 || ESCTemps[i] > 130 ||
-              motorCurrent[i] < 0 || motorCurrent[i] > 10000 ||
-              motorKERPM[i] < 0 || motorKERPM[i] > 500 ||
-              ESCVoltage[i] < 0 || ESCVoltage[i] > 10000 ||
-              ESCmAh[i] < 0)
+          if (ESCTemps[i] > 160 ||
+              motorCurrent[i] > 10000 ||
+              motorKERPM[i] > 700 ||
+              ESCVoltage[i] > 10000)
           {
             return false;
           }
         }
-        if (LipoVoltage < 0 || LipoVoltage > 10000 ||
-            throttle < 0 || throttle > 100 ||
-            roll < 0 || roll > 2000 ||
-            pitch < 0 || pitch > 2000 ||
-            yaw < 0 || yaw > 2000 ||
-            LipoMAH < 0)
+        if (LipoVoltage > 10000 ||
+            throttle > 100 ||
+            roll > 2000 ||
+            pitch > 2000 ||
+            yaw > 2000)
         {
           return false;
         }
@@ -216,7 +227,7 @@ boolean ReadTelemetry()
           }
           MaxAmps = findMax(MaxAmps, current);
           tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
-          MaxC = (int16_t) tmp32;
+          MaxC = (uint8_t) tmp32;
           tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
           MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
           if (MaxWatt > settings.m_maxWatts) settings.m_maxWatts = MaxWatt;
@@ -342,7 +353,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
           switch (sMode)
           {
             case FC_SETTINGS:
-              if (serialBuf[73 + STARTCOUNT] > 0)
+              if (protoVersion > 104 && serialBuf[73 + STARTCOUNT] > 0)
               {
                 armOnYaw = false;
               }
@@ -350,6 +361,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               {
                 dShotEnabled = true;
               }
+              if (protoVersion < 107) menuDisabled = true;
 #ifndef IMPULSERC_VTX
               if (protoVersion > 106 && serialBuf[154 + STARTCOUNT] > 0 && ((serialBuf[154 + STARTCOUNT] & 0x0F) == 0x06))
               {

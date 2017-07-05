@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "Config.h"
 
 #ifndef CSettingsh
 #define CSettingsh
@@ -80,44 +81,47 @@ class CSettings
   bool cleanEEPROM();
   void UpdateMaxWatt(int16_t maxWatt);
   
-  volatile uint8_t m_batWarning; // 0 = off, 1 = on
-  volatile int16_t m_batMAH[4]; // 300-32000 mAh
-  volatile int16_t m_batWarningMAH; // 300-32000 mAh
-  volatile int16_t m_batSlice; // calculated for battery symbol
-  volatile uint8_t m_activeBattery; // 0-4
-  volatile uint8_t m_batWarningPercent; // battery capacity percentage -> if below, warning will get displayed
-  volatile uint8_t m_DVchannel; // AUX1-AUX4
-  volatile uint8_t m_tempUnit; //°C or °F
-  volatile int16_t m_lastMAH; // mAh value from previous run
-  volatile uint8_t m_fontSize; // 0 = normal font; 1 = large font
-  volatile uint8_t m_displaySymbols; // 0 = no; 1 = yes (symbols such as battery and timer)
-  volatile uint8_t m_vTxChannel, m_vTxBand, m_vTxPower; // vTx settings
-  volatile int8_t m_xOffset, m_yOffset; // OSD screen offsets
-  volatile uint8_t m_stats;
+  uint8_t m_batWarning; // 0 = off, 1 = on
+  uint16_t m_batMAH[4]; // 300-32000 mAh
+  uint16_t m_batWarningMAH; // 300-32000 mAh
+  uint16_t m_batSlice; // calculated for battery symbol
+  uint8_t m_activeBattery; // 0-4
+  uint8_t m_batWarningPercent; // battery capacity percentage -> if below, warning will get displayed
+  uint8_t m_DVchannel; // AUX1-AUX4
+  uint8_t m_tempUnit; //°C or °F
+  int16_t m_lastMAH; // mAh value from previous run
+  uint8_t m_fontSize; // 0 = normal font; 1 = large font
+  uint8_t m_displaySymbols; // 0 = no; 1 = yes (symbols such as battery and timer)
+  uint8_t m_vTxChannel, m_vTxBand, m_vTxPower; // vTx settings
+  int8_t m_xOffset, m_yOffset; // OSD screen offsets
+  uint8_t m_stats;
   static const uint8_t NICKNAME_STR_SIZE = 9;
-  volatile char m_nickname[NICKNAME_STR_SIZE]; //Nickname to be displayed on OSD
+  char m_nickname[NICKNAME_STR_SIZE]; //Nickname to be displayed on OSD
   static const uint8_t OSD_ITEMS_SIZE = 11;
   static const uint8_t OSD_ITEMS_POS_SIZE = 19;
-  volatile uint8_t m_OSDItems[OSD_ITEMS_POS_SIZE][2]; // OSD item positions
-  volatile bool m_colBorder[OSD_ITEMS_POS_SIZE];
+  uint8_t m_OSDItems[OSD_ITEMS_POS_SIZE][2]; // OSD item positions
+  bool m_colBorder[OSD_ITEMS_POS_SIZE];
   static const uint8_t DISPLAY_DV_SIZE = 10;
-  volatile uint8_t m_DISPLAY_DV[DISPLAY_DV_SIZE];
-  static const int16_t DV_PPM_INCREMENT = 150;
-  volatile uint8_t m_goggle; //0 = fatshark, 1 = headplay
-  volatile uint8_t m_videoMode; //2 = NTSC, 1 = PAL
-  volatile uint8_t ROWS, COLS;
-  volatile uint8_t m_wattMeter, m_Moustache;
-  volatile int16_t m_maxWatts;
-  volatile uint8_t m_voltWarning, m_minVolts;
-  volatile uint8_t m_airTimer;
-  volatile int16_t m_voltCorrect;
-  volatile uint8_t m_crossHair;
-  volatile int8_t m_RSSIchannel;
-  volatile int16_t m_RSSImax, m_RSSImin;
+  uint8_t m_DISPLAY_DV[DISPLAY_DV_SIZE];
+  static const uint8_t DV_PPM_INCREMENT = 150;
+  uint8_t m_goggle; //0 = fatshark, 1 = headplay
+  uint8_t m_videoMode; //2 = NTSC, 1 = PAL
+  uint8_t ROWS, COLS;
+  uint8_t m_wattMeter, m_Moustache;
+  uint16_t m_maxWatts;
+  uint8_t m_voltWarning, m_minVolts;
+  uint8_t m_airTimer;
+  uint16_t m_voltCorrect;
+  uint8_t m_crossHair;
+  int8_t m_RSSIchannel;
+  int16_t m_RSSImax, m_RSSImin;
   static const uint8_t ICON_SETTINGS_SIZE = 7;
-  volatile uint8_t m_IconSettings[ICON_SETTINGS_SIZE];
-  volatile uint8_t m_oldDisplaySymbols;
-  volatile int16_t m_vTxMaxPower;
+  uint8_t m_IconSettings[ICON_SETTINGS_SIZE];
+  uint8_t m_oldDisplaySymbols;
+  uint16_t m_vTxMaxPower;
+  #ifdef MAH_CORRECTION
+  uint8_t m_ESCCorrection[4];
+  #endif
   
   private:
   void UpgradeFromPreviousVersion(uint8_t ver);
