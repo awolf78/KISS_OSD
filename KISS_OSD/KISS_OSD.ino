@@ -330,7 +330,6 @@ static unsigned long krTime[4] = { 0, 0, 0, 0 };
 bool timer1sec = false;
 bool timer40Hz = false;
 static unsigned long timer1secTime = 0;
-static uint8_t currentDVItem = 0;
 static bool symbolOnOffChanged = false;
 static uint16_t fcNotConnectedCount = 0;
 static bool telemetryReceived = false;
@@ -341,6 +340,8 @@ static bool vTxPowerActive = false;
 static int8_t vTxPowerKnobChannel = -1;
 static int16_t vTxPowerKnobLastPPM = -1;
 static unsigned long vTxPowerTime = 0;
+static uint8_t oldPrintCount = 0;
+static uint8_t printCount = 0;
 static bool statsActive = false;
 #ifdef ADVANCED_STATS
 static const uint8_t STAT_GENERATOR_SIZE = 6;
@@ -488,20 +489,6 @@ void loop(){
         settingMode++;
         if(settingMode < MAX_SETTING_MODES) fcSettingsReceived = false;
       }
-      /*if(settingMode == MAX_SETTING_MODES)
-      {
-        for(i=0; i<3; i++)
-        {
-          if(pid_p[i] < 0 || pid_i[i] < 0 || pid_d[i] < 0 || 
-            rcrate[i] < 0 || rate[i] < 0 || rccurve[i] < 0 ||
-            fc_tpa.tpa[i] < 0)
-          {
-            fcSettingsReceived = false;
-            settingMode = 0;
-            return;
-          }  
-        }
-      }*/
     }
     else
     {
@@ -691,13 +678,12 @@ void loop(){
       vTxType = 2;
       OSD.printInt16(0,8,protoVersion,0);
       #endif 
-      
-      if(triggerCleanScreen || (abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && (AuxChanVals[settings.m_DVchannel]+1000) < (CSettings::DV_PPM_INCREMENT*(CSettings::DISPLAY_DV_SIZE))))
+
+      if(triggerCleanScreen || oldPrintCount != printCount)
       {
-        currentDVItem = CSettings::DISPLAY_DV_SIZE-1;
-        while(abs((DV_PPMs[currentDVItem]+1000) - (AuxChanVals[settings.m_DVchannel]+1000)) >= CSettings::DV_PPM_INCREMENT && currentDVItem > 0) currentDVItem--;
         triggerCleanScreen = false;
         cleanScreen();
+        if(oldPrintCount != printCount) oldPrintCount = printCount;
       }
       
       if(settings.m_tempUnit == 1)
@@ -1043,6 +1029,8 @@ void loop(){
         LipoMAH = LipoMAH2;
         AuxChanVals[settings.m_RSSIchannel] = rssi2;
         #endif 
+
+        printCount = 0;
          
         if(armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[settings.m_DVchannel]) 
         {
@@ -1050,21 +1038,22 @@ void loop(){
           last_Aux_Val = AuxChanVals[settings.m_DVchannel];
         }
         
-        uint8_t TMPmargin          = 0;
-        uint8_t CurrentMargin      = 0;
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
         {
+          printCount++;
           OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, "%", 2, THROTTLEp);
         }
           
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
         {
+          printCount++;
           OSD.checkPrintLength(settings.m_OSDItems[NICKNAME][0], settings.m_OSDItems[NICKNAME][1], strlen(settings.m_nickname), zeroBlanks, NICKNAMEp);
           OSD.print( fixStr(settings.m_nickname) );          
         }        
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
         {
+          printCount++;
           #ifdef WATTMETER
           if(settings.m_wattMeter > 0)
           {
@@ -1125,24 +1114,26 @@ void loop(){
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
         {
+          printCount++;
           OSD.printInt16( settings.m_OSDItems[VOLTAGE][0], settings.m_OSDItems[VOLTAGE][1], LipoVoltage / 10, 1, "v", 1, VOLTAGEp);
         }
         
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
         {
+          printCount++;
           #ifdef _MAH_ICON        
           if(settings.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
           {            
             batteryIcon[1] = 0x84;
             batteryIcon[2] = 0x84;
-            getIconPos(settings.m_batMAH[settings.m_activeBattery]-(LipoMAH+previousMAH), settings.m_batMAH[settings.m_activeBattery], 8, batteryIcon[2], batteryIcon[1]);
+            getIconPos(settings.m_batMAH[settings.m_activeBattery]-statMAH, settings.m_batMAH[settings.m_activeBattery], 8, batteryIcon[2], batteryIcon[1]);
             OSD.checkPrintLength(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], 4, zeroBlanks, MAHp);
             OSD.print(batteryIcon);           
           }
           else
           #endif
           {
-            OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], LipoMAH+previousMAH, 0, "mah", 0, MAHp);
+            OSD.printInt16(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], statMAH, 0, "mah", 0, MAHp);
           }
         }
   
@@ -1154,9 +1145,13 @@ void loop(){
         {
           ESCSymbol[0] = 0x00;
         }
+
         
+        uint8_t TMPmargin          = 0;
+        uint8_t CurrentMargin      = 0;
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
         {
+          printCount++;
           #ifdef PROP_ICON
           static char KR[4][2];
           if(settings.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
@@ -1217,6 +1212,7 @@ void loop(){
      
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
         {
+          printCount++;
           static char ampESC[3];
           ampESC[0] = 'a';
           ampESC[1] = ESCSymbol[0];
@@ -1230,6 +1226,7 @@ void loop(){
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
         {
+          printCount++;
           static char tempESC[3];
           tempESC[0] = tempSymbol[0];
           tempESC[1] = ESCSymbol[0];
@@ -1242,6 +1239,7 @@ void loop(){
     
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER]) 
         {
+          printCount++;
           char stopWatchStr[] = { 0x00, 0x00 };
           #ifdef STOPWATCH_ICON
           if(settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
@@ -1295,7 +1293,7 @@ void loop(){
         if(settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
         {                                       
           //OSD.printInt16(0, settings.ROWS/2, rssiVal, 0, "db", 1);
-
+          printCount++;
           if(rssiVal < 45 && timer1sec)
           {
             uint8_t spaces = 5;
@@ -1326,7 +1324,7 @@ void loop(){
         }
         #endif
         
-        if(settings.m_batWarning > 0 && (LipoMAH+previousMAH) >= settings.m_batWarningMAH)
+        if(settings.m_batWarning > 0 && statMAH >= settings.m_batWarningMAH)
         {
           totalMAH = 0;
           static const char BATTERY_LOW[] PROGMEM =   "battery low";
@@ -1346,7 +1344,7 @@ void loop(){
             }
             else
             {
-              OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 3, LipoMAH+previousMAH, 0, "mah");              
+              OSD.printInt16(settings.COLS/2 - 3, settings.ROWS/2 + 3, statMAH, 0, "mah");              
             }
             flipOnce = true;
           }
@@ -1365,7 +1363,7 @@ void loop(){
         {
           if(settings.m_batWarning > 0)
           {
-            totalMAH = LipoMAH+previousMAH;
+            totalMAH = statMAH;
           }
           else
           {

@@ -506,7 +506,7 @@ void* DisplayMenu()
     {
       case 0:
         settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 4);
-        if(settings.m_DVchannel != oldDVChannel && oldDVChannel > 2 && settings.m_DVchannel > 2)
+        if(settings.m_DVchannel != oldDVChannel)
         {
           uint8_t i;
           if(oldDVChannel == 4)
@@ -517,7 +517,7 @@ void* DisplayMenu()
               settings.m_DISPLAY_DV[i] = oldDVOrderPos[i];             
             }            
           }
-          else
+          if(oldDVChannel == 3 && settings.m_DVchannel == 4)
           {
             for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
             {
