@@ -333,6 +333,8 @@ static uint8_t currentDVItem = 0;
 static uint16_t fcNotConnectedCount = 0;
 static uint8_t serialBuf[512];
 static bool activeOSDItems[] = { true, true, true, true, true, true, true, true, true, true, true };
+static uint8_t oldPrintCount = 0;
+static uint8_t printCount = 0;
 
 #ifdef DEBUG
 static int16_t versionProto = 0;
@@ -442,15 +444,16 @@ void loop() {
     vtx_flash_led(1);
 #endif
 
-    if (triggerCleanScreen ||
-        (abs((DV_PPMs[currentDVItem] + 1000) - (AuxChanVals[settings.m_DVchannel] + 1000)) >= CSettings::DV_PPM_INCREMENT
-         && (AuxChanVals[settings.m_DVchannel] + 1000) < (CSettings::DV_PPM_INCREMENT * (CSettings::DISPLAY_DV_SIZE))
-         && !moveItems))
+    if(triggerCleanScreen)
     {
-      currentDVItem = CSettings::DISPLAY_DV_SIZE - 1;
-      while (abs((DV_PPMs[currentDVItem] + 1000) - (AuxChanVals[settings.m_DVchannel] + 1000)) >= CSettings::DV_PPM_INCREMENT && currentDVItem > 0) currentDVItem--;
       triggerCleanScreen = false;
       cleanScreen();
+    }
+
+    if(oldPrintCount != printCount)
+    {
+      cleanScreen();
+      oldPrintCount = printCount;
     }
 
     if (settings.m_tempUnit == 1)
@@ -804,10 +807,12 @@ void loop() {
       last_Aux_Val = AuxChanVals[settings.m_DVchannel];
     }
 
+    printCount = 0;
     uint8_t TMPmargin          = 0;
     uint8_t CurrentMargin      = 0;
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
     {
+      printCount++;
       activeOSDItems[THROTTLE] = true;
       if (OSD_ITEM_BLINK[THROTTLE]) OSD.blink1sec();
       itemLengthOK[THROTTLE] = OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, 1, "%", 2, THROTTLEp);
@@ -817,6 +822,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
     {
+      printCount++;
       activeOSDItems[NICKNAME] = true;
       uint8_t nickBlanks = 0;
       itemLengthOK[NICKNAME] = OSD.checkPrintLength(settings.m_OSDItems[NICKNAME][0], settings.m_OSDItems[NICKNAME][1], (uint8_t)strlen(settings.m_nickname), nickBlanks, NICKNAMEp);
@@ -833,6 +839,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
+      printCount++;
       activeOSDItems[AMPS] = true;
       if(settings.m_wattMeter == 0)
       {
@@ -880,6 +887,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
     {
+      printCount++;
       activeOSDItems[VOLTAGE] = true;
       if (OSD_ITEM_BLINK[VOLTAGE]) OSD.blink1sec();
       itemLengthOK[VOLTAGE] = OSD.printInt16( settings.m_OSDItems[VOLTAGE][0], settings.m_OSDItems[VOLTAGE][1], LipoVoltage / 10, 1, 1, "v", 1, VOLTAGEp);
@@ -888,6 +896,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
     {
+      printCount++;
       activeOSDItems[MAH] = true;
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
       {
@@ -937,6 +946,7 @@ void loop() {
     bool displayAnyESCData = false;
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
     {
+      printCount++;
       displayAnyESCData = true;
       static char KR[4];
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
@@ -1001,6 +1011,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
     {
+      printCount++;
       displayAnyESCData = true;
       static char ampESC[] = { 'a', 0x7E, 0x00};
       ampESC[1] = ESCSymbol[0];
@@ -1017,6 +1028,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
     {
+      printCount++;
       displayAnyESCData = true;
       static char tempESC[] = { tempSymbol[0], 0x7E, 0x00};
       tempESC[0] = tempSymbol[0];
@@ -1035,6 +1047,7 @@ void loop() {
 
     if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER])
     {
+      printCount++;
       activeOSDItems[STOPW] = true;
       char stopWatchStr[] = { 0x00, 0x00 };
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
@@ -1061,6 +1074,7 @@ void loop() {
 
     if((settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || (moveItems && settings.m_DVchannel < 4))
     {
+      printCount++;
       activeOSDItems[RSSI_] = true;
       if (settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
       {
