@@ -194,6 +194,7 @@ static uint16_t LipoMAH = 0;
 static uint16_t  previousMAH = 0;
 static uint16_t totalMAH = 0;
 static uint16_t statMAH = 0;
+static uint16_t remainMAH = 0;
 static uint16_t MaxAmps = 0;
 static uint8_t  MaxC    = 0;
 static uint16_t MaxRPMs = 0;
@@ -677,13 +678,18 @@ void loop(){
       #ifdef DEBUG
       vTxType = 2;
       OSD.printInt16(0,8,protoVersion,0);
-      #endif 
+      #endif
 
-      if(triggerCleanScreen || oldPrintCount != printCount)
+      if(triggerCleanScreen)
       {
         triggerCleanScreen = false;
         cleanScreen();
-        if(oldPrintCount != printCount) oldPrintCount = printCount;
+      }
+
+      if(oldPrintCount != printCount)
+      {
+        cleanScreen();
+        oldPrintCount = printCount;
       }
       
       if(settings.m_tempUnit == 1)
@@ -830,7 +836,7 @@ void loop(){
         {              
           static const char VTX_POWER_STATE[] PROGMEM = "vtx power:";
           OSD.printP(settings.COLS/2 - strlen_P(VTX_POWER_STATE)/2, settings.ROWS/2, VTX_POWER_STATE);
-          char suffix[] = "mw";
+          static const char suffix[] = "mw";
           uint8_t maxMWmult = 60;            
           if(vTxType > 2)
           {
@@ -1065,8 +1071,6 @@ void loop(){
               int8_t wattRow2 = settings.m_OSDItems[AMPS][1]-1;            
               if(wattRow2 < 0) wattRow2 = 0;
               int8_t wattRow1 = wattRow2 + 1;
-              int16_t wattSlice;
-              uint8_t wattStatus;
               uint8_t steps;
               switch(settings.m_wattMeter)
               {              
@@ -1126,7 +1130,9 @@ void loop(){
           {            
             batteryIcon[1] = 0x84;
             batteryIcon[2] = 0x84;
-            getIconPos(settings.m_batMAH[settings.m_activeBattery]-statMAH, settings.m_batMAH[settings.m_activeBattery], 8, batteryIcon[2], batteryIcon[1]);
+            remainMAH = settings.m_batMAH[settings.m_activeBattery]-statMAH;
+            if(statMAH > settings.m_batMAH[settings.m_activeBattery]) remainMAH = 0;
+            getIconPos(remainMAH, settings.m_batMAH[settings.m_activeBattery], 8, batteryIcon[2], batteryIcon[1]);
             OSD.checkPrintLength(settings.m_OSDItems[MAH][0], settings.m_OSDItems[MAH][1], 4, zeroBlanks, MAHp);
             OSD.print(batteryIcon);           
           }
@@ -1240,7 +1246,7 @@ void loop(){
         if(AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER]) 
         {
           printCount++;
-          char stopWatchStr[] = { 0x00, 0x00 };
+          static char stopWatchStr[] = { 0x00, 0x00 };
           #ifdef STOPWATCH_ICON
           if(settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
           {
@@ -1274,7 +1280,7 @@ void loop(){
         #endif
 
         #ifdef RSSI_
-        int16_t rssiVal;
+        static int16_t rssiVal;
         if(settings.m_RSSIchannel > -1)
         {
           rssiVal = AuxChanVals[settings.m_RSSIchannel];
@@ -1306,7 +1312,7 @@ void loop(){
             #ifdef _RSSI_ICON
             if(settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
             {
-              const uint8_t maxRSSIvalue = 50;
+              static const uint8_t maxRSSIvalue = 50;
               iconPrintBuf1[0] = 0x12;
               iconPrintBuf1[1] = 0x15;
               rssiVal -= 30;
