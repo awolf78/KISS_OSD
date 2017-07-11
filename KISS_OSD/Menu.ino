@@ -314,13 +314,13 @@ void* LPFMenu()
   switch(activeLPFMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6); //FIXME settingMode and filtersetting
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6);
     break;
     case 1:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6); //FIXME settingMode and filtersetting
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.yawLpF, 1, 0, 6);
     break;
     case 2:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6); //FIXME settingMode and filtersetting
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.DLpF, 1, 0, 6);
     break;     
     case 3:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -342,9 +342,9 @@ void* LPFMenu()
   static const uint8_t LPF_MENU_ITEMS = 5;
   activeLPFMenuItem = checkMenuItem(activeLPFMenuItem, LPF_MENU_ITEMS);
   
-  static const char LPF_ROLL_PITCH_STR[] PROGMEM =     "roll/pitch lpf : ";
-  static const char LPF_YAW_STR[] PROGMEM =            "yaw lpf        : ";
-  static const char LPF_DTERM_STROLL_STR[] PROGMEM =   "dterm lpf      : ";
+  static const char LPF_ROLL_PITCH_STR[] PROGMEM =     "roll/pitch lpf:";
+  static const char LPF_YAW_STR[] PROGMEM =            "yaw lpf       :";
+  static const char LPF_DTERM_STROLL_STR[] PROGMEM =   "dterm lpf     :";
 //static const char SAVE_EXIT_STR[] PROGMEM =          "save+exit";
 //static const char BACK_STR[] PROGMEM =               "back";
   
@@ -354,13 +354,13 @@ void* LPFMenu()
   OSD.printP(settings.COLS/2 - strlen_P(LPF_MENU_TITLE_STR)/2, ++startRow, LPF_MENU_TITLE_STR);
   
   OSD.printP( startCol, ++startRow, LPF_ROLL_PITCH_STR, activeLPFMenuItem);
-  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) ); //FIXME filtersetting
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) );
 
   OSD.printP( startCol, ++startRow, LPF_YAW_STR, activeLPFMenuItem);
-  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) ); //FIXME filtersetting
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.yawLpF]) );
 
   OSD.printP( startCol, ++startRow, LPF_DTERM_STROLL_STR, activeLPFMenuItem);
-  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) ); //FIXME filtersetting
+  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.DLpF]) );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeLPFMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeLPFMenuItem);
@@ -373,7 +373,15 @@ void* FilterMenu()
   switch(activeFilterMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6);
+      if(moreLPFfilters)
+      {
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          cleanScreen();
+          return (void*)LPFMenu;
+        }
+      }
+      else fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.lpf_frq, 1, 0, 6);
     break;
     case 1:
       fcSettingModeChanged[FC_FILTERS] |= checkCode(fc_filters.yawFilterCut, 10, 0, 97);
@@ -417,6 +425,7 @@ void* FilterMenu()
   activeFilterMenuItem = checkMenuItem(activeFilterMenuItem, FILTER_MENU_ITEMS);
 
   static const char LPF_STR[] PROGMEM =                 "lpf      : ";
+  static const char LPF2_STR[] PROGMEM =                "lpf";
   static const char YAW_FLTR_STR[] PROGMEM =            "yaw fltr strength:";
   static const char NOTCH_ROLL_STR[] PROGMEM =          "notch roll fltr  :";
   static const char NOTCH_ROLL_CENTER_STR[] PROGMEM =   "roll center freq :";
@@ -431,9 +440,13 @@ void* FilterMenu()
   uint8_t startCol = settings.COLS/2 - (strlen_P(YAW_FLTR_STR)+8)/2;
   static const char FILTER_MENU_TITLE_STR[] PROGMEM = "filter menu";
   OSD.printP(settings.COLS/2 - strlen_P(FILTER_MENU_TITLE_STR)/2, ++startRow, FILTER_MENU_TITLE_STR);
-  
-  OSD.printP( startCol, ++startRow, LPF_STR, activeFilterMenuItem);
-  OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) );
+
+  if(moreLPFfilters) OSD.printP( startCol, ++startRow, LPF2_STR, activeFilterMenuItem);
+  else
+  {
+    OSD.printP( startCol, ++startRow, LPF_STR, activeFilterMenuItem);
+    OSD.print( fixPStr(LPF_FRQ_STR[fc_filters.lpf_frq]) );
+  }
   OSD.printIntArrow( startCol, ++startRow, YAW_FLTR_STR, fc_filters.yawFilterCut, 0, activeFilterMenuItem, "", 1);
   OSD.printP( startCol, ++startRow, NOTCH_ROLL_STR, activeFilterMenuItem);
   OSD.print( fixPStr(ON_OFF_STR[fc_filters.notchFilterEnabledR]) );

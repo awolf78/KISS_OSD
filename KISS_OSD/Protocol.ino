@@ -112,7 +112,8 @@ boolean ReadTelemetry()
         #ifdef MAH_CORRECTION
         LipoMAH = 0;
         #else
-        LipoMAH =       ((serialBuf[148 + STARTCOUNT] << 8) | serialBuf[149 + STARTCOUNT]);
+        uint16_t newMAH = ((serialBuf[148 + STARTCOUNT] << 8) | serialBuf[149 + STARTCOUNT]);
+        if(newMAH > LipoMAH) LipoMAH = newMAH; 
         #endif
         
         uint32_t tmp32 = 0;
@@ -406,6 +407,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               fc_filters.notchFilterCutR = (uint16_t)((uint16_t)fc_filters.notchFilterCutR >> 8) | ((uint16_t)fc_filters.notchFilterCutR << 8);
               fc_filters.notchFilterCenterP = (uint16_t)((uint16_t)fc_filters.notchFilterCenterP >> 8) | ((uint16_t)fc_filters.notchFilterCenterP << 8);
               fc_filters.notchFilterCutP = (uint16_t)((uint16_t)fc_filters.notchFilterCutP >> 8) | ((uint16_t)fc_filters.notchFilterCutP << 8);
+              if((stopByte-STARTCOUNT) > 12) moreLPFfilters = true;
               break;
             case FC_TPA:
               memcpy(&fc_tpa, &serialBuf[STARTCOUNT], sizeof(fc_tpa));
@@ -476,6 +478,8 @@ void SendFCSettings(uint8_t sMode)
       serialBuf[STARTCOUNT + index++] = (byte)(fc_filters.notchFilterCenterP & 0x00FF);
       serialBuf[STARTCOUNT + index++] = (byte)((fc_filters.notchFilterCutP & 0xFF00) >> 8);
       serialBuf[STARTCOUNT + index++] = (byte)(fc_filters.notchFilterCutP & 0x00FF);
+      serialBuf[STARTCOUNT + index++] = fc_filters.yawLpF;
+      serialBuf[STARTCOUNT + index++] = fc_filters.DLpF;
       break;
     case FC_TPA:
       for (i = 0; i < 3; i++)

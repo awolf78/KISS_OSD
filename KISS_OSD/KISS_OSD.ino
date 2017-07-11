@@ -286,6 +286,8 @@ struct _FC_FILTERS
   uint8_t notchFilterEnabledP;
   uint16_t notchFilterCenterP;
   uint16_t notchFilterCutP;
+  uint8_t yawLpF;
+  uint8_t DLpF;
 } fc_filters;
 
 struct _FC_TPA
@@ -299,6 +301,7 @@ struct _FC_TPA
 
 static uint16_t pid_p[3], pid_i[3], pid_d[3], rcrate[3], rate[3], rccurve[3];
 static uint16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
+static boolean moreLPFfilters = false;
 static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
 static uint32_t LastLoopTime = 0;
