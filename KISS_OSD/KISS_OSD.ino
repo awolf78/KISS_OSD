@@ -377,6 +377,8 @@ extern void* MainMenu();
 static char iconPrintBuf1[] = { 0x00, 0x00, 0x00 };
 static char iconPrintBuf2[] = { 0x00, 0x00, 0x00 };
 
+static char ESC_STAT_STR1[] = "esc";
+
 void getIconPos(uint16_t value, uint16_t maxValue, uint8_t steps, char &iconPos1, char &iconPos2, char inc = 1)
 {
   if(value > maxValue) value = maxValue;
@@ -973,8 +975,7 @@ void loop(){
           case 2:
           case 3:
           case 4:
-          case 5:
-            static char ESC_STAT_STR1[] = "esc";
+          case 5:            
             char* ESC_STAT_STR = ESC_STAT_STR1;
             if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
             {

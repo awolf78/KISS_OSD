@@ -7,6 +7,7 @@
 //#define FORCE_PAL
 
 #define NEW_FILTER
+#define MAH_CORRECTION
 
 // INTERNALS - DO NOT CHANGE
 //=============================

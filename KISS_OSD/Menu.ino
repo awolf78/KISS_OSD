@@ -651,24 +651,27 @@ void* MAHCorrectionMenu()
   
   activeMAHCorrectionMenuItem = checkMenuItem(activeMAHCorrectionMenuItem, MAH_MENU_ITEMS);
 
-  static char ESC_STR1[] = "esc";
-  char* ESC_STAT_STR = ESC_STR1;
+  char* ESC_STR2 = ESC_STAT_STR1;
   if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
   {
-    ESC_STAT_STR = ESCSymbol;
-  }
+    ESC_STR2 = ESCSymbol;
+  } 
 
   static const char ESC_MAH_STR[] PROGMEM = " mah : ";
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (strlen(ESC_STAT_STR)+2+strlen_P(ESC_MAH_STR)+3)/2;
+  uint8_t startCol = settings.COLS/2 - (strlen(ESC_STR2)+2+strlen_P(ESC_MAH_STR)+3)/2;
   static const char MAH_TITLE_STR[] PROGMEM = "mah correction menu";
   OSD.printP(settings.COLS/2 - strlen_P(MAH_TITLE_STR)/2, ++startRow, MAH_TITLE_STR);
   
   for(uint8_t i=0; i<4; i++)
   {
-    OSD.printInt16( startCol, ++startRow, ESC_STAT_STR, i+1, 0, "", 0, activeMAHCorrectionMenuItem);
-    OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, startRow, ESC_MAH_STR, settings.m_ESCCorrection[i], 2);
+    OSD.setCursor(startCol, ++startRow);
+    OSD.checkArrow(startRow, activeMAHCorrectionMenuItem);
+    OSD.setCursor(startCol+1, startRow);
+    OSD.print(fixStr(ESC_STR2));
+    OSD.printInt16( startCol + strlen(ESC_STR2) + 1, startRow, (int16_t)(i+1), 0);
+    OSD.printInt16P( startCol + strlen(ESC_STR2) + 2, startRow, ESC_MAH_STR, settings.m_ESCCorrection[i], 2);
   }
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMAHCorrectionMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeMAHCorrectionMenuItem );
@@ -785,14 +788,14 @@ void* BatteryMenu()
 
   OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
   OSD.print( fixPStr(ON_OFF_STR[settings.m_voltWarning]) );
-
-  #ifdef MAH_CORRECTION
-  OSD.printP( startCol, ++startRow, MAH_CORRECT_STR, activeBatteryMenuItem );
-  #endif
   
   OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, activeBatteryMenuItem, "v", 1 );
 
   OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, activeBatteryMenuItem, "v", 1 );
+
+  #ifdef MAH_CORRECTION
+  OSD.printP( startCol, ++startRow, MAH_CORRECT_STR, activeBatteryMenuItem );
+  #endif
 
   OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, activeBatteryMenuItem, "w", 1 );
   

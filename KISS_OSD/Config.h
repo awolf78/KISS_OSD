@@ -24,7 +24,7 @@
 //#define VTX_POWER_KNOB
 //#define ADVANCED_STATS
 #define ADVANCED_ESC_STATS
-//#define MAH_CORRECTION
+#define MAH_CORRECTION
 
 
 
