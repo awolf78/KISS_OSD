@@ -723,6 +723,7 @@ void loop(){
         {
           cleanScreen();
           showBat = true;
+          logoDone = true;
         }
         if((code & inputChecker.ROLL_LEFT) && settings.m_activeBattery > 0)
         {
@@ -1270,6 +1271,10 @@ void loop(){
             stopWatchStr[0] = 0x00;
           }
           #endif
+          if(settings.m_timerMode == 2 && (time / 1000) > 109) 
+          {
+            OSD.blink1sec();
+          }
           OSD.printTime(settings.m_OSDItems[STOPW][0], settings.m_OSDItems[STOPW][1], time, stopWatchStr, STOPWp);
         }                
 

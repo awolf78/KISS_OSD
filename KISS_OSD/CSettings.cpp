@@ -116,7 +116,7 @@ void CSettings::LoadDefaults()
   m_Moustache = 1;
   m_voltWarning = 0;
   m_minVolts = 148;
-  m_airTimer = 1;
+  m_timerMode = 1;
   m_voltCorrect = 0;
   m_crossHair = 0;
   m_RSSIchannel = -1;
@@ -214,7 +214,7 @@ void CSettings::LoadDefaults()
   m_Moustache = 1;
   m_voltWarning = 0;
   m_minVolts = 148;
-  m_airTimer = 1;
+  m_timerMode = 1;
   m_voltCorrect = 0;
   m_crossHair = 0;
   m_RSSIchannel = 3; //AUX4
@@ -340,7 +340,7 @@ void CSettings::ReadSettingsInternal()
   pos++;
   m_IconSettings[PROPS_ICON] = EEPROM.read(pos);
   pos++;
-  m_airTimer = EEPROM.read(pos);
+  m_timerMode = EEPROM.read(pos);
   pos++;
   m_voltCorrect = EEPROM.read(pos);
   pos++;
@@ -395,7 +395,7 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       m_voltWarning = 0;
       m_minVolts = 148;
       m_IconSettings[PROPS_ICON] = 1;
-      m_airTimer = 1;
+      m_timerMode = 1;
       m_voltCorrect = 0;
     }
     if(ver < 0x0E)
@@ -535,7 +535,7 @@ void CSettings::WriteSettings()
   pos++;
   EEPROM.update(pos, (byte)m_IconSettings[PROPS_ICON]);
   pos++;
-  EEPROM.update(pos, (byte)m_airTimer);
+  EEPROM.update(pos, (byte)m_timerMode);
   pos++;
   EEPROM.update(pos, (byte)m_voltCorrect);
   pos++;
@@ -610,7 +610,7 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 
 void CSettings::UpdateMaxWatt(int16_t maxWatt)
 {
-  if(maxWatt > m_maxWatts)
+  if(maxWatt >= m_maxWatts)
   {
     m_maxWatts = maxWatt;
     WriteInt16_t(253, 254, m_maxWatts);

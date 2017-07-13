@@ -61,10 +61,7 @@ boolean ReadTelemetry()
         // switch disarmed => armed
         if (armed == 0 && current_armed > 0)
         {
-          if (settings.m_airTimer == 0)
-          {
-            start_time = millis();
-          }
+          start_time = millis();
           triggerCleanScreen = true;
           armedOnce = true;
           last_Aux_Val = AuxChanVals[settings.m_DVchannel];
@@ -96,13 +93,13 @@ boolean ReadTelemetry()
           }
           else if (armed > 0)
           {
-            if (throttle < 5 && settings.m_airTimer == 1 && start_time == 0)
+            if (throttle < 5 && start_time == 0)
             {
               time = 0;
             }
             else
             {
-              if (settings.m_airTimer == 1 && start_time == 0) start_time = millis();
+              if (start_time == 0) start_time = millis();
               time = millis() - start_time;
             }
           }

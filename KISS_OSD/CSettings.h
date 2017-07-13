@@ -110,7 +110,7 @@ class CSettings
   uint8_t m_wattMeter, m_Moustache;
   uint16_t m_maxWatts;
   uint8_t m_voltWarning, m_minVolts;
-  uint8_t m_airTimer;
+  uint8_t m_timerMode; // 0 = reset, 1 = continuous, 2 = race timer
   uint16_t m_voltCorrect;
   uint8_t m_crossHair;
   int8_t m_RSSIchannel;

@@ -1023,7 +1023,7 @@ void* MainMenu()
         settingChanged |= symbolOnOffChanged;
       break;
       case 6:
-        settingChanged |= checkCode(settings.m_airTimer, 1, 0, 1);        
+        settingChanged |= checkCode(settings.m_timerMode, 1, 0, 2);        
       break;
       #ifdef CROSSHAIR
       case 7:
@@ -1089,16 +1089,16 @@ void* MainMenu()
   static const char FILTER_STR[] PROGMEM =          "filters";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
-  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons    : ";
-  static const char AIR_TIMER_STR[] PROGMEM =       "air timer: ";
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons     : ";
+  static const char AIR_TIMER_STR[] PROGMEM =       "timer mode: ";
   #ifdef CROSSHAIR
-  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair: ";
+  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair : ";
   #endif
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
   static const char CANCEL_STR[] PROGMEM =          "cancel";
   
   uint8_t startRow = 0;
-  uint8_t startCol = settings.COLS/2 - strlen_P(SYMBOLS_SIZE_STR)/2;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(SYMBOLS_SIZE_STR)+5)/2;
   OSD.setCursor( settings.COLS/2 - strlen_P(KISS_OSD_VER)/2, ++startRow );
   OSD.print( fixPStr(KISS_OSD_VER) );
   static const char MAIN_TITLE_STR[] PROGMEM = "main menu";
@@ -1112,7 +1112,8 @@ void* MainMenu()
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeMenuItem );
   OSD.print( fixPStr(ON_OFF_STR[settings.m_displaySymbols]) );
   OSD.printP( startCol, ++startRow, AIR_TIMER_STR, activeMenuItem );
-  OSD.print( fixPStr(ON_OFF_STR[settings.m_airTimer]) );
+  static const char TIMER_TYPES_STR[][6] PROGMEM = { "reset", "auto ", "race " };
+  OSD.print( fixPStr(TIMER_TYPES_STR[settings.m_timerMode]) );
   #ifdef CROSSHAIR
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeMenuItem );
   static const char ON_OFF_STR_CROSS[][4] PROGMEM = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };

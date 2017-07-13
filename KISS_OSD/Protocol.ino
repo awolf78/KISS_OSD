@@ -16,6 +16,7 @@ const uint8_t filterCount2 = 5;
 CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
 CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
 CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
+static boolean airTimerStarted = false;
 
 boolean ReadTelemetry()
 {
@@ -61,10 +62,10 @@ boolean ReadTelemetry()
         // switch disarmed => armed
         if (armed == 0 && current_armed > 0)
         {
-          if (settings.m_airTimer == 0)
+          /*if (settings.m_airTimer == 0)
           {
             start_time = millis();
-          }
+          }*/
           triggerCleanScreen = true;
           armedOnce = true;
           last_Aux_Val = AuxChanVals[settings.m_DVchannel];
@@ -78,8 +79,16 @@ boolean ReadTelemetry()
         {
           if (armed > 0 && current_armed == 0)
           {
-            if(start_time > 0) total_time = total_time + (millis() - start_time);
-            start_time = 0;
+            if(settings.m_timerMode < 2) airTimerStarted = false;
+            if(start_time > 0)
+            {
+              if(settings.m_timerMode < 2)
+              {
+                total_time = total_time + (millis() - start_time);
+                start_time = 0;
+              }
+              else total_time = millis() - start_time;
+            }             
             triggerCleanScreen = true;
             if (settings.m_batWarning > 0)
             {
@@ -96,17 +105,20 @@ boolean ReadTelemetry()
           }
           else if (armed > 0)
           {
-            if (throttle < 5 && settings.m_airTimer == 1 && start_time == 0)
+            if (throttle < 5 && !airTimerStarted)
             {
               time = 0;
             }
             else
             {
-              if (settings.m_airTimer == 1 && start_time == 0) start_time = millis();
+              airTimerStarted = true;
+              if (start_time == 0) start_time = millis();
               time = millis() - start_time;
             }
+            if(settings.m_timerMode > 0) time += total_time;
           }
         }
+        if(settings.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
         armed = current_armed;
 
         #ifdef MAH_CORRECTION
@@ -231,7 +243,6 @@ boolean ReadTelemetry()
           MaxC = (uint8_t) tmp32;
           tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
           MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
-          if (MaxWatt > settings.m_maxWatts) settings.m_maxWatts = MaxWatt;
           for (i = 0; i < 4; i++)
           {
             maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
