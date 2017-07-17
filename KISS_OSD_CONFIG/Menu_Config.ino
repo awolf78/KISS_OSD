@@ -575,15 +575,15 @@ void* DisplayMenu()
   static const uint8_t DISPLAY_MENU_ITEMS = 10;
   activeDisplayMenuItem = checkMenuItem(activeDisplayMenuItem, DISPLAY_MENU_ITEMS);
   
-  static const char DV_CHANNEL_STR[] PROGMEM =      "dv channel : ";
+  static const char DV_CHANNEL_STR[] PROGMEM =      "reduce items :";
   static const char RSSI_MENU_STR[] PROGMEM =       "rssi";
-  static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit : ";
-  static const char FONT_SIZE_STR[] PROGMEM =       "font size  : ";
+  static const char TEMP_UNIT_STR[] PROGMEM =       "temp. unit   :";
+  static const char FONT_SIZE_STR[] PROGMEM =       "font size    :";
   static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons";
-  static const char GOGGLE_STR[] PROGMEM =          "goggle     : ";
-  static const char BEERMUG_STR[] PROGMEM =         "watt meter : ";
-  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair  : ";
-  static const char STATISTICS_STR[] PROGMEM =      "statistics : ";
+  static const char GOGGLE_STR[] PROGMEM =          "goggle       :";
+  static const char BEERMUG_STR[] PROGMEM =         "watt meter   :";
+  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair    :";
+  static const char STATISTICS_STR[] PROGMEM =      "statistics   :";
 //static const char BACK_STR[] PROGMEM =            "back";
   
   uint8_t startRow = 1;
