@@ -671,7 +671,7 @@ void* MAHCorrectionMenu()
     OSD.setCursor(startCol+1, startRow);
     OSD.print(fixStr(ESC_STR2));
     OSD.printInt16( startCol + strlen(ESC_STR2) + 1, startRow, (int16_t)(i+1), 0);
-    OSD.printInt16P( startCol + strlen(ESC_STR2) + 2, startRow, ESC_MAH_STR, settings.m_ESCCorrection[i], 2);
+    OSD.printInt16P( startCol + strlen(ESC_STR2) + 2, startRow, ESC_MAH_STR, settings.m_ESCCorrection[i], 0, "%", 1);
   }
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMAHCorrectionMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeMAHCorrectionMenuItem );

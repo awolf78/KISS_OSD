@@ -405,6 +405,7 @@ void loop() {
     OSD.printInt16(debug_col, 8, (int16_t)analogRead(A6), 0, 0);
 #endif
 
+    #ifndef UPDATE_FONT_ONLY
     NewSerial.write(0x20); // request telemetry
     if (!ReadTelemetry())
     {
@@ -412,6 +413,7 @@ void loop() {
       if (fcNotConnectedCount <= 500) return;
     }
     else fcNotConnectedCount = 0;
+    #endif
 
     while (!OSD.notInVSync());
 
