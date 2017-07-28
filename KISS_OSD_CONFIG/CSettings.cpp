@@ -5,8 +5,13 @@
 
 CSettings::CSettings()
 {
+  #ifdef FORCE_PAL
+  m_videoMode = 1;
+  ROWS = 15;
+  #else
   m_videoMode = 2;
   ROWS = 13;
+  #endif
   COLS = 28;
   m_maxWatts = 2500;
   LoadDefaults();

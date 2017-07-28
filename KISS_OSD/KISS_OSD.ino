@@ -161,13 +161,15 @@ void checkVideoMode()
 
 void setupMAX7456()
 {
+  #if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
+  MAX7456Setup();
+  delay(100);
+  #endif
   OSD.begin(settings.COLS,13);    
   #ifdef FORCE_NTSC
   OSD.setDefaultSystem(MAX7456_NTSC);
-  settings.ROWS = 13;
   #elif defined(FORCE_PAL)
   OSD.setDefaultSystem(MAX7456_PAL);
-  settings.ROWS = 15;
   #else
   delay(1000);
   checkVideoMode();
@@ -175,10 +177,6 @@ void setupMAX7456()
   OSD.setTextArea(settings.COLS, settings.ROWS);
   OSD.setSwitchingTime( 5 ); 
   OSD.display();
-#if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
-  delay(100);
-  MAX7456Setup();
-#endif
   delay(100);
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset); 
 }

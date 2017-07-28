@@ -147,6 +147,10 @@ void checkVideoMode()
 
 void setupMAX7456()
 {
+  #if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
+  MAX7456Setup();
+  delay(100);
+  #endif
   OSD.begin(settings.COLS,13);  
   #ifdef FORCE_NTSC
   OSD.setDefaultSystem(MAX7456_NTSC);
@@ -162,10 +166,6 @@ void setupMAX7456()
   OSD.setSwitchingTime( 5 );   
   OSD.setCharEncoding( MAX7456_ASCII );  
   OSD.display();
-#if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
-  delay(100);
-  MAX7456Setup();
-#endif
   delay(100);
   OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
 }

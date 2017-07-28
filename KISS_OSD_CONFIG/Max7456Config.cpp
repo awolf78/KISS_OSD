@@ -4,7 +4,9 @@
 #include "fontCompressedSteelePDB.h"
 #else
 #include "fontCompressed.h"
-#endif
+#endif#include "CSettings.h"
+
+extern CSettings settings;
 
 class Flashbits {
 public:
@@ -125,11 +127,8 @@ void CMax7456Config::write_NVM(uint8_t char_address)
   
   //digitalWrite(deviceSelectPin,LOW);
   //spi_transfer(VM0_reg);
-#ifdef PAL
-  spi_transfer(0x40);
-#else
-  spi_transfer(0);
-#endif
+  if(settings.m_videoMode == 1) spi_transfer(0x40);
+  else spi_transfer(0);
 
   spi_transfer(MAX7456ADD_CMAH); // set start address high
   spi_transfer(char_address);
@@ -151,11 +150,8 @@ void CMax7456Config::write_NVM(uint8_t char_address)
 
  spi_transfer(MAX7456ADD_VM0); // turn on screen next vertical
   //spi_transfer(ENABLE_display_vert);
-#ifdef PAL
-  spi_transfer(0x4c);
-#else
-  spi_transfer(0x0c);
-#endif 
+  if(settings.m_videoMode == 1) spi_transfer(0x40);
+  else spi_transfer(0);
   digitalWrite(deviceSelectPin,HIGH);
 }
 
