@@ -6,6 +6,7 @@ static uint8_t activeResetMenuItem = 0;
 static uint8_t activeIconsMenuItem = 0;
 static uint8_t activeOSDItemsMenuItem = 0;
 static uint8_t activeRSSIMenuItem = 0;
+static uint8_t activeMiscMenuItem = 0;
 static bool selectedOrder = false;
 static uint8_t activeOrderMenuSelectedItem = 199;
 static uint8_t confirmIndex = 0;
@@ -212,7 +213,7 @@ void* ChangeOrder()
   for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
   {
     if(i == activeOrderMenuSelectedItem) OSD.blink1sec();
-    if(settings.m_wattMeter && reverseLUT[i] == DISPLAY_COMB_CURRENT) OSD.printP( startCol, ++startRow, WATT_ORDER_STR, activeOrderMenuItem );
+    if(settings.s.m_wattMeter && reverseLUT[i] == DISPLAY_COMB_CURRENT) OSD.printP( startCol, ++startRow, WATT_ORDER_STR, activeOrderMenuItem );
     else OSD.printP( startCol, ++startRow, DISPLAY_OSD_ITEMS_STR[reverseLUT[i]], activeOrderMenuItem );
   }  
   OSD.printP( startCol, ++startRow, BACK_STR, activeOrderMenuItem );
@@ -267,10 +268,10 @@ void* BatteryMenu()
       }
     break;
     case 1:
-      settingChanged |= checkCode(settings.m_batWarning, 1, 0, 1);
+      settingChanged |= checkCode(settings.s.m_batWarning, 1, 0, 1);
     break;
     case 2:
-      changed = checkCode(settings.m_batWarningPercent, 1, 0, 100);
+      changed = checkCode(settings.s.m_batWarningPercent, 1, 0, 100);
       settingChanged |= changed;
       if(changed)
       {
@@ -278,23 +279,23 @@ void* BatteryMenu()
       }
     break;
     case 3:
-      settingChanged |= checkCode(settings.m_voltWarning, 1, 0, 1);
+      settingChanged |= checkCode(settings.s.m_voltWarning, 1, 0, 1);
     break;
     case 4:
-      settingChanged |= checkCode(settings.m_minVolts, 1, 90, 250);
+      settingChanged |= checkCode(settings.s.m_minVolts, 1, 90, 250);
     break;
     case 5:
-      settingChanged |= checkCode(settings.m_voltCorrect, 1, -10, 10);
+      settingChanged |= checkCode(settings.s.m_voltCorrect, 1, -10, 10);
     break;
     case 6:
-      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+      checkCode(settings.s.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
     break;
     case 7:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
         activeBatteryMenuItem = 0;
-        settings.UpdateMaxWatt(settings.m_maxWatts);
+        settings.UpdateMaxWatt(settings.s.m_maxWatts);
         return (void*)MainMenu;
       }
     break;
@@ -319,18 +320,18 @@ void* BatteryMenu()
   OSD.printP( startCol, ++startRow, SELECT_BATTERY_STR, activeBatteryMenuItem );
   
   OSD.printP( startCol, ++startRow, BATTERY_WARNING_STR, activeBatteryMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_batWarning]) );
+  OSD.print( fixStr(ON_OFF_STR[settings.s.m_batWarning]) );
   
-  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
+  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.s.m_batWarningPercent, 0, 1, activeBatteryMenuItem, "%", true );
 
   OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );  
-  OSD.print( fixStr(ON_OFF_STR[settings.m_voltWarning]) );
+  OSD.print( fixStr(ON_OFF_STR[settings.s.m_voltWarning]) );
 
-  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.s.m_minVolts, 1, 1, activeBatteryMenuItem, "v", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.s.m_voltCorrect, 1, 1, activeBatteryMenuItem, "v", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.s.m_maxWatts/10, 0, 1, activeBatteryMenuItem, "w", 1 );
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeBatteryMenuItem );
   
@@ -348,8 +349,8 @@ void* IconsMenu()
     switch(activeIconsMenuItem)
     {
       case 0:
-        settings.m_oldDisplaySymbols = settings.m_displaySymbols;
-        settingChanged |= checkCode(settings.m_displaySymbols, 1, 0, 1);
+        settings.m_oldDisplaySymbols = settings.s.m_displaySymbols;
+        settingChanged |= checkCode(settings.s.m_displaySymbols, 1, 0, 1);
         settings.fixColBorders();        
       break;
       case 1:
@@ -361,31 +362,31 @@ void* IconsMenu()
       case 7:
         oldVal = settings.m_IconSettings[activeIconsMenuItem-1];
         settingChanged |= checkCode(settings.m_IconSettings[activeIconsMenuItem-1], 1, 0, 1);
-        if((activeIconsMenuItem-1) == ESC_ICON && oldVal != settings.m_IconSettings[ESC_ICON] && settings.m_displaySymbols == 1) 
+        if((activeIconsMenuItem-1) == ESC_ICON && oldVal != settings.m_IconSettings[ESC_ICON] && settings.s.m_displaySymbols == 1) 
         {
           temp1 = settings.m_IconSettings[PROPS_ICON];
           settings.m_IconSettings[PROPS_ICON] = 0;
           settings.m_oldDisplaySymbols = 2;
-          settings.m_displaySymbols = settings.m_IconSettings[ESC_ICON];
+          settings.s.m_displaySymbols = settings.m_IconSettings[ESC_ICON];
           settings.m_IconSettings[ESC_ICON] = 1;
           settings.fixColBorders();
-          settings.m_IconSettings[ESC_ICON] = settings.m_displaySymbols;
+          settings.m_IconSettings[ESC_ICON] = settings.s.m_displaySymbols;
           settings.m_IconSettings[PROPS_ICON] = temp1;
-          settings.m_displaySymbols = 1;
+          settings.s.m_displaySymbols = 1;
           settings.m_oldDisplaySymbols = 1;
           
         }
-        if((activeIconsMenuItem-1) == (uint8_t)PROPS_ICON && oldVal != settings.m_IconSettings[PROPS_ICON] && settings.m_displaySymbols == 1) 
+        if((activeIconsMenuItem-1) == (uint8_t)PROPS_ICON && oldVal != settings.m_IconSettings[PROPS_ICON] && settings.s.m_displaySymbols == 1) 
         {
           temp1 = settings.m_IconSettings[ESC_ICON];
           settings.m_IconSettings[ESC_ICON] = 0;
           settings.m_oldDisplaySymbols = 2;
-          settings.m_displaySymbols = settings.m_IconSettings[PROPS_ICON];
+          settings.s.m_displaySymbols = settings.m_IconSettings[PROPS_ICON];
           settings.m_IconSettings[PROPS_ICON] = 1;
           settings.fixColBorders();
-          settings.m_IconSettings[PROPS_ICON] = settings.m_displaySymbols;
+          settings.m_IconSettings[PROPS_ICON] = settings.s.m_displaySymbols;
           settings.m_IconSettings[ESC_ICON] = temp1;
-          settings.m_displaySymbols = 1;
+          settings.s.m_displaySymbols = 1;
           settings.m_oldDisplaySymbols = 1;
         }
       break;      
@@ -418,7 +419,7 @@ void* IconsMenu()
   OSD.printP( settings.COLS/2 - strlen_P(ICONS_TITLE_STR)/2, ++startRow, ICONS_TITLE_STR);
 
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeIconsMenuItem );
-  OSD.print( fixStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  OSD.print( fixStr(ON_OFF_STR[settings.s.m_displaySymbols]) );
   
   uint8_t i;
   for(i=0; i<settings.ICON_SETTINGS_SIZE; i++)
@@ -440,13 +441,13 @@ void* RSSIMenu()
     switch(activeRSSIMenuItem)
     {
       case 0:
-        settingChanged |= checkCode(settings.m_RSSIchannel, 1, -1, 3);
+        settingChanged |= checkCode(settings.s.m_RSSIchannel, 1, -1, 3);
       break;
       case 1:
-        settingChanged |= checkCode(settings.m_RSSImax, 10, -1001, 1000);
+        settingChanged |= checkCode(settings.s.m_RSSImax, 10, -1001, 1000);
       break;
       case 2:
-        settingChanged |= checkCode(settings.m_RSSImin, 10, -1001, 1000);
+        settingChanged |= checkCode(settings.s.m_RSSImin, 10, -1001, 1000);
       break;
       case 3:
         if(code &  inputChecker.ROLL_RIGHT)
@@ -472,7 +473,7 @@ void* RSSIMenu()
   OSD.printP( settings.COLS/2 - strlen_P(RSSI_TITLE_STR)/2, ++startRow, RSSI_TITLE_STR );
   
   OSD.printP( startCol, ++startRow, RSSI_CHANNEL_STR, activeRSSIMenuItem );
-  if(settings.m_RSSIchannel < 0)
+  if(settings.s.m_RSSIchannel < 0)
   {
     OSD.print( fixStr("off") );
   }
@@ -480,12 +481,12 @@ void* RSSIMenu()
   {
     OSD.print( fixStr("aux") );
     uint8_t tempCol = startCol + strlen_P(RSSI_CHANNEL_STR) + 4;
-    OSD.printInt16(tempCol, startRow, settings.m_RSSIchannel+1, 0, 1 );
+    OSD.printInt16(tempCol, startRow, settings.s.m_RSSIchannel+1, 0, 1 );
   }
 
-  OSD.printIntArrow( startCol, ++startRow, RSSI_MAX_PPM_STR, settings.m_RSSImax+1000, 0, 0, activeRSSIMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, RSSI_MAX_PPM_STR, settings.s.m_RSSImax+1000, 0, 0, activeRSSIMenuItem, "", 1);
 
-  OSD.printIntArrow( startCol, ++startRow, RSSI_MIN_PPM_STR, settings.m_RSSImin+1000, 0, 0, activeRSSIMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, RSSI_MIN_PPM_STR, settings.s.m_RSSImin+1000, 0, 0, activeRSSIMenuItem, "", 1);
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeRSSIMenuItem );
   
@@ -501,12 +502,12 @@ void* DisplayMenu()
   if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
   {
     bool gogglechanged, symbolChanged;
-    uint8_t oldDVChannel = settings.m_DVchannel;
+    uint8_t oldDVChannel = settings.s.m_DVchannel;
     switch(activeDisplayMenuItem)
     {
       case 0:
-        settingChanged |= checkCode(settings.m_DVchannel, 1, 0, 4);
-        if(settings.m_DVchannel != oldDVChannel)
+        settingChanged |= checkCode(settings.s.m_DVchannel, 1, 0, 4);
+        if(settings.s.m_DVchannel != oldDVChannel)
         {
           uint8_t i;
           if(oldDVChannel == 4)
@@ -517,7 +518,7 @@ void* DisplayMenu()
               settings.m_DISPLAY_DV[i] = oldDVOrderPos[i];             
             }            
           }
-          if(oldDVChannel == 3 && settings.m_DVchannel == 4)
+          if(oldDVChannel == 3 && settings.s.m_DVchannel == 4)
           {
             for(i=0; i<CSettings::DISPLAY_DV_SIZE; i++)
             {
@@ -536,10 +537,10 @@ void* DisplayMenu()
         }
       break;
       case 2:
-        settingChanged |= checkCode(settings.m_tempUnit, 1, 0, 1);
+        settingChanged |= checkCode(settings.s.m_tempUnit, 1, 0, 1);
       break;
       case 3:
-        settingChanged |= checkCode(settings.m_fontSize, 1, 0, 1);
+        settingChanged |= checkCode(settings.s.m_fontSize, 1, 0, 1);
       break;
       case 4:
         if(code &  inputChecker.ROLL_RIGHT)
@@ -549,18 +550,18 @@ void* DisplayMenu()
         }
       break;
       case 5:
-        gogglechanged = checkCode(settings.m_goggle, 1, 0, 1);
+        gogglechanged = checkCode(settings.s.m_goggle, 1, 0, 1);
         if(gogglechanged) correctItemsOnce = false;
         settingChanged |= gogglechanged;
       break;
       case 6:
-        settingChanged |= checkCode(settings.m_wattMeter, 1, 0, 2);
+        settingChanged |= checkCode(settings.s.m_wattMeter, 1, 0, 2);
       break;
       case 7:
-        settingChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
+        settingChanged |= checkCode(settings.s.m_crossHair, 1, 0, 8);
       break;
       case 8:
-        settingChanged |= checkCode(settings.m_stats, 1, 0, 2);
+        settingChanged |= checkCode(settings.s.m_stats, 1, 0, 2);
       break;
       case 9:
         if(code &  inputChecker.ROLL_RIGHT)
@@ -592,7 +593,7 @@ void* DisplayMenu()
   OSD.printP( settings.COLS/2 - strlen_P(DISPLAY_TITLE_STR)/2, ++startRow, DISPLAY_TITLE_STR );
   
   OSD.printP( startCol, ++startRow, DV_CHANNEL_STR, activeDisplayMenuItem );
-  if(settings.m_DVchannel == 4)
+  if(settings.s.m_DVchannel == 4)
   {
     OSD.print( fixStr("fixed") );
   }
@@ -600,20 +601,20 @@ void* DisplayMenu()
   {
     OSD.print( fixStr("aux") );
     uint8_t tempCol = startCol + strlen_P(DV_CHANNEL_STR) + 4;
-    OSD.printInt16(tempCol, startRow, settings.m_DVchannel+1, 0, 1, " " );
+    OSD.printInt16(tempCol, startRow, settings.s.m_DVchannel+1, 0, 1, " " );
   }
 
   OSD.printP( startCol, ++startRow, RSSI_MENU_STR, activeDisplayMenuItem );
     
   OSD.printP( startCol, ++startRow, TEMP_UNIT_STR, activeDisplayMenuItem);
   static const char tempSymbols[][2] = { {0xB0,0x00} , {0xB1, 0x00}};
-  OSD.print( fixStr(tempSymbols[settings.m_tempUnit]) );
+  OSD.print( fixStr(tempSymbols[settings.s.m_tempUnit]) );
   
   static const char NORMAL_FONT_STR[] PROGMEM = "normal";
   static const char LARGE_FONT_STR[] PROGMEM =  "large ";
   static const char* FONT_SIZES_STR[] = { NORMAL_FONT_STR, LARGE_FONT_STR };
   OSD.printP( startCol, ++startRow, FONT_SIZE_STR, activeDisplayMenuItem );
-  OSD.print( fixPStr(FONT_SIZES_STR[settings.m_fontSize]) );
+  OSD.print( fixPStr(FONT_SIZES_STR[settings.s.m_fontSize]) );
   
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeDisplayMenuItem );
 
@@ -621,19 +622,19 @@ void* DisplayMenu()
   static const char HEADPLAY_STR[] PROGMEM =   "hplay ";
   static const char* GOGGLES_STR[] = { FATSHARK_STR, HEADPLAY_STR };
   OSD.printP( startCol, ++startRow, GOGGLE_STR, activeDisplayMenuItem );
-  OSD.print( fixPStr(GOGGLES_STR[settings.m_goggle]) );
+  OSD.print( fixPStr(GOGGLES_STR[settings.s.m_goggle]) );
 
   OSD.printP( startCol, ++startRow, BEERMUG_STR, activeDisplayMenuItem );
   static const char ON_OFF_BEER_STR[][8] PROGMEM = { "off    ", "on     ", "beermug" };
-  OSD.print( fixPStr(ON_OFF_BEER_STR[settings.m_wattMeter]) );
+  OSD.print( fixPStr(ON_OFF_BEER_STR[settings.s.m_wattMeter]) );
 
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeDisplayMenuItem );
   static const char ON_OFF_STR_CROSS[][4] PROGMEM = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
-  OSD.print( fixPStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
+  OSD.print( fixPStr(ON_OFF_STR_CROSS[settings.s.m_crossHair]) );
 
   OSD.printP( startCol, ++startRow, STATISTICS_STR, activeDisplayMenuItem );
   static const char ON_OFF_STAT_STR[][7] PROGMEM = { "off   ", "on    ", "hidden" };
-  OSD.print( fixPStr(ON_OFF_STAT_STR[settings.m_stats]) );
+  OSD.print( fixPStr(ON_OFF_STAT_STR[settings.s.m_stats]) );
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeDisplayMenuItem );
   
@@ -650,20 +651,20 @@ void* vTxMenu()
     switch(activeVTXMenuItem)
     {
       case 0:
-        vTxSettingChanged |= checkCode(settings.m_vTxPower, 1, 0, 2);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
       break;
       case 1:
-        vTxSettingChanged |= checkCode(settings.m_vTxBand, 1, 0, 4);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
       break;
       case 2:
-        vTxSettingChanged |= checkCode(settings.m_vTxChannel, 1, 0, 7);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
       break;
       case 3:
         if(code &  inputChecker.ROLL_RIGHT)
         {
-          vTxPower = settings.m_vTxPower;
-          vTxBand = settings.m_vTxBand;
-          vTxChannel = settings.m_vTxChannel;
+          vTxPower = settings.s.m_vTxPower;
+          vTxBand = settings.s.m_vTxBand;
+          vTxChannel = settings.s.m_vTxChannel;
           settingChanged |= vTxSettingChanged;
           menuActive = false;
           menuWasActive = true;
@@ -677,13 +678,13 @@ void* vTxMenu()
           activeVTXMenuItem = 0;
           if(!vTxSettingChanged)
           {
-            settings.m_vTxPower = vTxPower;
-            settings.m_vTxBand = vTxBand;
-            settings.m_vTxChannel = vTxChannel;
+            settings.s.m_vTxPower = vTxPower;
+            settings.s.m_vTxBand = vTxBand;
+            settings.s.m_vTxChannel = vTxChannel;
           }
           vTxSettingChanged = false;
           cleanScreen();
-          return (void*)MainMenu;
+          return (void*)MiscMenu;
         }
       break;
     }
@@ -707,13 +708,13 @@ void* vTxMenu()
   static const char _500MW_STR[] PROGMEM =  "500mw";
   static const char* VTX_POWERS_STR[] = { _25MW_STR, _200MW_STR, _500MW_STR };
   OSD.printP( startCol, ++startRow, VTX_POWER_STR, activeVTXMenuItem );
-  OSD.print( fixPStr(VTX_POWERS_STR[settings.m_vTxPower]) );
+  OSD.print( fixPStr(VTX_POWERS_STR[settings.s.m_vTxPower]) );
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
-  OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
+  OSD.print( fixStr(bandSymbols[settings.s.m_vTxBand]) );
   
-  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
-  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, 1, "mhz" );
+  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.s.m_vTxChannel+1, 0, 1, activeVTXMenuItem, "=" );
+  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.s.m_vTxBand][settings.s.m_vTxChannel]), 0, 1, "mhz" );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeVTXMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
@@ -728,14 +729,14 @@ void* vTxMenu()
     switch(activeVTXMenuItem)
     {
       case 0:
-        settingChanged |= checkCode(settings.m_vTxMaxPower, 50);
+        settingChanged |= checkCode(settings.s.m_vTxMaxPower, 50);
       break;
       case 1:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeVTXMenuItem = 0;          
           cleanScreen();
-          return (void*)MainMenu;
+          return (void*)MiscMenu;
         }
       break;
     }
@@ -751,13 +752,58 @@ void* vTxMenu()
   static const char VTX_TITLE_STR[] PROGMEM = "vtx config menu";
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
   
-  OSD.printIntArrow( startCol, ++startRow, VTX_MAX_POWER_STR, settings.m_vTxMaxPower, 0, 0, activeVTXMenuItem, "mw", 1);
+  OSD.printIntArrow( startCol, ++startRow, VTX_MAX_POWER_STR, settings.s.m_vTxMaxPower, 0, 0, activeVTXMenuItem, "mw", 1);
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
   
   return (void*)vTxMenu;
 }
 #endif
+
+void* MiscMenu()
+{
+  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  {
+    switch(activeMiscMenuItem)
+    {
+      case 0:
+        cleanScreen();
+        return (void*)vTxMenu;
+      break;
+      case 1:
+        settingChanged |= checkCode(settings.s.m_RCSplitControl, 1, 0, 1);
+      break;
+      case 2:
+        if(code &  inputChecker.ROLL_RIGHT)
+        {
+          activeMiscMenuItem = 0;          
+          cleanScreen();
+          return (void*)MainMenu;
+        }
+      break;
+    }
+  }
+  static const uint8_t MISC_MENU_ITEMS = 3;
+  activeMiscMenuItem = checkMenuItem(activeMiscMenuItem, MISC_MENU_ITEMS);
+  
+  static const char VTX_MENU_STR[] PROGMEM =      "vtx";
+  static const char RC_SPLIT_STR[] PROGMEM =      "rc split:";
+//static const char BACK_STR[] PROGMEM =          "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(RC_SPLIT_STR)+3)/2;
+  static const char MISC_TITLE_STR[] PROGMEM = "misc menu";
+  OSD.printP( settings.COLS/2 - strlen_P(MISC_TITLE_STR)/2, ++startRow, MISC_TITLE_STR );
+  
+  OSD.printP( startCol, ++startRow, VTX_MENU_STR, activeMiscMenuItem );
+  
+  OSD.printP( startCol, ++startRow, RC_SPLIT_STR, activeMiscMenuItem );
+  OSD.print( fixStr(ON_OFF_STR[settings.s.m_RCSplitControl]) );
+  
+  OSD.printP( startCol, ++startRow, BACK_STR, activeMiscMenuItem );
+  
+  return (void*)MiscMenu;
+}
 
 void* ResetMenu()
 {
@@ -851,7 +897,7 @@ void* MainMenu()
         cleanScreen();
         setupNickname = true;
         charSelected = 0;
-        charIndex = findCharPos(settings.m_nickname[charSelected]);
+        charIndex = findCharPos(settings.s.m_nickname[charSelected]);
         return (void*)MainMenu; 
       break;
       case 3:
@@ -871,7 +917,7 @@ void* MainMenu()
       break;
       case 5:
         cleanScreen();
-        if(settings.m_DVchannel == 4) return (void*)SetOSDItems;
+        if(settings.s.m_DVchannel == 4) return (void*)SetOSDItems;
         else return (void*)ChangeOrder;
       break;      
       case 6:
@@ -880,7 +926,7 @@ void* MainMenu()
       break;
       case 7:
         cleanScreen();
-        return (void*)vTxMenu;
+        return (void*)MiscMenu;
       break;
       case 8:
         cleanScreen();
@@ -903,7 +949,7 @@ void* MainMenu()
   static const char CENTER_OSD_STR[] PROGMEM =      "center osd";
   static const char CHANGE_ORDER_STR[] PROGMEM =    "change order";  static const char SET_OSD_ITEMS_STR[] PROGMEM = "set items";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
-  static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
+  static const char MISC_PAGE_STR[] PROGMEM =       "misc";
   static const char SAVE_STR[] PROGMEM =            "save";
   static const char RESET_STR[] PROGMEM =           "reset";
   
@@ -919,10 +965,10 @@ void* MainMenu()
   OSD.printP( startCol, ++startRow, NICKNAME_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, MOVE_ITEMS_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CENTER_OSD_STR, activeMenuItem );
-  if(settings.m_DVchannel == 4) OSD.printP( startCol, ++startRow, SET_OSD_ITEMS_STR, activeMenuItem );  
+  if(settings.s.m_DVchannel == 4) OSD.printP( startCol, ++startRow, SET_OSD_ITEMS_STR, activeMenuItem );  
   else OSD.printP( startCol, ++startRow, CHANGE_ORDER_STR, activeMenuItem );  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
-  OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
+  OSD.printP( startCol, ++startRow, MISC_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, SAVE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, RESET_STR, activeMenuItem );
   

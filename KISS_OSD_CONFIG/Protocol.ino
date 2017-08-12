@@ -1,9 +1,7 @@
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
-#ifndef KISS_OSD_CONFIG
-static uint8_t serialBuf[256];
-#else
+#ifdef KISS_OSD_CONFIG
 static const uint8_t protoVersion = 108;
 #endif
 #ifdef NEW_FILTER
@@ -64,7 +62,7 @@ boolean ReadTelemetry()
           start_time = millis();
           triggerCleanScreen = true;
           armedOnce = true;
-          last_Aux_Val = AuxChanVals[settings.m_DVchannel];
+          last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
           DV_change_time = 0;
           #ifndef KISS_OSD_CONFIG
           statsActive = false;
@@ -78,7 +76,7 @@ boolean ReadTelemetry()
             if(start_time > 0) total_time = total_time + (millis() - start_time);
             start_time = 0;
             triggerCleanScreen = true;
-            if (settings.m_batWarning > 0)
+            if (settings.s.m_batWarning > 0)
             {
               settings.m_lastMAH = totalMAH;
               settings.WriteLastMAH();
@@ -133,7 +131,7 @@ boolean ReadTelemetry()
           tmp32 = tmp32 / (uint32_t)voltDev;
           LipoVoltage = (int16_t)tmp32;
         }
-        LipoVoltage += settings.m_voltCorrect * 10;
+        LipoVoltage += settings.s.m_voltCorrect * 10;
 
         current = (uint16_t)(motorCurrent[0] + motorCurrent[1] + motorCurrent[2] + motorCurrent[3]);
 
@@ -164,7 +162,7 @@ boolean ReadTelemetry()
         }
 
 
-        if (settings.m_tempUnit == 1)
+        if (settings.s.m_tempUnit == 1)
         {
           for (i = 0; i < 4; i++)
           {
@@ -179,7 +177,7 @@ boolean ReadTelemetry()
             MaxTemp = 9 * MaxTemp / 5 + 32;
           }
         }
-        if (lastTempUnit == 1 && settings.m_tempUnit == 0)
+        if (lastTempUnit == 1 && settings.s.m_tempUnit == 0)
         {
           for (i = 0; i < 4; i++)
           {
@@ -187,7 +185,7 @@ boolean ReadTelemetry()
           }
           MaxTemp = (MaxTemp - 32) * 5 / 9;
         }
-        lastTempUnit = settings.m_tempUnit;
+        lastTempUnit = settings.s.m_tempUnit;
 
         
         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
@@ -212,11 +210,11 @@ boolean ReadTelemetry()
             MinBat = LipoVoltage;
           }
           MaxAmps = findMax(MaxAmps, current);
-          tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
+          tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.s.m_batMAH[settings.s.m_activeBattery];
           MaxC = (int16_t) tmp32;
           tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
           MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
-          if (MaxWatt > settings.m_maxWatts) settings.m_maxWatts = MaxWatt;
+          if (MaxWatt > settings.s.m_maxWatts) settings.s.m_maxWatts = MaxWatt;
           for (i = 0; i < 4; i++)
           {
             maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);

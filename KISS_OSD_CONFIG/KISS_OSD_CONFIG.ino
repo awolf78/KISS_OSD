@@ -77,9 +77,9 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 #include "Config.h"
 
 #ifdef STEELE_PDB
-static const char KISS_OSD_VER[] PROGMEM = "steele osd config v2.4";
+static const char KISS_OSD_VER[] PROGMEM = "steele pdb config v2.4.1";
 #else
-static const char KISS_OSD_VER[] PROGMEM = "kiss osd config v2.4";
+static const char KISS_OSD_VER[] PROGMEM = "kiss osd config v2.4.1";
 #endif
 
 #if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
@@ -92,10 +92,11 @@ const byte masterInSlaveOut          =            MISO;
 const byte slaveClock                =            SCK;
 const byte osdReset                  =            2;
 
+static uint8_t serialBuf[512];
 CMax7456Config OSD( osdChipSelect );
 SerialPort<0, 64, 0> NewSerial;
 CStickInput inputChecker;
-CSettings settings;
+CSettings settings(serialBuf);
 static int16_t DV_PPMs[CSettings::DISPLAY_DV_SIZE];
 static bool OSD_ITEM_BLINK[CSettings::OSD_ITEMS_SIZE];
 static uint8_t itemLengthOK[CSettings::OSD_ITEMS_POS_SIZE];
@@ -118,9 +119,9 @@ const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
 
 void setvTxSettings()
 {
-  oldvTxChannel = vTxChannel = settings.m_vTxChannel;
-  oldvTxBand = vTxBand =  settings.m_vTxBand;
-  vTxPower = settings.m_vTxPower;
+  oldvTxChannel = vTxChannel = settings.s.m_vTxChannel;
+  oldvTxBand = vTxBand =  settings.s.m_vTxBand;
+  vTxPower = settings.s.m_vTxPower;
 }
 #endif
 
@@ -131,6 +132,7 @@ void cleanScreen()
 }
 
 static uint8_t lastTempUnit;
+static boolean triggerCleanScreen = true;
 
 void checkVideoMode()
 {
@@ -141,7 +143,8 @@ void checkVideoMode()
     if(settings.m_videoMode == MAX7456_PAL) settings.ROWS = 15;
     else settings.ROWS = 13;
     OSD.setDefaultSystem(videoSys);
-    OSD.setTextArea(settings.COLS, settings.ROWS);           
+    OSD.setTextArea(settings.COLS, settings.ROWS);
+    triggerCleanScreen = true;           
   }  
 }
 
@@ -167,7 +170,7 @@ void setupMAX7456()
   OSD.setCharEncoding( MAX7456_ASCII );  
   OSD.display();
   delay(100);
-  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+  OSD.setTextOffset(settings.s.m_xOffset, settings.s.m_yOffset);
 }
 
 void resetBlinking()
@@ -187,7 +190,7 @@ void setup()
   setupMAX7456();
   settings.cleanEEPROM();
   settings.ReadSettings();
-  OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+  OSD.setTextOffset(settings.s.m_xOffset, settings.s.m_yOffset);
 
   //clean used area
   while (!OSD.notInVSync());
@@ -202,7 +205,7 @@ void setup()
   vtx_set_frequency(vTxBand, vTxChannel);
   vtx_flash_led(5);
 #endif
-  lastTempUnit = settings.m_tempUnit;
+  lastTempUnit = settings.s.m_tempUnit;
   settings.SetupPPMs(DV_PPMs);
   resetBlinking();
   uint8_t i;
@@ -303,7 +306,6 @@ extern void* MainMenu();
 static void* activePage = (void*)MainMenu;
 static boolean batterySelect = false;
 static boolean shiftOSDactive = false;
-static boolean triggerCleanScreen = true;
 static uint8_t activeMenuItem = 0;
 static uint8_t stopWatch = 0x94;
 static char batterySymbol[] = { 0x83, 0x88, 0x88, 0x89, 0x00 };
@@ -331,7 +333,6 @@ volatile bool timer1sec = false;
 static unsigned long timer1secTime = 0;
 static uint8_t currentDVItem = 0;
 static uint16_t fcNotConnectedCount = 0;
-static uint8_t serialBuf[512];
 static bool activeOSDItems[] = { true, true, true, true, true, true, true, true, true, true, true };
 static uint8_t oldPrintCount = 0;
 static uint8_t printCount = 0;
@@ -458,7 +459,7 @@ void loop() {
       oldPrintCount = printCount;
     }
 
-    if (settings.m_tempUnit == 1)
+    if (settings.s.m_tempUnit == 1)
     {
       tempSymbol[0] = fixChar(0xB1);
     }
@@ -507,14 +508,14 @@ void loop() {
       if (code & inputChecker.ROLL_LEFT && charSelected > 0)
       {
         charSelected--;
-        charIndex = findCharPos(settings.m_nickname[charSelected]);
+        charIndex = findCharPos(settings.s.m_nickname[charSelected]);
       }
       if (code & inputChecker.ROLL_RIGHT && charSelected < CSettings::NICKNAME_STR_SIZE - 2)
       {
         charSelected++;
-        charIndex = findCharPos(settings.m_nickname[charSelected]);
+        charIndex = findCharPos(settings.s.m_nickname[charSelected]);
       }
-      settings.m_nickname[charSelected] = charTable[charIndex];
+      settings.s.m_nickname[charSelected] = charTable[charIndex];
       OSD.setCursor(settings.COLS / 2 - CSettings::NICKNAME_STR_SIZE / 2, settings.ROWS / 2);
       for (i = 0; i < CSettings::NICKNAME_STR_SIZE - 1; i++)
       {
@@ -524,24 +525,24 @@ void loop() {
         }
         else
         {
-          if (settings.m_nickname[i] == 0x00 && i == 0)
+          if (settings.s.m_nickname[i] == 0x00 && i == 0)
           {
             OSD.print(fixChar(charTable[charIndex]));
           }
           else
           {
-            OSD.print(fixChar(settings.m_nickname[i]));
+            OSD.print(fixChar(settings.s.m_nickname[i]));
           }
         }
       }
       if (code & inputChecker.YAW_LEFT)
       {
         uint8_t nickEnd = 7;
-        while ((settings.m_nickname[nickEnd] == 0x00 || settings.m_nickname[nickEnd] == 0x20) && nickEnd > 0) nickEnd--;
-        settings.m_nickname[nickEnd + 1] = 0x00;
+        while ((settings.s.m_nickname[nickEnd] == 0x00 || settings.s.m_nickname[nickEnd] == 0x20) && nickEnd > 0) nickEnd--;
+        settings.s.m_nickname[nickEnd + 1] = 0x00;
         const char mustache[] = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
         const char secret[] = { 0x35, 0x37, 0x33, 0x33, 0x31, 0x33, 0x00 }; //573313
-        if(strcmp(settings.m_nickname, secret) == 0) strcpy(settings.m_nickname, mustache);
+        if(strcmp(settings.s.m_nickname, secret) == 0) strcpy(settings.s.m_nickname, mustache);
         setupNickname = false;
         cleanScreen();
       }
@@ -576,7 +577,7 @@ void loop() {
           moveSelected = 0;
         }       
       }
-       while(settings.m_DVchannel == 4 && !activeOSDItems[moveSelected])
+       while(settings.s.m_DVchannel == 4 && !activeOSDItems[moveSelected])
       {
         moveSelected++;
         if (moveSelected == CSettings::OSD_ITEMS_SIZE) moveSelected = 0;       
@@ -621,7 +622,7 @@ void loop() {
         }
         if (code & inputChecker.ROLL_RIGHT)
         {
-          if (settings.m_OSDItems[moveSelected][0] < settings.COLS - 1 - settings.m_goggle && itemLengthOK[moveSelected] == 0)
+          if (settings.m_OSDItems[moveSelected][0] < settings.COLS - 1 - settings.s.m_goggle && itemLengthOK[moveSelected] == 0)
           {
             settings.m_OSDItems[moveSelected][0]++;
             cleanScreen();
@@ -677,29 +678,29 @@ void loop() {
       boolean changedOffset = false;
       if (code & inputChecker.ROLL_RIGHT)
       {
-        settings.m_xOffset++;
+        settings.s.m_xOffset++;
         changedOffset = true;
       }
       if (code & inputChecker.ROLL_LEFT)
       {
-        settings.m_xOffset--;
+        settings.s.m_xOffset--;
         changedOffset = true;
       }
       if (code & inputChecker.PITCH_UP)
       {
-        settings.m_yOffset--;
+        settings.s.m_yOffset--;
         changedOffset = true;
       }
       if (code & inputChecker.PITCH_DOWN)
       {
-        settings.m_yOffset++;
+        settings.s.m_yOffset++;
         changedOffset = true;
       }
       settingChanged |= changedOffset;
       if (changedOffset)
       {
         cleanScreen();
-        OSD.setTextOffset(settings.m_xOffset, settings.m_yOffset);
+        OSD.setTextOffset(settings.s.m_xOffset, settings.s.m_yOffset);
       }
       if (code & inputChecker.YAW_LEFT)
       {
@@ -716,39 +717,39 @@ void loop() {
         cleanScreen();
         showBat = true;
       }
-      if ((code & inputChecker.ROLL_LEFT) && settings.m_activeBattery > 0)
+      if ((code & inputChecker.ROLL_LEFT) && settings.s.m_activeBattery > 0)
       {
-        settings.m_activeBattery--;
+        settings.s.m_activeBattery--;
         settings.FixBatWarning();
         settingChanged = true;
       }
-      if ((code & inputChecker.ROLL_RIGHT) && settings.m_activeBattery < 3)
+      if ((code & inputChecker.ROLL_RIGHT) && settings.s.m_activeBattery < 3)
       {
-        settings.m_activeBattery++;
+        settings.s.m_activeBattery++;
         settings.FixBatWarning();
         settingChanged = true;
       }
-      if ((code & inputChecker.PITCH_UP) && settings.m_batMAH[settings.m_activeBattery] < 32000)
+      if ((code & inputChecker.PITCH_UP) && settings.s.m_batMAH[settings.s.m_activeBattery] < 32000)
       {
-        settings.m_batMAH[settings.m_activeBattery] += BAT_MAH_INCREMENT;
+        settings.s.m_batMAH[settings.s.m_activeBattery] += BAT_MAH_INCREMENT;
         settings.FixBatWarning();
         settingChanged = true;
       }
-      if ((code & inputChecker.PITCH_DOWN) && settings.m_batMAH[settings.m_activeBattery] > 300)
+      if ((code & inputChecker.PITCH_DOWN) && settings.s.m_batMAH[settings.s.m_activeBattery] > 300)
       {
-        settings.m_batMAH[settings.m_activeBattery] -= BAT_MAH_INCREMENT;
+        settings.s.m_batMAH[settings.s.m_activeBattery] -= BAT_MAH_INCREMENT;
         settings.FixBatWarning();
         settingChanged = true;
       }
       static const char BATTERY_STR[] PROGMEM = "battery ";
       uint8_t batCol = settings.COLS / 2 - (strlen_P(BATTERY_STR) + 1) / 2;
-      OSD.printInt16P(batCol, settings.ROWS / 2 - 1, BATTERY_STR, settings.m_activeBattery + 1, 0, 1);
+      OSD.printInt16P(batCol, settings.ROWS / 2 - 1, BATTERY_STR, settings.s.m_activeBattery + 1, 0, 1);
       batCol = settings.COLS / 2 - 3;
-      OSD.printInt16(batCol, settings.ROWS / 2, settings.m_batMAH[settings.m_activeBattery], 0, 1, "mah", 2);
+      OSD.printInt16(batCol, settings.ROWS / 2, settings.s.m_batMAH[settings.s.m_activeBattery], 0, 1, "mah", 2);
 
       static const char WARN_STR[] PROGMEM = "warn at ";
       batCol = settings.COLS / 2 - (strlen_P(WARN_STR) + 6) / 2;
-      OSD.printInt16P(batCol, settings.ROWS / 2 + 1, WARN_STR, settings.m_batWarningMAH, 0, 1, "mah", 2);
+      OSD.printInt16P(batCol, settings.ROWS / 2 + 1, WARN_STR, settings.s.m_batWarningMAH, 0, 1, "mah", 2);
 
       if (batterySelect)
       {
@@ -803,16 +804,16 @@ void loop() {
       }
     }
 
-    if (armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[settings.m_DVchannel])
+    if (armed == 0 && armedOnce && last_Aux_Val != AuxChanVals[settings.s.m_DVchannel])
     {
       DV_change_time = millis();
-      last_Aux_Val = AuxChanVals[settings.m_DVchannel];
+      last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
     }
 
     printCount = 0;
     uint8_t TMPmargin          = 0;
     uint8_t CurrentMargin      = 0;
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
     {
       printCount++;
       activeOSDItems[THROTTLE] = true;
@@ -822,35 +823,35 @@ void loop() {
     }
     else activeOSDItems[THROTTLE] = false;
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
     {
       printCount++;
       activeOSDItems[NICKNAME] = true;
       uint8_t nickBlanks = 0;
-      itemLengthOK[NICKNAME] = OSD.checkPrintLength(settings.m_OSDItems[NICKNAME][0], settings.m_OSDItems[NICKNAME][1], (uint8_t)strlen(settings.m_nickname), nickBlanks, NICKNAMEp);
+      itemLengthOK[NICKNAME] = OSD.checkPrintLength(settings.m_OSDItems[NICKNAME][0], settings.m_OSDItems[NICKNAME][1], (uint8_t)strlen(settings.s.m_nickname), nickBlanks, NICKNAMEp);
       if (OSD_ITEM_BLINK[NICKNAME] && timer1sec)
       {
-        OSD.printSpaces(strlen(settings.m_nickname));
+        OSD.printSpaces(strlen(settings.s.m_nickname));
       }
       else
       {
-        OSD.print( fixStr(settings.m_nickname) );
+        OSD.print( fixStr(settings.s.m_nickname) );
       }
     }
     else activeOSDItems[NICKNAME] = false;
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_COMB_CURRENT])
     {
       printCount++;
       activeOSDItems[AMPS] = true;
-      if(settings.m_wattMeter == 0)
+      if(settings.s.m_wattMeter == 0)
       {
         if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
         itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], current, 1, 0, "a", 1, AMPSp);
       }
       else
       {
-        if(settings.m_displaySymbols == 0 || settings.m_IconSettings[WATT_ICON] == 0)
+        if(settings.s.m_displaySymbols == 0 || settings.m_IconSettings[WATT_ICON] == 0)
         {
           if (OSD_ITEM_BLINK[AMPS]) OSD.blink1sec();
           itemLengthOK[AMPS] = OSD.printInt16(settings.m_OSDItems[AMPS][0], settings.m_OSDItems[AMPS][1], (int16_t)999, 1, 0, "w", 1, AMPSp);                    
@@ -859,7 +860,7 @@ void loop() {
         {
           char finalMeter1[] = { 0xEB, 0xEC, 0x00 }; 
           char finalMeter2[] = { 0xE1, 0xE2, 0x00 };
-          if(settings.m_wattMeter == 2)
+          if(settings.s.m_wattMeter == 2)
           {
             finalMeter1[0] = 0x01;
             finalMeter1[1] = 0x02;
@@ -887,7 +888,7 @@ void loop() {
     }
     else activeOSDItems[AMPS] = false;
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_LIPO_VOLTAGE])
     {
       printCount++;
       activeOSDItems[VOLTAGE] = true;
@@ -896,11 +897,11 @@ void loop() {
     }
     else activeOSDItems[VOLTAGE] = false;
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_MA_CONSUMPTION])
     {
       printCount++;
       activeOSDItems[MAH] = true;
-      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
+      if (settings.s.m_displaySymbols == 1 && settings.m_IconSettings[MAH_ICON] == 1)
       {
         uint8_t batCount = (LipoMAH + previousMAH) / settings.m_batSlice;
         uint8_t batStatus = 0x88;
@@ -936,7 +937,7 @@ void loop() {
     }
     else activeOSDItems[MAH] = false;
 
-    if (settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
+    if (settings.s.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
     {
       ESCSymbol[0] = fixChar((char)0x7E);
     }
@@ -946,12 +947,12 @@ void loop() {
     }
 
     bool displayAnyESCData = false;
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_ESC_KRPM])
     {
       printCount++;
       displayAnyESCData = true;
       static char KR[4];
-      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
+      if (settings.s.m_displaySymbols == 1 && settings.m_IconSettings[PROPS_ICON] == 1)
       {
         for (i = 0; i < 4; i++)
         {
@@ -1011,7 +1012,7 @@ void loop() {
       CurrentMargin++;
     }
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_ESC_CURRENT])
     {
       printCount++;
       displayAnyESCData = true;
@@ -1028,7 +1029,7 @@ void loop() {
       TMPmargin++;
     }
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_ESC_TEMPERATURE])
     {
       printCount++;
       displayAnyESCData = true;
@@ -1047,12 +1048,12 @@ void loop() {
 
     for(i=ESC1; i<RSSI_; i++) activeOSDItems[i] = displayAnyESCData;
 
-    if (AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_TIMER])
+    if (AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_TIMER])
     {
       printCount++;
       activeOSDItems[STOPW] = true;
       char stopWatchStr[] = { 0x00, 0x00 };
-      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
+      if (settings.s.m_displaySymbols == 1 && settings.m_IconSettings[TIMER_ICON] == 1)
       {
         if (time - old_time > 1000)
         {
@@ -1074,11 +1075,11 @@ void loop() {
     }
     else activeOSDItems[STOPW] = false;
 
-    if((settings.m_RSSIchannel > -1 && AuxChanVals[settings.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || (moveItems && settings.m_DVchannel < 4))
+    if((settings.s.m_RSSIchannel > -1 && AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_RSSI]) || (moveItems && settings.s.m_DVchannel < 4))
     {
       printCount++;
       activeOSDItems[RSSI_] = true;
-      if (settings.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
+      if (settings.s.m_displaySymbols == 1 && settings.m_IconSettings[RSSI_ICON] == 1)
       {
         static char rssiIcon[] = { 0x14, 0x17, 0x00 };
         uint8_t zeroBlanks = 0;
@@ -1094,15 +1095,15 @@ void loop() {
     }
     else activeOSDItems[RSSI_] = false;
 
-    if(settings.m_crossHair && !moveItems && !shiftOSDactive)
+    if(settings.s.m_crossHair && !moveItems && !shiftOSDactive)
     {
       int8_t crossOffset = 0;
-      if(settings.m_crossHair > 1) crossOffset = (int8_t)settings.m_crossHair - (int8_t)5;
+      if(settings.s.m_crossHair > 1) crossOffset = (int8_t)settings.s.m_crossHair - (int8_t)5;
       OSD.setCursor(settings.COLS/2  - 1, (int8_t)(settings.ROWS/2) + crossOffset);
       OSD.print(crossHairSymbol);
     }
 
-    if (DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.m_DVchannel])
+    if (DV_change_time > 0 && (millis() - DV_change_time) > 3000 && last_Aux_Val == AuxChanVals[settings.s.m_DVchannel])
     {
       DV_change_time = 0;
       cleanScreen();

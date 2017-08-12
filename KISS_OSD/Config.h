@@ -12,7 +12,7 @@
 #define BEERMUG
 #define CUSTOM_TPA
 #define CROSSHAIR
-#define PROP_ICON
+//#define PROP_ICON
 #define _MAH_ICON
 #define WATTMETER
 #define SHOW_KISS_LOGO
@@ -25,6 +25,8 @@
 //#define ADVANCED_STATS
 #define ADVANCED_ESC_STATS
 #define MAH_CORRECTION
+//#define CROSSHAIR_ANGLE
+#define RC_SPLIT_CONTROL
 
 
 

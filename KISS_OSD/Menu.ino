@@ -627,7 +627,7 @@ void* MAHCorrectionMenu()
     case 1:
     case 2:
     case 3:
-      settingChanged |= checkCode(settings.m_ESCCorrection[activeMAHCorrectionMenuItem], 10, 50, 200);
+      settingChanged |= checkCode(settings.s.m_ESCCorrection[activeMAHCorrectionMenuItem], 10, 50, 200);
     break;
     case 4:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -652,7 +652,7 @@ void* MAHCorrectionMenu()
   activeMAHCorrectionMenuItem = checkMenuItem(activeMAHCorrectionMenuItem, MAH_MENU_ITEMS);
 
   char* ESC_STR2 = ESC_STAT_STR1;
-  if(settings.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
+  if(settings.s.m_displaySymbols == 1 && settings.m_IconSettings[ESC_ICON] == 1)
   {
     ESC_STR2 = ESCSymbol;
   } 
@@ -671,7 +671,7 @@ void* MAHCorrectionMenu()
     OSD.setCursor(startCol+1, startRow);
     OSD.print(fixStr(ESC_STR2));
     OSD.printInt16( startCol + strlen(ESC_STR2) + 1, startRow, (int16_t)(i+1), 0);
-    OSD.printInt16P( startCol + strlen(ESC_STR2) + 2, startRow, ESC_MAH_STR, settings.m_ESCCorrection[i], 0, "%", 1);
+    OSD.printInt16P( startCol + strlen(ESC_STR2) + 2, startRow, ESC_MAH_STR, settings.s.m_ESCCorrection[i], 0, "%", 1);
   }
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMAHCorrectionMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeMAHCorrectionMenuItem );
@@ -685,6 +685,7 @@ void* MAHCorrectionMenu()
 void* BatteryMenu()
 {
   boolean changed = false;
+  int16_t temp;
   switch(activeBatteryMenuItem)
   {
     case 0:
@@ -694,10 +695,10 @@ void* BatteryMenu()
       }
     break;
     case 1:
-      settingChanged |= checkCode(settings.m_batWarning, 1, 0, 1);
+      settingChanged |= checkCode(settings.s.m_batWarning, 1, 0, 1);
     break;
     case 2:
-      changed = checkCode(settings.m_batWarningPercent, 1, 0, 100);
+      changed = checkCode(settings.s.m_batWarningPercent, 1, 0, 100);
       settingChanged |= changed;
       if(changed)
       {
@@ -705,13 +706,15 @@ void* BatteryMenu()
       }
     break;
     case 3:
-      settingChanged |= checkCode(settings.m_voltWarning, 1, 0, 1);
+      settingChanged |= checkCode(settings.s.m_voltWarning, 1, 0, 1);
     break;
     case 4:
-      settingChanged |= checkCode(settings.m_minVolts, 1, 90, 250);
+      settingChanged |= checkCode(settings.s.m_minVolts, 1, 90, 250);
     break;
     case 5:
-      settingChanged |= checkCode(settings.m_voltCorrect, 1, -10, 10);
+      temp = settings.s.m_voltCorrect;
+      settingChanged |= checkCode(temp, 1, -10, 10);
+      settings.s.m_voltCorrect = temp;
     break;
     #ifdef MAH_CORRECTION
     case 6:
@@ -725,7 +728,7 @@ void* BatteryMenu()
     #else
     case 6:
     #endif
-      checkCode(settings.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+      checkCode(settings.s.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
     break;
     #ifdef MAH_CORRECTION
     case 8:
@@ -737,7 +740,7 @@ void* BatteryMenu()
         menuActive = false;
         menuWasActive = true;
         activeBatteryMenuItem = 0;
-        settings.UpdateMaxWatt(settings.m_maxWatts);
+        settings.UpdateMaxWatt(settings.s.m_maxWatts);
       }
     break;
     #ifdef MAH_CORRECTION
@@ -749,7 +752,7 @@ void* BatteryMenu()
       {
         cleanScreen();
         activeBatteryMenuItem = 0;
-        settings.UpdateMaxWatt(settings.m_maxWatts);
+        settings.UpdateMaxWatt(settings.s.m_maxWatts);
         return (void*)MainMenu;
       }
     break;
@@ -782,22 +785,22 @@ void* BatteryMenu()
   OSD.printP( startCol, ++startRow, SELECT_BATTERY_STR, activeBatteryMenuItem );
   
   OSD.printP( startCol, ++startRow, BATTERY_WARNING_STR, activeBatteryMenuItem );
-  OSD.print( fixPStr(ON_OFF_STR[settings.m_batWarning]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.s.m_batWarning]) );
   
-  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.m_batWarningPercent, 0, activeBatteryMenuItem, "%", true );
+  OSD.printIntArrow( startCol, ++startRow, BATTERY_PERCENT_STR, settings.s.m_batWarningPercent, 0, activeBatteryMenuItem, "%", true );
 
   OSD.printP( startCol, ++startRow, VOLTAGE_WARN_STR, activeBatteryMenuItem );
-  OSD.print( fixPStr(ON_OFF_STR[settings.m_voltWarning]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.s.m_voltWarning]) );
   
-  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.m_minVolts, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MIN_VOLT_STR, settings.s.m_minVolts, 1, activeBatteryMenuItem, "v", 1 );
 
-  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.m_voltCorrect, 1, activeBatteryMenuItem, "v", 1 );
+  OSD.printIntArrow( startCol, ++startRow, VOLT_CORRECT_STR, settings.s.m_voltCorrect, 1, activeBatteryMenuItem, "v", 1 );
 
   #ifdef MAH_CORRECTION
   OSD.printP( startCol, ++startRow, MAH_CORRECT_STR, activeBatteryMenuItem );
   #endif
 
-  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.m_maxWatts/10, 0, activeBatteryMenuItem, "w", 1 );
+  OSD.printIntArrow( startCol, ++startRow, MAX_BEER_WATT_STR, settings.s.m_maxWatts/10, 0, activeBatteryMenuItem, "w", 1 );
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeBatteryMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeBatteryMenuItem );
@@ -815,20 +818,20 @@ void* vTxMenu()
     switch(activeVTXMenuItem)
     {
       case 0:
-        vTxSettingChanged |= checkCode(settings.m_vTxPower, 1, 0, 2);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
       break;
       case 1:
-        vTxSettingChanged |= checkCode(settings.m_vTxBand, 1, 0, 4);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
       break;
       case 2:
-        vTxSettingChanged |= checkCode(settings.m_vTxChannel, 1, 0, 7);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
       break;
       case 3:
         if(code &  inputChecker.ROLL_RIGHT)
         {
-          vTxPower = settings.m_vTxPower;
-          vTxBand = settings.m_vTxBand;
-          vTxChannel = settings.m_vTxChannel;
+          vTxPower = settings.s.m_vTxPower;
+          vTxBand = settings.s.m_vTxBand;
+          vTxChannel = settings.s.m_vTxChannel;
           settingChanged |= vTxSettingChanged;
           menuActive = false;
           menuWasActive = true;
@@ -842,9 +845,9 @@ void* vTxMenu()
           activeVTXMenuItem = 0;
           if(!vTxSettingChanged)
           {
-            settings.m_vTxPower = vTxPower;
-            settings.m_vTxBand = vTxBand;
-            settings.m_vTxChannel = vTxChannel;
+            settings.s.m_vTxPower = vTxPower;
+            settings.s.m_vTxBand = vTxBand;
+            settings.s.m_vTxChannel = vTxChannel;
           }
           vTxSettingChanged = false;
           cleanScreen();
@@ -869,13 +872,13 @@ void* vTxMenu()
 
   static const char VTX_POWERS_STR[][6] PROGMEM = { {"25mw "}, {"200mw"}, {"500mw"} };
   OSD.printP( startCol, ++startRow, VTX_POWER_STR, activeVTXMenuItem );
-  OSD.print( fixPStr(VTX_POWERS_STR[settings.m_vTxPower]) );
+  OSD.print( fixPStr(VTX_POWERS_STR[settings.s.m_vTxPower]) );
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
-  OSD.print( fixStr(bandSymbols[settings.m_vTxBand]) );
+  OSD.print( fixStr(bandSymbols[settings.s.m_vTxBand]) );
   
-  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.m_vTxChannel+1, 0, activeVTXMenuItem, "=" );
-  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.m_vTxBand][settings.m_vTxChannel]), 0, "mhz" );
+  OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.s.m_vTxChannel+1, 0, activeVTXMenuItem, "=" );
+  OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.s.m_vTxBand][settings.s.m_vTxChannel]), 0, "mhz" );
   
   OSD.printP( startCol, ++startRow, SET_EXIT_STR, activeVTXMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeVTXMenuItem );
@@ -886,7 +889,7 @@ void* vTxMenu()
 void* vTxMenu()
 {
   int16_t maxWatt = 600;
-  if(settings.m_vTxMaxPower > 0) maxWatt = settings.m_vTxMaxPower;
+  if(settings.s.m_vTxMaxPower > 0) maxWatt = settings.s.m_vTxMaxPower;
   else if(vTxType == 3) maxWatt = 800;
   switch(activeVTXMenuItem)
   {
@@ -971,6 +974,7 @@ void* MainMenu()
 {
   uint8_t i;
   bool crossHairChanged = false;
+  int16_t temp;
   if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
   {
     switch(activeMenuItem)
@@ -1019,15 +1023,21 @@ void* MainMenu()
 #endif
       break;
       case 5:
-        symbolOnOffChanged = checkCode(settings.m_displaySymbols, 1, 0, 1);
+        #ifdef CROSSHAIR_ANGLE
+        temp = settings.s.m_angleOffset;
+        settingChanged |= checkCode(temp, 1, -70, 0);
+        settings.s.m_angleOffset = temp;
+        #else
+        symbolOnOffChanged = checkCode(settings.s.m_displaySymbols, 1, 0, 1);
         settingChanged |= symbolOnOffChanged;
+        #endif
       break;
       case 6:
-        settingChanged |= checkCode(settings.m_timerMode, 1, 0, 2);        
+        settingChanged |= checkCode(settings.s.m_timerMode, 1, 0, 2);        
       break;
       #ifdef CROSSHAIR
       case 7:
-        crossHairChanged |= checkCode(settings.m_crossHair, 1, 0, 8);
+        crossHairChanged |= checkCode(settings.s.m_crossHair, 1, 0, 8);
         if(crossHairChanged) logoDone = true;
         settingChanged |= crossHairChanged;
       break;
@@ -1089,16 +1099,20 @@ void* MainMenu()
   static const char FILTER_STR[] PROGMEM =          "filters";
   static const char BATTERY_PAGE_STR[] PROGMEM =    "battery";
   static const char VTX_PAGE_STR[] PROGMEM =        "vtx";
-  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons     : ";
-  static const char AIR_TIMER_STR[] PROGMEM =       "timer mode: ";
+  #ifdef CROSSHAIR_ANGLE
+  static const char CROSS_ANGLE_STR[] PROGMEM =     "angle corr:";
+  #else
+  static const char SYMBOLS_SIZE_STR[] PROGMEM =    "icons     :";
+  #endif
+  static const char AIR_TIMER_STR[] PROGMEM =       "timer mode:";
   #ifdef CROSSHAIR
-  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair : ";
+  static const char CROSSHAIR_STR[] PROGMEM =       "crosshair :";
   #endif
 //static const char SAVE_EXIT_STR[] PROGMEM =       "save+exit";
   static const char CANCEL_STR[] PROGMEM =          "cancel";
   
   uint8_t startRow = 0;
-  uint8_t startCol = settings.COLS/2 - (strlen_P(SYMBOLS_SIZE_STR)+5)/2;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(AIR_TIMER_STR)+5)/2;
   OSD.setCursor( settings.COLS/2 - strlen_P(KISS_OSD_VER)/2, ++startRow );
   OSD.print( fixPStr(KISS_OSD_VER) );
   static const char MAIN_TITLE_STR[] PROGMEM = "main menu";
@@ -1109,15 +1123,19 @@ void* MainMenu()
   OSD.printP( startCol, ++startRow, FILTER_STR, activeMenuItem);  
   OSD.printP( startCol, ++startRow, BATTERY_PAGE_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, VTX_PAGE_STR, activeMenuItem );
+  #ifdef CROSSHAIR_ANGLE
+  OSD.printIntArrow( startCol, ++startRow, CROSS_ANGLE_STR, settings.s.m_angleOffset, 0, activeMenuItem, "", 1 );
+  #else
   OSD.printP( startCol, ++startRow, SYMBOLS_SIZE_STR, activeMenuItem );
-  OSD.print( fixPStr(ON_OFF_STR[settings.m_displaySymbols]) );
+  OSD.print( fixPStr(ON_OFF_STR[settings.s.m_displaySymbols]) );
+  #endif
   OSD.printP( startCol, ++startRow, AIR_TIMER_STR, activeMenuItem );
   static const char TIMER_TYPES_STR[][6] PROGMEM = { "reset", "auto ", "race " };
-  OSD.print( fixPStr(TIMER_TYPES_STR[settings.m_timerMode]) );
+  OSD.print( fixPStr(TIMER_TYPES_STR[settings.s.m_timerMode]) );
   #ifdef CROSSHAIR
   OSD.printP( startCol, ++startRow, CROSSHAIR_STR, activeMenuItem );
   static const char ON_OFF_STR_CROSS[][4] PROGMEM = { "off", "on ", "-3 ", "-2 ", "-1 ", "0  ", "+1 ", "+2 ", "+3 " };
-  OSD.print( fixPStr(ON_OFF_STR_CROSS[settings.m_crossHair]) );
+  OSD.print( fixPStr(ON_OFF_STR_CROSS[settings.s.m_crossHair]) );
   #endif
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeMenuItem );
   OSD.printP( startCol, ++startRow, CANCEL_STR, activeMenuItem );

@@ -33,7 +33,7 @@ char fixChar(char str)
   str = 0x32;
   #endif
   #ifdef NICE_FONT
-  if(settings.m_fontSize > 0)
+  if(settings.s.m_fontSize > 0)
   {
     uint8_t str2 = (uint8_t) str;
     if(str2 > 0x60 && str2 < 0x7B)
@@ -90,7 +90,7 @@ char fixNo(char no)
   return no - 0x2A;
   #endif
   #ifdef NICE_FONT
-  if(settings.m_fontSize > 0)
+  if(settings.s.m_fontSize > 0)
   {
     uint8_t no2 = (uint8_t) no;
     if(no2 > 0x2F && no2 < 0x3A)

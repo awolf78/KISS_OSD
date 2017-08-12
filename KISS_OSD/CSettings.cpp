@@ -3,7 +3,7 @@
 #include "Config.h"
 #include "fixFont.h"
 
-CSettings::CSettings()
+CSettings::CSettings(uint8_t *byteBuf)
 {
   #ifdef FORCE_PAL
   m_videoMode = 1;
@@ -13,8 +13,9 @@ CSettings::CSettings()
   ROWS = 13;
   #endif
   COLS = 28;
-  m_maxWatts = 2500;
+  s.m_maxWatts = 2500;
   LoadDefaults();
+  m_byteBuf = byteBuf;
 }
 
 bool CSettings::cleanEEPROM()
@@ -44,25 +45,25 @@ bool CSettings::cleanEEPROM()
 void CSettings::LoadDefaults()
 {
   #ifdef STEELE_PDB
-  m_batWarning = 0;
-  m_batMAH[0] = 1300; //1300 mAh by default
-  m_batMAH[1] = 1500; //1500 mAh by default
-  m_batMAH[2] = 1800; //1800 mAh by default
-  m_batMAH[3] = 2250; //2250 mAh by default
-  m_activeBattery = 0;
-  m_batWarningPercent = 25; //25% by default
+  s.m_batWarning = 0;
+  s.m_batMAH[0] = 1300; //1300 mAh by default
+  s.m_batMAH[1] = 1500; //1500 mAh by default
+  s.m_batMAH[2] = 1800; //1800 mAh by default
+  s.m_batMAH[3] = 2250; //2250 mAh by default
+  s.m_activeBattery = 0;
+  s.m_batWarningPercent = 25; //25% by default
   FixBatWarning();
-  m_DVchannel = 4; //fixed positions
-  m_tempUnit = 1; //°F default
+  s.m_DVchannel = 4; //fixed positions
+  s.m_tempUnit = 1; //°F default
   m_lastMAH = 0;
-  m_fontSize = 1;
-  m_displaySymbols = 1;
-  m_vTxChannel = 4; // Raceband 5 @ 25mW default
-  m_vTxBand = 4;
-  m_vTxPower = 0;
-  m_xOffset = 0; // Center OSD offsets
-  m_yOffset = 3;
-  m_stats = 2;
+  s.m_fontSize = 1;
+  s.m_displaySymbols = 1;
+  s.m_vTxChannel = 4; // Raceband 5 @ 25mW default
+  s.m_vTxBand = 4;
+  s.m_vTxPower = 0;
+  s.m_xOffset = 0; // Center OSD offsets
+  s.m_yOffset = 3;
+  s.m_stats = 2;
   m_DISPLAY_DV[DISPLAY_NICKNAME] = 0;
   m_DISPLAY_DV[DISPLAY_TIMER] = 0;
   m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 0;
@@ -76,7 +77,7 @@ void CSettings::LoadDefaults()
   uint8_t i;
   for(i=0; i < NICKNAME_STR_SIZE; i++)
   {
-    m_nickname[i] = 0x00;
+    s.m_nickname[i] = 0x00;
   }
   m_OSDItems[ESC1kr][0] = 0;
   m_OSDItems[ESC1kr][1] = 2;
@@ -116,51 +117,51 @@ void CSettings::LoadDefaults()
   m_OSDItems[MAH][1] = 0;
   m_OSDItems[RSSIp][0] = COLS/4;
   m_OSDItems[RSSIp][1] = ROWS - 1;
-  m_goggle = 0; //0 = fatshark, 1 = headplay
-  m_wattMeter = 0;
-  m_Moustache = 1;
-  m_voltWarning = 0;
-  m_minVolts = 148;
-  m_timerMode = 1;
-  m_voltCorrect = 0;
-  m_crossHair = 0;
-  m_RSSIchannel = -1;
+  s.m_goggle = 0; //0 = fatshark, 1 = headplay
+  s.m_wattMeter = 0;
+  s.m_Moustache = 1;
+  s.m_voltWarning = 0;
+  s.m_minVolts = 148;
+  s.m_timerMode = 1;
+  s.m_voltCorrect = 0;
+  s.m_crossHair = 0;
+  s.m_RSSIchannel = -1;
   for(i=0; i<ICON_SETTINGS_SIZE; i++)
   {
     m_IconSettings[i] = 1;  
   }
   m_IconSettings[MAH_ICON] = 0;
-  m_vTxMaxPower = 0;
-  m_RSSImax = -1001;
-  m_RSSImin = -1001;
-  #ifdef MAH_CORRECTION
+  s.m_vTxMaxPower = 0;
+  s.m_RSSImax = -1001;
+  s.m_RSSImin = -1001;
   for(i=0; i<4; i++)
   {
-    m_ESCCorrection[i] = 100;
+    s.m_ESCCorrection[i] = 100;
   }
-  #endif
+  s.m_angleOffset = -20;
+  s.m_RCSplitControl = 0;
 
   #else
   
-  m_batWarning = 1; //on by default
-  m_batMAH[0] = 1300; //1300 mAh by default
-  m_batMAH[1] = 1500; //1500 mAh by default
-  m_batMAH[2] = 1800; //1800 mAh by default
-  m_batMAH[3] = 2250; //2250 mAh by default
-  m_activeBattery = 0;
-  m_batWarningPercent = 25; //25% by default
+  s.m_batWarning = 1; //on by default
+  s.m_batMAH[0] = 1300; //1300 mAh by default
+  s.m_batMAH[1] = 1500; //1500 mAh by default
+  s.m_batMAH[2] = 1800; //1800 mAh by default
+  s.m_batMAH[3] = 2250; //2250 mAh by default
+  s.m_activeBattery = 0;
+  s.m_batWarningPercent = 25; //25% by default
   FixBatWarning();
-  m_DVchannel = 0; //AUX1 default
-  m_tempUnit = 0; //°C default
+  s.m_DVchannel = 0; //AUX1 default
+  s.m_tempUnit = 0; //°C default
   m_lastMAH = 0;
-  m_fontSize = 1;
-  m_displaySymbols = 1;
-  m_vTxChannel = 4; // Raceband 5 @ 25mW default
-  m_vTxBand = 4;
-  m_vTxPower = 0;
-  m_xOffset = 0; // Center OSD offsets
-  m_yOffset = 0;
-  m_stats = 1;
+  s.m_fontSize = 1;
+  s.m_displaySymbols = 1;
+  s.m_vTxChannel = 4; // Raceband 5 @ 25mW default
+  s.m_vTxBand = 4;
+  s.m_vTxPower = 0;
+  s.m_xOffset = 0; // Center OSD offsets
+  s.m_yOffset = 0;
+  s.m_stats = 1;
   m_DISPLAY_DV[DISPLAY_NICKNAME] = 9;
   m_DISPLAY_DV[DISPLAY_TIMER] = 2;
   m_DISPLAY_DV[DISPLAY_RC_THROTTLE] = 8;
@@ -174,7 +175,7 @@ void CSettings::LoadDefaults()
   uint8_t i;
   for(i=0; i < NICKNAME_STR_SIZE; i++)
   {
-    m_nickname[i] = 0x00;
+    s.m_nickname[i] = 0x00;
   }
   m_OSDItems[ESC1kr][0] = 0;
   m_OSDItems[ESC1kr][1] = 1;
@@ -214,39 +215,39 @@ void CSettings::LoadDefaults()
   m_OSDItems[MAH][1] = ROWS - 1;
   m_OSDItems[RSSIp][0] = COLS/4;
   m_OSDItems[RSSIp][1] = ROWS - 1;
-  m_goggle = 0; //0 = fatshark, 1 = headplay
-  m_wattMeter = 1;
-  m_Moustache = 1;
-  m_voltWarning = 0;
-  m_minVolts = 148;
-  m_timerMode = 1;
-  m_voltCorrect = 0;
-  m_crossHair = 0;
-  m_RSSIchannel = 3; //AUX4
+  s.m_goggle = 0; //0 = fatshark, 1 = headplay
+  s.m_wattMeter = 1;
+  s.m_Moustache = 1;
+  s.m_voltWarning = 0;
+  s.m_minVolts = 148;
+  s.m_timerMode = 1;
+  s.m_voltCorrect = 0;
+  s.m_crossHair = 0;
+  s.m_RSSIchannel = 3; //AUX4
   for(i=0; i<ICON_SETTINGS_SIZE; i++)
   {
     m_IconSettings[i] = 1;  
   }
-  m_vTxMaxPower = 0;
-  m_RSSImax = -1001;
-  m_RSSImin = -1001;
-  #ifdef MAH_CORRECTION
+  s.m_vTxMaxPower = 0;
+  s.m_RSSImax = -1001;
+  s.m_RSSImin = -1001;
   for(i=0; i<4; i++)
   {
-    m_ESCCorrection[i] = 100;
+    s.m_ESCCorrection[i] = 100;
   }
-  #endif
+  s.m_angleOffset = -20;
+  s.m_RCSplitControl = 0;
   
   #endif
 }
 
 void CSettings::fixColBorders()
 {
-  if(m_oldDisplaySymbols != m_displaySymbols)
+  if(m_oldDisplaySymbols != s.m_displaySymbols)
   {
-    m_oldDisplaySymbols = m_displaySymbols;
+    m_oldDisplaySymbols = s.m_displaySymbols;
     int8_t moveDir = 1;
-    if(m_displaySymbols == 1) moveDir = -1;
+    if(s.m_displaySymbols == 1) moveDir = -1;
     uint8_t i;
     for(i=0; i < OSD_ITEMS_POS_SIZE; i++)
     {
@@ -283,108 +284,18 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
 
 void CSettings::ReadSettingsInternal()
 {
-  m_batWarningMAH = ReadInt16_t(0x03,0x04);
-  m_batWarning = EEPROM.read(0x05);
-  m_activeBattery = EEPROM.read(0x06);
-  m_DVchannel = EEPROM.read(0x07);
-  uint8_t i;
-  byte pos = 0x08;
-  for(i=0; i < 4; i++)
-  {
-    m_batMAH[i] = ReadInt16_t(pos, pos+1);
-    pos += 2;
-  }
-  m_batWarningPercent = EEPROM.read(pos);
-  pos++;
-  m_tempUnit = EEPROM.read(pos);
-  pos++;
-  m_fontSize = EEPROM.read(pos);
-  pos++;
-  m_displaySymbols = EEPROM.read(pos);
-  pos++;
-  m_vTxChannel = EEPROM.read(pos);
-  pos++;
-  m_vTxBand = EEPROM.read(pos);
-  pos++;
-  m_vTxPower = EEPROM.read(pos);
-  pos++;
-  m_xOffset = EEPROM.read(pos);
-  pos++;
-  m_yOffset = EEPROM.read(pos);
-  pos++;
-  for(i=0; i<DISPLAY_DV_SIZE-1; i++)
-  {
-    m_DISPLAY_DV[i] = EEPROM.read(pos);
-    pos++;
-  }
-  for(i=0; i<NICKNAME_STR_SIZE; i++)
-  {
-    m_nickname[i] = EEPROM.read(pos);
-    pos++;
-  }
-  uint8_t j;
-  for(i=0; i < OSD_ITEMS_POS_SIZE-1; i++)
-  {
-    for(j=0; j<2; j++)
-    {
-      m_OSDItems[i][j] = EEPROM.read(pos);
-      pos++;
-    }
-  }
-  m_goggle = EEPROM.read(pos);
-  pos++;
-  m_wattMeter =  EEPROM.read(pos);
-  pos++;
-  m_Moustache = EEPROM.read(pos);
-  pos++;
-  m_maxWatts = ReadInt16_t(pos, pos+1);
-  pos += 2;
-  m_voltWarning = EEPROM.read(pos);
-  pos++;
-  m_minVolts = EEPROM.read(pos);
-  pos++;
-  m_IconSettings[PROPS_ICON] = EEPROM.read(pos);
-  pos++;
-  m_timerMode = EEPROM.read(pos);
-  pos++;
-  m_voltCorrect = EEPROM.read(pos);
-  pos++;
-  m_crossHair = EEPROM.read(pos);
-  pos++;
-  m_RSSIchannel = EEPROM.read(pos);
-  pos++;
-  for(j=0; j<2; j++)
-  {
-    m_OSDItems[RSSIp][j] = EEPROM.read(pos);
-    pos++;
-  }
-  m_DISPLAY_DV[DISPLAY_RSSI] = EEPROM.read(pos);
-  pos++;
-  for(i=1; i<ICON_SETTINGS_SIZE; i++)
-  {
-    m_IconSettings[i] = EEPROM.read(pos);
-    pos++;
-  }
-  m_vTxMaxPower = ReadInt16_t(pos, pos+1);
-  pos += 2;
-  m_stats = EEPROM.read(pos);
-  pos++;
-  m_RSSImax = ReadInt16_t(pos, pos+1);
-  pos += 2;
-  m_RSSImin = ReadInt16_t(pos, pos+1);
-  pos += 2;
-  #ifdef MAH_CORRECTION
-  for(i=0; i<4; i++)
-  {
-    m_ESCCorrection[i] = EEPROM.read(pos);
-    pos++;
-  }
-  #else
-  pos +=4;
-  #endif
+  uint16_t i;
+  for(i=0; i<sizeof(s); i++) m_byteBuf[i] = EEPROM.read(i+3);
+  memcpy(&s, &m_byteBuf[0], sizeof(s));
+  m_DISPLAY_DV[DISPLAY_RSSI] = s.m_DISPLAY_DV_RSSI;
+  memcpy(m_DISPLAY_DV, &s.m_DISPLAY_DV_[0], sizeof(s.m_DISPLAY_DV_));
+  memcpy(m_OSDItems, &s.m_OSDItems_[0], sizeof(s.m_OSDItems_));
+  memcpy(&m_OSDItems[18], s.m_OSDItemsRSSIp, sizeof(s.m_OSDItemsRSSIp));
+  m_IconSettings[0] = s.m_IconSettingsPROPS_ICON;
+  memcpy(&m_IconSettings[1], s.m_IconSettings_, sizeof(s.m_IconSettings_));
   
   m_lastMAH = ReadInt16_t(251, 252);
-  m_maxWatts = ReadInt16_t(253, 254);
+  s.m_maxWatts = ReadInt16_t(253, 254);
 }
 
 void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
@@ -394,22 +305,22 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     ReadSettingsInternal();
     if(ver < 0x0D)
     {
-      m_wattMeter = 1;
-      m_Moustache = 1;
-      m_maxWatts = 2500;    
-      m_voltWarning = 0;
-      m_minVolts = 148;
+      s.m_wattMeter = 1;
+      s.m_Moustache = 1;
+      s.m_maxWatts = 2500;    
+      s.m_voltWarning = 0;
+      s.m_minVolts = 148;
       m_IconSettings[PROPS_ICON] = 1;
-      m_timerMode = 1;
-      m_voltCorrect = 0;
+      s.m_timerMode = 1;
+      s.m_voltCorrect = 0;
     }
     if(ver < 0x0E)
     {
-      m_crossHair = 0;
+      s.m_crossHair = 0;
     }
     if(ver < 0x0F)
     {
-      m_RSSIchannel = 3;
+      s.m_RSSIchannel = 3;
       m_DISPLAY_DV[DISPLAY_RSSI] = 9;
       m_OSDItems[RSSIp][0] = COLS/4;
       m_OSDItems[RSSIp][1] = ROWS - 1;
@@ -426,38 +337,44 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     }
     if(ver < 0x13)
     {
-      m_vTxMaxPower = 0;
+      s.m_vTxMaxPower = 0;
       #ifdef STEELE_PDB
-      m_stats = 2;
+      s.m_stats = 2;
       #else
-      m_stats = 1;
+      s.m_stats = 1;
       #endif
     }
     if(ver < 0x14)
     {
-      m_RSSImax = -1001;
-      m_RSSImin = -1001;
+      s.m_RSSImax = -1001;
+      s.m_RSSImin = -1001;
     }
-    #ifdef MAH_CORRECTION
     if(ver < 0x15)
     {
       for(uint8_t i=0; i<4; i++)
       {
-        m_ESCCorrection[i] = 100;
+        s.m_ESCCorrection[i] = 100;
       }      
     }
-    #endif
+    if(ver < 0x16)
+    {
+      s.m_angleOffset = -20;
+    }
+    if(ver < 0x17)
+    {
+      s.m_RCSplitControl = 0;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x15) //first start of OSD - or older version
+  if(settingsVer < 0x17) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x15);
+    EEPROM.update(0x01,0x17);
   }
   else
   {
@@ -478,114 +395,24 @@ void CSettings::WriteInt16_t(byte lsbPos, byte msbPos, int16_t value)
 
 void CSettings::WriteSettings()
 {
-  WriteInt16_t(0x03,0x04,m_batWarningMAH);
-  EEPROM.update(0x05,(byte)m_batWarning);
-  EEPROM.update(0x06,(byte)m_activeBattery);
-  EEPROM.update(0x07,(byte)m_DVchannel);
-  uint8_t i;
-  byte pos = 0x08;
-  for(i=0; i < 4; i++)
-  {
-    WriteInt16_t(pos, pos+1, m_batMAH[i]);
-    pos += 2;
-  }
-  EEPROM.update(pos, (byte)m_batWarningPercent); 
-  pos++;
-  EEPROM.update(pos, (byte)m_tempUnit);
-  pos++;
-  EEPROM.update(pos, (byte)m_fontSize);
-  pos++;
-  EEPROM.update(pos, (byte)m_displaySymbols);
-  pos++;
-  EEPROM.update(pos, (byte)m_vTxChannel);
-  pos++;
-  EEPROM.update(pos, (byte)m_vTxBand);
-  pos++;
-  EEPROM.update(pos, (byte)m_vTxPower);
-  pos++;
-  EEPROM.update(pos, (byte)m_xOffset);
-  pos++;
-  EEPROM.update(pos, (byte)m_yOffset);
-  pos++;
-  for(i=0; i<DISPLAY_DV_SIZE-1; i++)
-  {
-    EEPROM.update(pos, (byte)m_DISPLAY_DV[i]);
-    pos++;
-  }
-  for(i=0; i<NICKNAME_STR_SIZE; i++)
-  {
-    EEPROM.update(pos, (byte)m_nickname[i]);
-    pos++;
-  }
-  uint8_t j;
-  for(i=0; i < OSD_ITEMS_POS_SIZE-1; i++)
-  {
-    for(j=0; j<2; j++)
-    {
-      EEPROM.update(pos, (byte)m_OSDItems[i][j]);
-      pos++;
-    }
-  }
-  EEPROM.update(pos, (byte)m_goggle);
-  pos++;
-  EEPROM.update(pos, (byte)m_wattMeter);
-  pos++;
-  EEPROM.update(pos, (byte)m_Moustache);
-  pos++;
-  WriteInt16_t(pos, pos+1, m_maxWatts);
-  pos += 2;
-  EEPROM.update(pos, (byte)m_voltWarning);
-  pos++;
-  EEPROM.update(pos, (byte)m_minVolts);
-  pos++;
-  EEPROM.update(pos, (byte)m_IconSettings[PROPS_ICON]);
-  pos++;
-  EEPROM.update(pos, (byte)m_timerMode);
-  pos++;
-  EEPROM.update(pos, (byte)m_voltCorrect);
-  pos++;
-  EEPROM.update(pos, (byte)m_crossHair);
-  pos++;
-  EEPROM.update(pos, (byte)m_RSSIchannel);
-  pos++;
-  for(j=0; j<2; j++)
-  {
-    EEPROM.update(pos, (byte)m_OSDItems[RSSIp][j]);
-    pos++;
-  }
-  EEPROM.update(pos, (byte)m_DISPLAY_DV[DISPLAY_RSSI]);
-  pos++;
-  for(i=1; i<ICON_SETTINGS_SIZE; i++)
-  {
-    EEPROM.update(pos, (byte)m_IconSettings[i]);
-    pos++;
-  }
-  WriteInt16_t(pos, pos+1, m_vTxMaxPower);
-  pos += 2;
-  EEPROM.update(pos, (byte)m_stats);
-  pos++;
-  WriteInt16_t(pos, pos+1, m_RSSImax);
-  pos += 2;
-  WriteInt16_t(pos, pos+1, m_RSSImin);
-  pos += 2;
-  #ifdef MAH_CORRECTION
-  for(i=0; i<4; i++)
-  {
-    EEPROM.update(pos, (byte)m_ESCCorrection[i]);
-    pos++;
-  }
-  #else
-  pos += 4;
-  #endif
-
-  WriteInt16_t(253, 254, m_maxWatts);
+  s.m_DISPLAY_DV_RSSI = m_DISPLAY_DV[DISPLAY_RSSI];
+  memcpy(&s.m_DISPLAY_DV_[0], m_DISPLAY_DV, sizeof(s.m_DISPLAY_DV_));
+  memcpy(&s.m_OSDItems_[0], m_OSDItems, sizeof(s.m_OSDItems_));
+  memcpy(s.m_OSDItemsRSSIp, &m_OSDItems[18], sizeof(s.m_OSDItemsRSSIp));
+  s.m_IconSettingsPROPS_ICON = m_IconSettings[0];
+  memcpy(s.m_IconSettings_, &m_IconSettings[1], sizeof(s.m_IconSettings_));
+  memcpy(&m_byteBuf[0], &s, sizeof(s));
+  uint16_t i;
+  for(i=0; i<sizeof(s); i++) EEPROM.update(i+3, m_byteBuf[i]);
+  
+  WriteInt16_t(253, 254, s.m_maxWatts);
 }
 
 void CSettings::FixBatWarning()
 {
-  uint32_t temp = ((uint32_t)m_batMAH[m_activeBattery] * (uint32_t)m_batWarningPercent) / (uint32_t)100;
-  m_batWarningMAH = m_batMAH[m_activeBattery] - (int16_t)temp;
-  m_batSlice = m_batMAH[m_activeBattery] / 8;
+  uint32_t temp = ((uint32_t)s.m_batMAH[s.m_activeBattery] * (uint32_t)s.m_batWarningPercent) / (uint32_t)100;
+  s.m_batWarningMAH = s.m_batMAH[s.m_activeBattery] - (int16_t)temp;
+  m_batSlice = s.m_batMAH[s.m_activeBattery] / 8;
 }
 
 void CSettings::WriteLastMAH()
@@ -596,7 +423,7 @@ void CSettings::WriteLastMAH()
 void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 {
   uint8_t i;
-  if(all && m_DVchannel < 4)
+  if(all && s.m_DVchannel < 4)
   {
     for(i=0; i<DISPLAY_DV_SIZE; i++)
     {
@@ -607,7 +434,7 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
   {
     for(i=0; i<DISPLAY_DV_SIZE; i++)
     {
-      if(m_DVchannel < 4) dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
+      if(s.m_DVchannel < 4) dv_ppms[i] = -1000 + (m_DISPLAY_DV[i] * DV_PPM_INCREMENT);      
       else dv_ppms[i] = m_DISPLAY_DV[i] * -1;
     }
   }
@@ -615,10 +442,10 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 
 void CSettings::UpdateMaxWatt(int16_t maxWatt)
 {
-  if(maxWatt >= m_maxWatts)
+  if(maxWatt >= s.m_maxWatts)
   {
-    m_maxWatts = maxWatt;
-    WriteInt16_t(253, 254, m_maxWatts);
+    s.m_maxWatts = maxWatt;
+    WriteInt16_t(253, 254, s.m_maxWatts);
   }
 }
 

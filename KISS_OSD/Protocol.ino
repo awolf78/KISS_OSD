@@ -1,9 +1,7 @@
 static uint8_t minBytes = 0;
 static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
-#ifndef KISS_OSD_CONFIG
-static uint8_t serialBuf[256];
-#else
+#ifdef KISS_OSD_CONFIG
 static const uint8_t protoVersion = 108;
 #endif
 #ifdef NEW_FILTER
@@ -54,7 +52,9 @@ boolean ReadTelemetry()
         pitch = 1000 + ((serialBuf[4 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
         yaw = 1000 + ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[7 + STARTCOUNT]);
         LipoVoltage = ((serialBuf[17 + STARTCOUNT] << 8) | serialBuf[18 + STARTCOUNT]);
-
+        #ifdef CROSSHAIR_ANGLE
+        angleY = ((serialBuf[33 + STARTCOUNT] << 8) | serialBuf[34 + STARTCOUNT]) / 100;
+        #endif
 
         int8_t current_armed = serialBuf[16 + STARTCOUNT];
         if (current_armed < 0) return false;
@@ -62,16 +62,15 @@ boolean ReadTelemetry()
         // switch disarmed => armed
         if (armed == 0 && current_armed > 0)
         {
-          /*if (settings.m_airTimer == 0)
-          {
-            start_time = millis();
-          }*/
           triggerCleanScreen = true;
           armedOnce = true;
-          last_Aux_Val = AuxChanVals[settings.m_DVchannel];
+          last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
           DV_change_time = 0;
           #ifndef KISS_OSD_CONFIG
           statsActive = false;
+          #endif
+          #ifdef RC_SPLIT_CONTROL
+          if(settings.s.m_RCSplitControl > 0) newRCsplitState = true;
           #endif
         }
         // switch armed => disarmed
@@ -79,10 +78,10 @@ boolean ReadTelemetry()
         {
           if (armed > 0 && current_armed == 0)
           {
-            if(settings.m_timerMode < 2) airTimerStarted = false;
+            if(settings.s.m_timerMode < 2) airTimerStarted = false;
             if(start_time > 0)
             {
-              if(settings.m_timerMode < 2)
+              if(settings.s.m_timerMode < 2)
               {
                 total_time = total_time + (millis() - start_time);
                 start_time = 0;
@@ -90,7 +89,7 @@ boolean ReadTelemetry()
               else total_time = millis() - start_time;
             }             
             triggerCleanScreen = true;
-            if (settings.m_batWarning > 0)
+            if (settings.s.m_batWarning > 0)
             {
               settings.m_lastMAH = totalMAH;
               settings.WriteLastMAH();
@@ -102,6 +101,9 @@ boolean ReadTelemetry()
               settings.WriteLastMAH();
             }
             settings.UpdateMaxWatt(MaxWatt);
+            #ifdef RC_SPLIT_CONTROL
+            newRCsplitState = false;
+            #endif
           }
           else if (armed > 0)
           {
@@ -115,10 +117,10 @@ boolean ReadTelemetry()
               if (start_time == 0) start_time = millis();
               time = millis() - start_time;
             }
-            if(settings.m_timerMode > 0) time += total_time;
+            if(settings.s.m_timerMode > 0) time += total_time;
           }
         }
-        if(settings.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
+        if(settings.s.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
         armed = current_armed;
 
         #ifdef MAH_CORRECTION
@@ -139,11 +141,11 @@ boolean ReadTelemetry()
           ESCTemps[i] = ((serialBuf[83 + i10 + STARTCOUNT] << 8) | serialBuf[84 + i10 + STARTCOUNT]);
           ESCmAh[i] = ((serialBuf[89 + i10 + STARTCOUNT] << 8) | serialBuf[90 + i10 + STARTCOUNT]);
           #ifdef MAH_CORRECTION
-          uint32_t temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.m_ESCCorrection[i];
+          uint32_t temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.s.m_ESCCorrection[i];
           temp /= (uint32_t)100;
           ESCmAh[i] = (uint16_t)temp;
           LipoMAH += ESCmAh[i];
-          temp = (uint32_t)motorCurrent[i] * (uint32_t)settings.m_ESCCorrection[i];
+          temp = (uint32_t)motorCurrent[i] * (uint32_t)settings.s.m_ESCCorrection[i];
           temp /= (uint32_t)100;
           motorCurrent[i] = (uint16_t)temp;
           #endif
@@ -164,7 +166,7 @@ boolean ReadTelemetry()
           tmp32 = tmp32 / (uint32_t)voltDev;
           LipoVoltage = (uint16_t)tmp32;
         }
-        LipoVoltage += settings.m_voltCorrect * 10;
+        LipoVoltage += settings.s.m_voltCorrect * 10;
 
         #ifndef KISS_OSD_CONFIG
         failSafeState = serialBuf[41 + STARTCOUNT];
@@ -191,7 +193,7 @@ boolean ReadTelemetry()
         }
 
 
-        if (settings.m_tempUnit == 1)
+        if (settings.s.m_tempUnit == 1)
         {
           for (i = 0; i < 4; i++)
           {
@@ -206,7 +208,7 @@ boolean ReadTelemetry()
             MaxTemp = 9 * MaxTemp / 5 + 32;
           }
         }
-        if (lastTempUnit == 1 && settings.m_tempUnit == 0)
+        if (lastTempUnit == 1 && settings.s.m_tempUnit == 0)
         {
           for (i = 0; i < 4; i++)
           {
@@ -214,7 +216,7 @@ boolean ReadTelemetry()
           }
           MaxTemp = (MaxTemp - 32) * 5 / 9;
         }
-        lastTempUnit = settings.m_tempUnit;
+        lastTempUnit = settings.s.m_tempUnit;
 
         
         LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
@@ -239,7 +241,7 @@ boolean ReadTelemetry()
             MinBat = LipoVoltage;
           }
           MaxAmps = findMax(MaxAmps, current);
-          tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.m_batMAH[settings.m_activeBattery];
+          tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.s.m_batMAH[settings.s.m_activeBattery];
           MaxC = (uint8_t) tmp32;
           tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
           MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
