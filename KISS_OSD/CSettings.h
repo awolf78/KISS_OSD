@@ -121,6 +121,7 @@ class CSettings
     uint8_t m_ESCCorrection[4];
     int8_t m_angleOffset;
     uint8_t m_RCSplitControl;
+    uint8_t m_vTxMinPower;
   } s;
   uint16_t m_batSlice; // calculated for battery symbol
   int16_t m_lastMAH; // mAh value from previous run

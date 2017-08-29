@@ -9,7 +9,7 @@ extern boolean timer1sec;
 
 extern CSettings settings;
 
-CMyMax7456::CMyMax7456(uint8_t chipSelect) : MAX7456(chipSelect), blinkActive(false)
+CMyMax7456::CMyMax7456(uint8_t chipSelect) : MAX7456(chipSelect), blinkActive(false), topOffset(3)
 {
 }
 
@@ -126,7 +126,7 @@ void CMyMax7456::printIntArrow(uint8_t col, uint8_t row, const char *key, int16_
 
 void CMyMax7456::checkArrow(uint8_t currentRow, uint8_t menuItem)
 {
-  if(currentRow-3 == menuItem)
+  if(currentRow-topOffset == menuItem)
   {
     print(fixChar('>'));
   }

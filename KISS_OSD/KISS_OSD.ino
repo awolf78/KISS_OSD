@@ -94,6 +94,8 @@ unsigned long RCsplitChangeTime = 0;
 
 #ifdef STEELE_PDB
 static const char KISS_OSD_VER[] PROGMEM = "steele pdb v2.4.1";
+#elif defined(BF32_MODE)
+static const char KISS_OSD_VER[] PROGMEM = "bf32 osd v2.4.1";
 #else
 static const char KISS_OSD_VER[] PROGMEM = "kiss osd v2.4.1";
 #endif
@@ -134,7 +136,7 @@ static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM
 static const char bandSymbols[VTX_BAND_COUNT][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
 
 #ifdef IMPULSERC_VTX
-static uint8_t vTxPower;
+static uint8_t vTxPower, vTxMinPower;
 //static unsigned long changevTxTime = 0;
 
 void setvTxSettings()
@@ -142,6 +144,7 @@ void setvTxSettings()
   oldvTxChannel = vTxChannel = settings.s.m_vTxChannel;
   oldvTxBand = vTxBand =  settings.s.m_vTxBand;
   vTxPower = settings.s.m_vTxPower;
+  vTxMinPower = settings.s.m_vTxMinPower;
 }
 #endif
 
@@ -231,6 +234,7 @@ static boolean showBat = false;
 static boolean settingChanged = false;
 static uint8_t statPage = 0;
 static bool flipOnce = true;
+static uint8_t FCProfile = 0;
 #ifdef NEW_FILTER
 CMeanFilter rssiFilter(10);
 #else
@@ -276,6 +280,7 @@ void ReviveOSD()
   delay(2000);
 }
 
+
 enum _ROLL_PITCH_YAW
 {
   _ROLL,
@@ -284,6 +289,31 @@ enum _ROLL_PITCH_YAW
 };
 
 
+#ifdef BF32_MODE
+static uint8_t rc_rate, rc_expo, dynThrPID, thr_Mid, thr_Expo, rc_yawExpo, rc_yawRate;
+static uint16_t tpa_breakpoint;
+
+struct BF32_FILTERS
+{
+  uint8_t gyro_soft_lpf_hz;
+  uint16_t dterm_lpf_hz;
+  uint16_t yaw_lpf_hz;
+  uint16_t gyro_soft_notch_hz_1;
+  uint16_t gyro_soft_notch_cutoff_1;
+  uint16_t dterm_notch_hz;
+  uint16_t dterm_notch_cutoff;
+  uint16_t gyro_soft_notch_hz_2;
+  uint16_t gyro_soft_notch_cutoff_2;
+  uint8_t dterm_filter_type;
+} bf32_filters;
+
+static uint8_t vTx_powerIDX, oldvTx_powerIDX, vTx_pitmode;
+
+static uint8_t pid_p[10], pid_i[10], pid_d[10];
+static uint8_t checksumDebug = 255, bufMinusOne = 255;
+#else
+static uint16_t pid_p[3], pid_i[3], pid_d[3];
+#endif
 struct _FC_FILTERS
 {
   uint8_t lpf_frq;
@@ -306,9 +336,9 @@ struct _FC_TPA
   uint8_t ctpa_bp2;
   uint8_t ctpa_infl[4];
 } fc_tpa;
-
-static uint16_t pid_p[3], pid_i[3], pid_d[3], rcrate[3], rate[3], rccurve[3];
+static uint16_t rcrate[3], rate[3], rccurve[3];
 static uint16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
+
 static boolean moreLPFfilters = false;
 static boolean fcSettingsReceived = false;
 static boolean armOnYaw = true;
@@ -317,7 +347,6 @@ static boolean dShotEnabled = false;
 static boolean logoDone = false;
 static uint8_t protoVersion = 0;
 static uint8_t failSafeState = 10;
-extern void ReadFCSettings(boolean skipValues);
 
 typedef void* (*fptr)();
 static char tempSymbol[] = {0xB0, 0x00};
@@ -364,6 +393,31 @@ CStatGenerator statGenerators[STAT_GENERATOR_SIZE] = { CStatGenerator(5,20), CSt
 CStatGenerator ESCstatGenerators[4] = { CStatGenerator(90,100), CStatGenerator(90,100), CStatGenerator(90,100), CStatGenerator(90,100) };
 #endif
 
+
+#ifdef BF32_MODE
+enum _SETTING_MODES 
+{
+  FC_SETTINGS = 1,
+  FC_RATES = 1, 
+  FC_PIDS = 1, 
+  FC_VTX = 1, 
+  FC_FILTERS = 1,
+  FC_TPA = 1
+};
+static uint8_t telemetryMSP = 0;
+static const uint8_t MAX_TELEMETRY_MSPS = 6;
+static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129 }; //FIXME: Move define for MSPs
+extern void mspRequest(uint8_t mspCommand);
+static const unsigned long minLoop = 5000;
+/*static const uint8_t MAX_SETTING_MODES = 5;
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 1, 112, 111, 92, 88 }; //FIXME: Move define for MSPs
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0, 202, 204, 93, 89 }; //FIXME: Move define for MSPs
+static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false };*/
+static const uint8_t MAX_SETTING_MODES = 4;
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 112, 111, 92, 88 }; //FIXME: Move define for MSPs
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 202, 204, 93, 89 }; //FIXME: Move define for MSPs
+static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false };
+#else
 enum _SETTING_MODES 
 {
   FC_SETTINGS,
@@ -373,12 +427,13 @@ enum _SETTING_MODES
   FC_FILTERS,
   FC_TPA
 };
+static const unsigned long minLoop = 10000;
 static const uint8_t MAX_SETTING_MODES = 6;
 static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x30, 0x4D, 0x43, 0x45, 0x47, 0x4B }; 
 static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x10, 0x4E, 0x44, 0x46, 0x48, 0x4C };
 static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
+#endif
 static uint8_t settingMode = 0;
-
 
 static unsigned long _StartupTime = 0;
 extern void* MainMenu();
@@ -402,7 +457,6 @@ void getIconPos(uint16_t value, uint16_t maxValue, uint8_t steps, char &iconPos1
     iconPos2 += ((char)(tempValue1 / stepValue)) * inc;    
   }
 }
-
 
 void setup()
 {
@@ -434,6 +488,7 @@ void setup()
   softSerial.begin(115200);
   #endif
 }
+
 
 void loop(){
   uint8_t i = 0;
@@ -479,7 +534,7 @@ void loop(){
       if(timer1sec) steele_flash_led(_millis, 1);
 #endif
   
-  if(micros()-LastLoopTime > 10000)
+  if(micros()-LastLoopTime > minLoop)
   { 
     LastLoopTime = micros();
 
@@ -490,7 +545,7 @@ void loop(){
 #ifdef IMPULSERC_VTX
      if (timer1sec) 
      {
-        vtx_set_power(armed ? vTxPower : 0);
+        vtx_set_power(armed ? vTxPower : vTxMinPower);
      }
 #endif
 
@@ -501,8 +556,10 @@ void loop(){
     
     if(!fcSettingsReceived && !menuDisabled)
     {
-      if(settingMode >= MAX_SETTING_MODES) settingMode = 0;
-      if(fcNotConnectedCount % 10 == 0) 
+      #ifdef BF32_MODE
+      mspRequest(getSettingModes[settingMode]);
+      #else
+      if(fcNotConnectedCount % 10 == 0)
       {
         NewSerial.write(getSettingModes[settingMode]); // request settings
         if(getSettingModes[settingMode] > 0x30)
@@ -511,6 +568,7 @@ void loop(){
           NewSerial.write((uint8_t)0x00);
         }
       }
+      #endif
       ReadFCSettings(fcSettingChanged, settingMode);
       if(!fcSettingsReceived) fcNotConnectedCount++;
       else fcNotConnectedCount = 0;
@@ -518,15 +576,20 @@ void loop(){
       {
         settingMode++;
         if(settingMode < MAX_SETTING_MODES) fcSettingsReceived = false;
+        else settingMode = 0;
       }
     }
     else
     {
       if(!fcSettingChanged || menuActive)
       {
+        #ifdef BF32_MODE
+        mspRequest(telemetryMSPs[telemetryMSP]);
+        #else
         uint8_t requestTelemetry = 0x20;
         if(protoVersion > 108) requestTelemetry = 0x13;
         NewSerial.write(requestTelemetry);
+        #endif
       }
       telemetryReceived = ReadTelemetry();
       if(!telemetryReceived) 
@@ -536,6 +599,10 @@ void loop(){
           bool savedBefore = false;
           for(i=1; i<MAX_SETTING_MODES; i++)
           {
+            #ifdef BF32_MODE
+            SendFCSettings(setSettingModes[i]);
+            fcSettingModeChanged[i] = false;
+            #else
             if(savedBefore && fcSettingModeChanged[i])
             {              
               while (!OSD.notInVSync());
@@ -549,28 +616,48 @@ void loop(){
               SendFCSettings(i);
               fcSettingModeChanged[i] = false;
               savedBefore = true;
-            }      
+            }
+            #endif      
           }
           fcSettingChanged = false;
         }
         else fcNotConnectedCount++;
       }
-      else fcNotConnectedCount = 0;
+      else 
+      {
+        fcNotConnectedCount = 0;
+        #ifdef BF32_MODE
+        telemetryMSP++;
+        if(telemetryMSP < MAX_TELEMETRY_MSPS)
+        {
+          telemetryReceived = false;
+        }
+        else telemetryMSP = 0;
+        #endif
+      }
     }    
 
     while (!OSD.notInVSync());
 
+    /*OSD.printInt16(settings.COLS, settings.ROWS/2, roll, 0, " ", 1);
+    OSD.printInt16(settings.COLS, settings.ROWS/2+1, pitch, 0, " ", 1);
+    OSD.printInt16(settings.COLS, settings.ROWS/2+2, yaw, 0, " ", 1);*/
+    
     if(fcNotConnectedCount > 500)
     {
       cleanScreen();
+      #ifdef BF32_MODE
+      static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to fc";
+      #else
       static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
+      #endif
       OSD.printP(settings.COLS/2 - strlen_P(FC_NOT_CONNECTED_STR)/2, settings.ROWS-2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       logoDone = true;
       fcNotConnectedCount = 0;
-      /*OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
+      OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
       OSD.printInt16(0, settings.ROWS/2+1, bufMinusOne, 0);
-      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);*/
+      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);
       return;
     }
 
@@ -679,7 +766,7 @@ void loop(){
     logoDone = true;
     #endif
 
-    if(fcNotConnectedCount <= 500 && (!fcSettingsReceived || !telemetryReceived)) return;
+    if(fcNotConnectedCount <= 500 && ((!fcSettingsReceived && !menuDisabled) || !telemetryReceived) ) return;
 
 #ifdef IMPULSERC_VTX
       vtx_flash_led(1);

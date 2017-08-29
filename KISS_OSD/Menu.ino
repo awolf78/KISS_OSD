@@ -16,11 +16,19 @@ static uint8_t activeFilterMenuItem = 0;
 static uint8_t activeCustomTPAMenuItem = 0;
 static uint8_t activeLPFMenuItem = 0;
 static uint8_t activeMAHCorrectionMenuItem = 0;
+#ifdef BF32_MODE
+static const int16_t P_STEP = 10;
+static const int16_t I_STEP = 10;
+static const int16_t D_STEP = 10;
+static const int16_t TPA_STEP = 10;
+static const int16_t RATE_STEP = 10;
+#else
 static const int16_t P_STEP = 100;
 static const int16_t I_STEP = 1;
 static const int16_t D_STEP = 1000;
 static const int16_t TPA_STEP = 50;
 static const int16_t RATE_STEP = 50;
+#endif
 
 static const char SAVE_EXIT_STR[] PROGMEM = "save+exit";
 static const char BACK_STR[] PROGMEM =      "back";
@@ -151,9 +159,7 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
   return menuItem; 
 }
 
-static char emptySuffix[][3] = { "", "", "" };
-
-void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint16_t &item1, uint16_t &item2, uint16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, const char *itemDescription1 = 0, const char *itemDescription2 = 0, const char *itemDescription3 = 0, char (*suffix)[3] = NULL, uint8_t dec = 3)
+void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint16_t &item1, uint16_t &item2, uint16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, const char *itemDescription1 = 0, const char *itemDescription2 = 0, const char *itemDescription3 = 0)
 {
   switch(active3MenuItem)
   {
@@ -182,11 +188,6 @@ void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint
       }
   }
   
-  if(suffix == NULL)
-  {
-    suffix = emptySuffix;
-  }
-  
   static const uint8_t MENU_ITEMS = 5;
   
   active3MenuItem = checkMenuItem(active3MenuItem, MENU_ITEMS);
@@ -195,19 +196,42 @@ void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint
   uint8_t startCol = settings.COLS/2 - (strlen_P(itemDescription1)+6)/2;
   OSD.setCursor( settings.COLS/2 - strlen(title)/2, ++startRow );
   OSD.print( fixStr(title) );
-  
-  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, active3MenuItem, suffix[0], true);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, active3MenuItem, suffix[1], true);
-  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, active3MenuItem, suffix[2], true);
+
+  #ifdef BF32_MODE
+  const uint8_t dec = 0;
+  #else
+  const uint8_t dec = 3;
+  #endif
+  OSD.printIntArrow( startCol, ++startRow, itemDescription1, item1, dec, active3MenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription2, item2, dec, active3MenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, itemDescription3, item3, dec, active3MenuItem, "", 1);
   OSD.printP( startCol, ++startRow, BACK_STR, active3MenuItem);
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, active3MenuItem);
   
   return thisPage;
 }
 
+void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint8_t &item1, uint8_t &item2, uint8_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, const char *itemDescription1 = 0, const char *itemDescription2 = 0, const char *itemDescription3 = 0)
+{
+  uint16_t tempItem1 = item1;
+  uint16_t tempItem2 = item2;
+  uint16_t tempItem3 = item3;
+  void* temp = ThreeItemPlusBackMenu(settingChanged, active3MenuItem, tempItem1, tempItem2, tempItem3, item1_step, item2_step, item3_step, title, prevPage, thisPage, itemDescription1, itemDescription2, itemDescription3);
+  item1 = tempItem1;
+  item2 = tempItem2;
+  item3 = tempItem3;
+  return temp;
+}
+
+#ifdef BF32_MODE
+static const char RATES_DESC_STR1[] PROGMEM = "rc rate   :"; 
+static const char RATES_DESC_STR2[] PROGMEM = "super rate:"; 
+static const char RATES_DESC_STR3[] PROGMEM = "rc expo   :";
+#else
 static const char RATES_DESC_STR1[] PROGMEM = "rc rate  : "; 
 static const char RATES_DESC_STR2[] PROGMEM = "rate     : "; 
 static const char RATES_DESC_STR3[] PROGMEM = "rc curve : ";
+#endif
 
 void* RatesRollMenu()
 {
@@ -216,7 +240,11 @@ void* RatesRollMenu()
 
 void* RatesPitchMenu()
 {
+  #ifdef BF32_MODE
+  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_ROLL], rate[_PITCH], rccurve[_ROLL], RATE_STEP, RATE_STEP, RATE_STEP, "pitch", (void*)RatesMenu, (void*) RatesPitchMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
+  #else
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_PITCH], rate[_PITCH], rccurve[_PITCH], RATE_STEP, RATE_STEP, RATE_STEP, "pitch", (void*)RatesMenu, (void*) RatesPitchMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
+  #endif
 }
 
 void* RatesYawMenu()
@@ -242,20 +270,38 @@ void* RatesMenu()
         cleanScreen();
         return (void*)RatesYawMenu;
       break;
+      #ifdef BF32_MODE
       case 3:
+        fcSettingModeChanged[FC_RATES] |= checkCode(thr_Mid, 10, 0, 100);
+      break;
+      case 4:
+        fcSettingModeChanged[FC_RATES] |= checkCode(thr_Expo, 10, 0, 100);
+      break;
+      case 5:
+      #else
+      case 3:
+      #endif
         cleanScreen();
         activeRatesMenuItem = 0;
         return (void*)MainMenu;
       break;
     }
   }
-  
+
+  #ifdef BF32_MODE
+  static const uint8_t RATES_MENU_ITEMS = 6;
+  #else
   static const uint8_t RATES_MENU_ITEMS = 4;
+  #endif
   activeRatesMenuItem = checkMenuItem(activeRatesMenuItem, RATES_MENU_ITEMS);
   
 //static const char ROLL_STR[] PROGMEM =  "roll  ";
 //static const char PITCH_STR[] PROGMEM = "pitch ";
 //static const char YAW_STR[] PROGMEM =   "yaw   ";
+  #ifdef BF32_MODE
+  static const char THR_MID[] PROGMEM =   "thr mid :";
+  static const char THR_EXPO[] PROGMEM =  "thr expo:";
+  #endif
 //static const char BACK_STR[] PROGMEM =  "back";
   
   uint8_t startRow = 1;
@@ -266,6 +312,10 @@ void* RatesMenu()
   OSD.printP( startCol, ++startRow, ROLL_STR, activeRatesMenuItem );
   OSD.printP( startCol, ++startRow, PITCH_STR, activeRatesMenuItem );
   OSD.printP( startCol, ++startRow, YAW_STR, activeRatesMenuItem );
+  #ifdef BF32_MODE
+  OSD.printIntArrow( startCol, ++startRow, THR_MID, thr_Mid, 0, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, THR_EXPO, thr_Expo, 0, activeRatesMenuItem, "", 1);
+  #endif
   OSD.printP( startCol, ++startRow, BACK_STR, activeRatesMenuItem );
 
   return (void*)RatesMenu;
@@ -292,6 +342,57 @@ void* PIDYawMenu()
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDYawMenuItem,  pid_p[_YAW], pid_i[_YAW], pid_d[_YAW], P_STEP, I_STEP, D_STEP, "yaw", (void*)TuneMenu, (void*) PIDYawMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
 }
 
+#ifdef BF32_MODE
+void* TPAMenu()
+{
+  switch(activeTPAMenuItem)
+  {
+    case 0:
+      fcSettingModeChanged[FC_TPA] |= checkCode(dynThrPID, 10, 0, 100);
+    break;
+    case 1:
+      fcSettingModeChanged[FC_TPA] |= checkCode(tpa_breakpoint, 10, 100, 200);
+    break;     
+    case 2:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeTPAMenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+      }
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activeTPAMenuItem = 0;
+        return (void*)TuneMenu;
+      }
+    break;
+  }
+
+  static const uint8_t TPA_MENU_ITEMS = 4;
+  activeTPAMenuItem = checkMenuItem(activeTPAMenuItem, TPA_MENU_ITEMS);
+  
+  static const char TPA_BF32_STR[] PROGMEM =     "tpa       :";
+  static const char TPA_BREAK_STR[] PROGMEM =    "tpa breakp:";
+//static const char SAVE_EXIT_STR[] PROGMEM =    "save+exit";
+//static const char BACK_STR[] PROGMEM =         "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(TPA_BF32_STR)+3)/2;
+  static const char TPA_MENU_TITLE_STR[] PROGMEM = "tpa menu";
+  OSD.printP(settings.COLS/2 - strlen_P(TPA_MENU_TITLE_STR)/2, ++startRow, TPA_MENU_TITLE_STR);
+  
+  OSD.printIntArrow( startCol, ++startRow, TPA_BF32_STR, dynThrPID, 0, activeTPAMenuItem, "", 1);
+
+  OSD.printIntArrow( startCol, ++startRow, TPA_BREAK_STR, tpa_breakpoint, 0, activeTPAMenuItem, "0", 1);
+  
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeLPFMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeLPFMenuItem);
+  
+  return (void*)TPAMenu;
+}
+#else
 void* TPAMenu()
 {
   static const char TPA_DESC_STR1[] PROGMEM = "tpa p : "; 
@@ -299,7 +400,10 @@ void* TPAMenu()
   static const char TPA_DESC_STR3[] PROGMEM = "tpa d : ";
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_TPA], activeTPAMenuItem,  fc_tpa.tpa[0], fc_tpa.tpa[1], fc_tpa.tpa[2], TPA_STEP, TPA_STEP, TPA_STEP, "tpa menu", (void*)TuneMenu, (void*) TPAMenu, TPA_DESC_STR1, TPA_DESC_STR2, TPA_DESC_STR3);
 }
+#endif
 
+
+#ifndef BF32_MODE
 static const char LPF_FRQ_STR[][9] PROGMEM = { {"off     "}, 
                                                {"high    "}, 
                                                {"med high"}, 
@@ -541,6 +645,104 @@ void* CustomTPAMenu()
   OSD.printP( startCol, ++startRow, BACK_STR, activeCustomTPAMenuItem );
   return (void*)CustomTPAMenu; 
 }
+#endif
+
+#ifdef BF32_MODE
+void* FilterMenu()
+{
+  OSD.topOffset = 1;
+  switch(activeFilterMenuItem)
+  {
+    case 0:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.gyro_soft_lpf_hz, 10, 0, 255);
+    break;
+    case 1:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.gyro_soft_notch_hz_1, 10, 0, 1000);
+    break;
+    case 2:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.gyro_soft_notch_cutoff_1, 10, 0, 1000);
+    break;
+    case 3:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.gyro_soft_notch_hz_2, 10, 0, 1000);
+    break;
+    case 4:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.gyro_soft_notch_cutoff_2, 10, 0, 1000);
+    break;
+    case 5:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.dterm_filter_type, 1, 0, 2);
+    break;
+    case 6:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.dterm_lpf_hz, 10, 0, 1000);
+    break;
+    case 7:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.dterm_notch_hz, 10, 0, 1000);
+    break;
+    case 8:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.dterm_notch_cutoff, 10, 0, 1000);
+    break;
+    case 9:
+      fcSettingModeChanged[FC_FILTERS] |= checkCode(bf32_filters.yaw_lpf_hz, 10, 0, 1000);
+    break;        
+    case 10:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeFilterMenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+        OSD.topOffset = 3;
+      }
+    case 11:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activeFilterMenuItem = 0;
+        OSD.topOffset = 3;
+        return (void*)MainMenu;
+      }
+    break;
+  }
+
+  static const uint8_t FILTER_MENU_ITEMS = 12;
+  activeFilterMenuItem = checkMenuItem(activeFilterMenuItem, FILTER_MENU_ITEMS);
+
+  static const char GYRO_SOFT_LPF_STR[] PROGMEM =       "gyro soft lpf   :";
+  static const char GYRO_NOTCH1_STR[] PROGMEM =         "gyro notch1 freq:";
+  static const char GYRO_NOTCH1_CUT_STR[] PROGMEM =     "gyro notch1 cut :";
+  static const char GYRO_NOTCH2_STR[] PROGMEM =         "gyro notch2 freq:";
+  static const char GYRO_NOTCH2_CUT_STR[] PROGMEM =     "gyro notch2 cut :";
+  static const char DTERM_TYPE_STR[] PROGMEM =          "dterm type      :";
+  static const char DTERM_LPF_STR[] PROGMEM =           "dterm lpf       :";
+  static const char DTERM_NOTCH_STR[] PROGMEM =         "dterm notch freq:";
+  static const char DTERM_NOTCH_CUT_STR[] PROGMEM =     "dterm notch cut :";
+  static const char YAW_LPF_STR[] PROGMEM =             "yaw lpf         :";
+//static const char SAVE_EXIT_STR[] PROGMEM =           "save+exit";
+//static const char BACK_STR[] PROGMEM =                "back";
+  
+  uint8_t startRow = 0;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(GYRO_SOFT_LPF_STR)+6)/2;
+  static const char FILTER_MENU_TITLE_STR[] PROGMEM = "filter menu";
+  OSD.printP(settings.COLS/2 - strlen_P(FILTER_MENU_TITLE_STR)/2, startRow, FILTER_MENU_TITLE_STR);
+
+  static const char HZ_SUFFIX[] = {"hz"};
+  OSD.printIntArrow( startCol, ++startRow, GYRO_SOFT_LPF_STR, bf32_filters.gyro_soft_lpf_hz, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, GYRO_NOTCH1_STR, bf32_filters.gyro_soft_notch_hz_1, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, GYRO_NOTCH1_CUT_STR, bf32_filters.gyro_soft_notch_cutoff_1, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, GYRO_NOTCH2_STR, bf32_filters.gyro_soft_notch_hz_2, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, GYRO_NOTCH2_CUT_STR, bf32_filters.gyro_soft_notch_cutoff_2, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  static const char DTERM_TYPE_STRS[][7] PROGMEM = { {"pt1   "}, 
+                                                     {"biquad"}, 
+                                                     {"fir   "}};
+  OSD.printP( startCol, ++startRow, DTERM_TYPE_STR, activeFilterMenuItem);
+  OSD.print( fixPStr(DTERM_TYPE_STRS[bf32_filters.dterm_filter_type]) );
+  OSD.printIntArrow( startCol, ++startRow, DTERM_LPF_STR, bf32_filters.dterm_lpf_hz, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, DTERM_NOTCH_STR, bf32_filters.dterm_notch_hz, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, DTERM_NOTCH_CUT_STR, bf32_filters.dterm_notch_cutoff, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printIntArrow( startCol, ++startRow, YAW_LPF_STR, bf32_filters.yaw_lpf_hz, 0, activeFilterMenuItem, HZ_SUFFIX, 1);
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeFilterMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeFilterMenuItem);
+  return (void*)FilterMenu;
+}
+#endif
 
 void* TuneMenu()
 {
@@ -818,17 +1020,21 @@ void* vTxMenu()
     switch(activeVTXMenuItem)
     {
       case 0:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxMinPower, 1, 0, 2);
       break;
       case 1:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
       break;
       case 2:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
+        vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
       break;
       case 3:
+        vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
+      break;
+      case 4:
         if(code &  inputChecker.ROLL_RIGHT)
         {
+          vTxMinPower = settings.s.m_vTxMinPower;
           vTxPower = settings.s.m_vTxPower;
           vTxBand = settings.s.m_vTxBand;
           vTxChannel = settings.s.m_vTxChannel;
@@ -839,12 +1045,13 @@ void* vTxMenu()
           return (void*)MainMenu;
         }
       break;
-      case 4:
+      case 5:
         if(code &  inputChecker.ROLL_RIGHT)
         {
           activeVTXMenuItem = 0;
-          if(!vTxSettingChanged)
+          if(vTxSettingChanged)
           {
+            settings.s.m_vTxMinPower = vTxMinPower;
             settings.s.m_vTxPower = vTxPower;
             settings.s.m_vTxBand = vTxBand;
             settings.s.m_vTxChannel = vTxChannel;
@@ -856,12 +1063,13 @@ void* vTxMenu()
       break;
     }
   }
-  static const uint8_t VTX_MENU_ITEMS = 5;
+  static const uint8_t VTX_MENU_ITEMS = 6;
   activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
   
-  static const char VTX_POWER_STR[] PROGMEM =      "power   : ";
-  static const char VTX_BAND_STR[] PROGMEM =       "band    : ";
-  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel : ";
+  static const char VTX_MIN_POWER_STR[] PROGMEM =  "min power:";
+  static const char VTX_POWER_STR[] PROGMEM =      "power    :";
+  static const char VTX_BAND_STR[] PROGMEM =       "band     :";
+  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel  :";
   static const char SET_EXIT_STR[] PROGMEM =       "set+exit";
 //static const char BACK_STR[] PROGMEM =           "back";
   
@@ -871,6 +1079,9 @@ void* vTxMenu()
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
   static const char VTX_POWERS_STR[][6] PROGMEM = { {"25mw "}, {"200mw"}, {"500mw"} };
+  OSD.printP( startCol, ++startRow, VTX_MIN_POWER_STR, activeVTXMenuItem );
+  OSD.print( fixPStr(VTX_POWERS_STR[settings.s.m_vTxMinPower]) );
+  
   OSD.printP( startCol, ++startRow, VTX_POWER_STR, activeVTXMenuItem );
   OSD.print( fixPStr(VTX_POWERS_STR[settings.s.m_vTxPower]) );
 

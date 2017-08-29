@@ -337,11 +337,22 @@ static bool activeOSDItems[] = { true, true, true, true, true, true, true, true,
 static uint8_t oldPrintCount = 0;
 static uint8_t printCount = 0;
 
+#ifdef BF32_MODE
+static uint8_t telemetryMSP = 0;
+static const uint8_t MAX_TELEMETRY_MSPS = 6;
+static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129 }; //FIXME: Move define for MSPs
+extern void mspRequest(uint8_t mspCommand);
+static const unsigned long minLoop = 2500;
+#else
+static const unsigned long minLoop = 10000;
+#endif
+
 #ifdef DEBUG
 static int16_t versionProto = 0;
 #endif
 
 static unsigned long _StartupTime = 0;
+static boolean telemetryReceived = false;
 extern void* MainMenu();
 
 uint8_t findCharPos(char charToFind)
@@ -385,7 +396,7 @@ void loop() {
     timer1sec = !timer1sec;
   }
 
-  if ((micros() - LastLoopTime) > 10000)
+  if ((micros() - LastLoopTime) > minLoop)
   {
     LastLoopTime = micros();
 
@@ -407,14 +418,31 @@ void loop() {
 #endif
 
     #ifndef UPDATE_FONT_ONLY
+    #ifdef BF32_MODE
+    mspRequest(telemetryMSPs[telemetryMSP]);
+    #else
     NewSerial.write(0x20); // request telemetry
-    if (!ReadTelemetry())
+    #endif
+    telemetryReceived = ReadTelemetry();
+    if (!telemetryReceived)
     {
       fcNotConnectedCount++;
-      if (fcNotConnectedCount <= 500) return;
     }
-    else fcNotConnectedCount = 0;
+    else 
+    {
+      fcNotConnectedCount = 0;
+      #ifdef BF32_MODE
+      telemetryMSP++;
+      if(telemetryMSP < MAX_TELEMETRY_MSPS)
+      {
+        telemetryReceived = false;
+      }
+      else telemetryMSP = 0;
+      #endif
+    }
     #endif
+
+    if (fcNotConnectedCount <= 500 && !telemetryReceived) return;
 
     while (!OSD.notInVSync());
 
@@ -468,7 +496,7 @@ void loop() {
       tempSymbol[0] = fixChar(0xB0);
     }
 
-    code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
+    if(telemetryReceived) code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
 
     if (armed == 0 && code & inputChecker.YAW_LONG_LEFT && code & inputChecker.ROLL_LEFT && code & inputChecker.PITCH_DOWN)
     {

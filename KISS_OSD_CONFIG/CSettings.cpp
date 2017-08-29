@@ -140,6 +140,7 @@ void CSettings::LoadDefaults()
   }
   s.m_angleOffset = -20;
   s.m_RCSplitControl = 0;
+  s.m_vTxMinPower = 0;
 
   #else
   
@@ -237,6 +238,7 @@ void CSettings::LoadDefaults()
   }
   s.m_angleOffset = -20;
   s.m_RCSplitControl = 0;
+  s.m_vTxMinPower = 0;
   
   #endif
 }
@@ -364,17 +366,21 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     {
       s.m_RCSplitControl = 0;
     }
+    if(ver < 0x18)
+    {
+      s.m_vTxMinPower = 0;
+    }
   }
 }
 
 void CSettings::ReadSettings()
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x17) //first start of OSD - or older version
+  if(settingsVer < 0x18) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x17);
+    EEPROM.update(0x01,0x18);
   }
   else
   {

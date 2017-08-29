@@ -34,6 +34,7 @@
 //=============================
 //#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
+//#define BF32_MODE
 
 
 // vTx config
@@ -43,5 +44,9 @@
 
 // DO NOT CHANGE
 //=============================
+
+#if defined(BF32_MODE) && defined(CUSTOM_TPA)
+#undef CUSTOM_TPA
+#endif
 
 #endif

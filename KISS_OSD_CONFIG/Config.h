@@ -16,6 +16,7 @@
 //#define FORCE_CLEAN_EEPROM
 //#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
+//#define BF32_MODE
 
 // vTx config
 //=============================

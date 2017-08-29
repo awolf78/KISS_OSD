@@ -16,6 +16,93 @@ CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCoun
 CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
 static boolean airTimerStarted = false;
 
+inline void GenerateStats()
+{
+  uint32_t tmp32 = 0;
+  uint8_t i;
+  MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
+  MaxRPMs = findMax4(MaxRPMs, motorKERPM, 4);
+  if (MinBat == 0)
+  {
+    MinBat = LipoVoltage;
+  }
+  else if (LipoVoltage < MinBat)
+  {
+    MinBat = LipoVoltage;
+  }
+  MaxAmps = findMax(MaxAmps, current);
+  tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.s.m_batMAH[settings.s.m_activeBattery];
+  MaxC = (uint8_t) tmp32;
+  tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
+  MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
+  for (i = 0; i < 4; i++)
+  {
+    maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
+    maxCurrent[i] = findMax(maxCurrent[i], motorCurrent[i]);
+    maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
+    minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
+  }
+  #if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
+  if(armed > 0)
+  {
+  #endif
+  #ifdef ADVANCED_STATS
+  for(i=0; i<STAT_GENERATOR_SIZE; i++)
+  {
+    statGenerators[i].StoreValue(current, throttle);
+  }
+  #endif
+  #ifdef ADVANCED_ESC_STATS
+  for(i=0; i<4; i++)
+  {
+    ESCstatGenerators[i].StoreValue(motorCurrent[i], throttle);
+  }
+  #endif
+  #if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
+  }
+  #endif    
+}
+
+inline void ProcessConversionAndFilters()
+{
+  uint8_t i;
+  if (settings.s.m_tempUnit == 1)
+  {
+    for (i = 0; i < 4; i++)
+    {
+      ESCTemps[i] = 9 * ESCTemps[i] / 5 + 32;
+      if (lastTempUnit == 0)
+      {
+        maxTemps[i] = 9 * maxTemps[i] / 5 + 32;
+      }
+    }
+    if (lastTempUnit == 0)
+    {
+      MaxTemp = 9 * MaxTemp / 5 + 32;
+    }
+  }
+  if (lastTempUnit == 1 && settings.s.m_tempUnit == 0)
+  {
+    for (i = 0; i < 4; i++)
+    {
+      maxTemps[i] = (maxTemps[i] - 32) * 5 / 9;
+    }
+    MaxTemp = (MaxTemp - 32) * 5 / 9;
+  }
+  lastTempUnit = settings.s.m_tempUnit;
+
+  
+  LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
+  current = ampTotalFilter.ProcessValue(current);
+  for (i = 0; i < 4; i++)
+  {
+    motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
+    motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
+  }
+}
+
+
+#ifndef BF32_MODE
 boolean ReadTelemetry()
 {
   minBytes = 100;
@@ -130,8 +217,9 @@ boolean ReadTelemetry()
         if(newMAH > LipoMAH) LipoMAH = newMAH; 
         #endif
         
-        uint32_t tmp32 = 0;
         uint8_t voltDev = 0;
+        uint32_t temp = 0;
+        uint32_t tmp32 = 0;
         current = 0;
         for (i = 0; i < 4; i++)
         {
@@ -141,7 +229,7 @@ boolean ReadTelemetry()
           ESCTemps[i] = ((serialBuf[83 + i10 + STARTCOUNT] << 8) | serialBuf[84 + i10 + STARTCOUNT]);
           ESCmAh[i] = ((serialBuf[89 + i10 + STARTCOUNT] << 8) | serialBuf[90 + i10 + STARTCOUNT]);
           #ifdef MAH_CORRECTION
-          uint32_t temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.s.m_ESCCorrection[i];
+          temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.s.m_ESCCorrection[i];
           temp /= (uint32_t)100;
           ESCmAh[i] = (uint16_t)temp;
           LipoMAH += ESCmAh[i];
@@ -164,7 +252,7 @@ boolean ReadTelemetry()
         if (voltDev != 0)
         {
           tmp32 = tmp32 / (uint32_t)voltDev;
-          LipoVoltage = (uint16_t)tmp32;
+          LipoVoltage = (uint16_t)temp;
         }
         LipoVoltage += settings.s.m_voltCorrect * 10;
 
@@ -193,84 +281,12 @@ boolean ReadTelemetry()
         }
 
 
-        if (settings.s.m_tempUnit == 1)
-        {
-          for (i = 0; i < 4; i++)
-          {
-            ESCTemps[i] = 9 * ESCTemps[i] / 5 + 32;
-            if (lastTempUnit == 0)
-            {
-              maxTemps[i] = 9 * maxTemps[i] / 5 + 32;
-            }
-          }
-          if (lastTempUnit == 0)
-          {
-            MaxTemp = 9 * MaxTemp / 5 + 32;
-          }
-        }
-        if (lastTempUnit == 1 && settings.s.m_tempUnit == 0)
-        {
-          for (i = 0; i < 4; i++)
-          {
-            maxTemps[i] = (maxTemps[i] - 32) * 5 / 9;
-          }
-          MaxTemp = (MaxTemp - 32) * 5 / 9;
-        }
-        lastTempUnit = settings.s.m_tempUnit;
-
-        
-        LipoVoltage = voltageFilter.ProcessValue(LipoVoltage);
-        current = ampTotalFilter.ProcessValue(current);
-        for (i = 0; i < 4; i++)
-        {
-          motorKERPM[i] = ESCKRfilter[i].ProcessValue(motorKERPM[i]);
-          motorCurrent[i] = ESCAmpfilter[i].ProcessValue(motorCurrent[i]);
-        }
+        ProcessConversionAndFilters();
 
         #ifndef KISS_OSD_CONFIG
         if (armedOnce)
         {
-          MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
-          MaxRPMs = findMax4(MaxRPMs, motorKERPM, 4);
-          if (MinBat == 0)
-          {
-            MinBat = LipoVoltage;
-          }
-          else if (LipoVoltage < MinBat)
-          {
-            MinBat = LipoVoltage;
-          }
-          MaxAmps = findMax(MaxAmps, current);
-          tmp32 = (uint32_t)MaxAmps * 10 / (uint32_t)settings.s.m_batMAH[settings.s.m_activeBattery];
-          MaxC = (uint8_t) tmp32;
-          tmp32 = (uint32_t)LipoVoltage * (uint32_t)current;
-          MaxWatt = findMax(MaxWatt, (uint16_t) (tmp32 / 1000));
-          for (i = 0; i < 4; i++)
-          {
-            maxKERPM[i] = findMax(maxKERPM[i], motorKERPM[i]);
-            maxCurrent[i] = findMax(maxCurrent[i], motorCurrent[i]);
-            maxTemps[i] = findMax(maxTemps[i], ESCTemps[i]);
-            minVoltage[i] = findMin(minVoltage[i], ESCVoltage[i]);
-          }
-          #if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
-          if(armed > 0)
-          {
-          #endif
-          #ifdef ADVANCED_STATS
-          for(i=0; i<STAT_GENERATOR_SIZE; i++)
-          {
-            statGenerators[i].StoreValue(current, throttle);
-          }
-          #endif
-          #ifdef ADVANCED_ESC_STATS
-          for(i=0; i<4; i++)
-          {
-            ESCstatGenerators[i].StoreValue(motorCurrent[i], throttle);
-          }
-          #endif
-          #if defined(ADVANCED_STATS) || defined(ADVANCED_ESC_STATS)
-          }
-          #endif
+          GenerateStats();
         }
         #endif
       }
@@ -367,9 +383,19 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
           switch (sMode)
           {
             case FC_SETTINGS:
-              if (protoVersion > 104 && serialBuf[73 + STARTCOUNT] > 0)
+              if (protoVersion >= 104 && serialBuf[73 + STARTCOUNT] > 0)
               {
                 armOnYaw = false;
+              }
+              if(protoVersion < 104)
+              {
+                if(serialBuf[73+STARTCOUNT] == 1 || serialBuf[73+STARTCOUNT] == 12 || serialBuf[73+STARTCOUNT] == 13
+                || serialBuf[73+1+STARTCOUNT] == 1 || serialBuf[73+1+STARTCOUNT] == 12 || serialBuf[73+1+STARTCOUNT] == 13
+                || serialBuf[73+2+STARTCOUNT] == 1 || serialBuf[73+2+STARTCOUNT] == 12 || serialBuf[73+2+STARTCOUNT] == 13
+                || serialBuf[73+3+STARTCOUNT] == 1 || serialBuf[73+3+STARTCOUNT] == 12 || serialBuf[73+3+STARTCOUNT] == 13)
+                {
+                   armOnYaw = false;
+                }
               }
               if (serialBuf[55 + STARTCOUNT] > 2)
               {
@@ -377,10 +403,12 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               }
               if (protoVersion < 107) menuDisabled = true;
 #ifndef IMPULSERC_VTX
+#ifdef VTX_POWER_KNOB
               if (protoVersion > 106 && serialBuf[154 + STARTCOUNT] > 0 && ((serialBuf[154 + STARTCOUNT] & 0x0F) == 0x06))
               {
                 vTxPowerKnobChannel = (int8_t)(serialBuf[154 + STARTCOUNT] >> 4) - 1;
               }
+#endif
 #endif
               break;
             case FC_RATES:
@@ -522,4 +550,448 @@ void SendFCSettings(uint8_t sMode)
     NewSerial.write(serialBuf[i]);
   }
 }
+#endif
+
+
+#else
+
+#define MSP_API_VERSION           1    //out message
+#define MSP_VTX_CONFIG           88    //out message         Get vtx settings - betaflight
+#define MSP_SET_VTX_CONFIG       89    //in message          Set vtx settings - betaflight
+#define MSP_FILTER_CONFIG        92
+#define MSP_SET_FILTER_CONFIG    93
+
+#define MSP_IDENT                100   //out message         multitype + multiwii version + protocol version + capability variable
+#define MSP_STATUS               101   //out message         cycletime & errors_count & sensor present & box activation & current setting number
+#define MSP_RAW_IMU              102   //out message         9 DOF
+#define MSP_SERVO                103   //out message         8 servos
+#define MSP_MOTOR                104   //out message         8 motors
+#define MSP_RC                   105   //out message         8 rc chan and more
+#define MSP_RAW_GPS              106   //out message         fix, numsat, lat, lon, alt, speed, ground course
+#define MSP_COMP_GPS             107   //out message         distance home, direction home
+#define MSP_ATTITUDE             108   //out message         2 angles 1 heading
+#define MSP_ALTITUDE             109   //out message         altitude, variometer
+#define MSP_ANALOG               110   //out message         vbat, powermetersum, rssi if available on RX
+#define MSP_RC_TUNING            111   //out message         rc rate, rc expo, rollpitch rate, yaw rate, dyn throttle PID
+#define MSP_PID                  112   //out message         P I D coeff (9 are used currently)
+#define MSP_BOX                  113   //out message         BOX setup (number is dependant of your setup)
+#define MSP_MISC                 114   //out message         powermeter trig
+#define MSP_MOTOR_PINS           115   //out message         which pins are in use for motors & servos, for GUI 
+#define MSP_BOXNAMES             116   //out message         the aux switch names
+#define MSP_PIDNAMES             117   //out message         the PID names
+#define MSP_BOXIDS               119   //out message         get the permanent IDs associated to BOXes
+#define MSP_NAV_STATUS           121   //out message         Returns navigation status
+#define MSP_VOLTAGE_METERS       128   //out message         Voltage (per meter)
+#define MSP_CURRENT_METERS       129   //out message         Amperage (per meter)
+
+#define MSP_CELLS                130   //out message         FrSky SPort Telemtry
+
+#define MSP_SET_RAW_RC           200   //in message          8 rc chan
+#define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
+#define MSP_SET_PID              202   //in message          P I D coeff (9 are used currently)
+#define MSP_SET_BOX              203   //in message          BOX setup (number is dependant of your setup)
+#define MSP_SET_RC_TUNING        204   //in message          rc rate, rc expo, rollpitch rate, yaw rate, dyn throttle PID
+#define MSP_ACC_CALIBRATION      205   //in message          no param
+#define MSP_MAG_CALIBRATION      206   //in message          no param
+#define MSP_SET_MISC             207   //in message          powermeter trig + 8 free for future use
+#define MSP_RESET_CONF           208   //in message          no param
+#define MSP_SET_WP               209   //in message          sets a given WP (WP#,lat, lon, alt, flags)
+#define MSP_SELECT_SETTING       210   //in message          Select Setting Number (0-2)
+#define MSP_SET_HEAD             211   //in message          define a new heading hold direction
+
+#define MSP_BIND                 240   //in message          no param
+
+#define MSP_ALARMS               242   //in message          poll for alert text
+
+#define MSP_EEPROM_WRITE         250   //in message          no param
+
+#define MSP_DEBUGMSG             253   //out message         debug string buffer
+#define MSP_DEBUG                254   //out message         debug1,debug2,debug3,debug4
+
+// Cleanflight/Betaflight specific
+#define MSP_PID_CONTROLLER       59    //in message          no param
+#define MSP_SET_PID_CONTROLLER   60    //out message         sets a given pid controller
+
+// Cleanflight specific
+#define MSP_LOOP_TIME            73    //out message         Returns FC cycle time i.e looptime 
+#define MSP_SET_LOOP_TIME        74    //in message          Sets FC cycle time i.e looptime parameter
+
+// Baseflight specific
+#define MSP_CONFIG               66    //out message         baseflight-specific settings that aren't covered elsewhere
+#define MSP_SET_CONFIG           67    //in message          baseflight-specific settings save
+
+static uint8_t armBox = 0;
+
+static const char mspHeader[] = { '$', 'M', '>' };
+
+void mspRequest(uint8_t mspCommand)
+{
+  for(uint8_t i=0; i<2; i++) NewSerial.write(mspHeader[i]);
+  NewSerial.write('<');
+  uint8_t txChecksum = 0;
+  NewSerial.write((uint8_t)0);
+  NewSerial.write(mspCommand);
+  txChecksum ^= mspCommand;
+  NewSerial.write(txChecksum);
+}
+
+boolean ReadTelemetry()
+{
+  minBytes = 100;
+  recBytes = 0;
+  uint8_t mspCmd;
+
+  while (recBytes < minBytes && micros() - LastLoopTime < 20000)
+  {
+    const uint8_t STARTCOUNT = 5;
+    if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
+    if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
+    if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
+    if (recBytes == 4) minBytes = serialBuf[3] + 6; // got the transmission length
+    if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
+    if (recBytes == minBytes)
+    {
+      uint8_t checksum = serialBuf[3];
+      uint8_t i;
+      for (i = STARTCOUNT-1; i < minBytes; i++) {
+        checksum ^= serialBuf[i];
+      }
+      checksumDebug = checksum;
+      bufMinusOne = serialBuf[minBytes-1];
+
+      if (checksum == 0)
+      {
+        uint32_t temp = 0;
+        uint8_t kissMotorPos = 0;
+        uint8_t bitShift = 1;
+        uint8_t current_armed;
+        switch(mspCmd)
+        {
+          case MSP_RC:
+            roll = (constrain(((serialBuf[1 + STARTCOUNT] << 8) | serialBuf[STARTCOUNT]), 1000, 2000) - 1000)*2;
+            pitch = (constrain(((serialBuf[3 + STARTCOUNT] << 8) | serialBuf[2 + STARTCOUNT]), 1000, 2000) - 1000)*2;
+            yaw = (constrain(((serialBuf[5 + STARTCOUNT] << 8) | serialBuf[4 + STARTCOUNT]), 1000, 2000) - 1000)*2;            
+            throttle = (constrain(((serialBuf[7 + STARTCOUNT] << 8) | serialBuf[6 + STARTCOUNT]), 1000, 2000) - 1000) / 10;
+            for(i=0; i<4; i++) AuxChanVals[i] = (constrain(((serialBuf[9 + i*2 + STARTCOUNT] << 8) | serialBuf[8 + i*2 + STARTCOUNT]), 1000, 2000) - 1000)*2-1000;
+          break;
+          case MSP_ANALOG:
+            LipoVoltage = serialBuf[STARTCOUNT]*10; //8-bit WTF???
+            LipoMAH = ((serialBuf[2 + STARTCOUNT] << 8) | serialBuf[1 + STARTCOUNT]);
+            current = ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
+          break;
+          case MSP_BOXIDS:
+            for(i=0; i<8; i++)
+            {
+              if(serialBuf[i + STARTCOUNT] == 0) armBox |= bitShift;
+              bitShift <<= 1;
+            }
+          break;
+          case MSP_STATUS:
+            #ifndef KISS_OSD_CONFIG
+            FCProfile = serialBuf[10 + STARTCOUNT];
+            #endif
+            current_armed = (serialBuf[6 + STARTCOUNT] & armBox) != 0;
+            // switch disarmed => armed
+            if (armed == 0 && current_armed > 0)
+            {
+              triggerCleanScreen = true;
+              armedOnce = true;
+              last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
+              DV_change_time = 0;
+              #ifndef KISS_OSD_CONFIG
+              statsActive = false;
+              #endif
+              #ifdef RC_SPLIT_CONTROL
+              if(settings.s.m_RCSplitControl > 0) newRCsplitState = true;
+              #endif
+            }
+            // switch armed => disarmed
+            else
+            {
+              if (armed > 0 && current_armed == 0)
+              {
+                if(settings.s.m_timerMode < 2) airTimerStarted = false;
+                if(start_time > 0)
+                {
+                  if(settings.s.m_timerMode < 2)
+                  {
+                    total_time = total_time + (millis() - start_time);
+                    start_time = 0;
+                  }
+                  else total_time = millis() - start_time;
+                }             
+                triggerCleanScreen = true;
+                if (settings.s.m_batWarning > 0)
+                {
+                  settings.m_lastMAH = totalMAH;
+                  settings.WriteLastMAH();
+                  settings.m_lastMAH = 0;
+                }
+                else
+                {
+                  settings.m_lastMAH = 0;
+                  settings.WriteLastMAH();
+                }
+                settings.UpdateMaxWatt(MaxWatt);
+                #ifdef RC_SPLIT_CONTROL
+                newRCsplitState = false;
+                #endif
+              }
+              else if (armed > 0)
+              {
+                if (throttle < 5 && !airTimerStarted)
+                {
+                  time = 0;
+                }
+                else
+                {
+                  airTimerStarted = true;
+                  if (start_time == 0) start_time = millis();
+                  time = millis() - start_time;
+                }
+                if(settings.s.m_timerMode > 0) time += total_time;
+              }
+            }
+            if(settings.s.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
+            armed = current_armed;     
+          break;
+          case MSP_VOLTAGE_METERS:
+            if(minBytes == 13)
+            {
+              uint16_t voltSum = 0;
+              for(i=0; i<4; i++)
+              {
+                kissMotorPos = (i+2)%4;
+                ESCVoltage[kissMotorPos] = serialBuf[STARTCOUNT+i*2]*10;
+                voltSum += ESCVoltage[kissMotorPos];              
+              }
+              LipoVoltage = voltSum / 4;
+            }
+          break;
+          case MSP_CURRENT_METERS:
+            if(minBytes == 13)
+            {
+              current = 0;
+              for(i=0; i<4; i++)
+              {
+                kissMotorPos = (i+2)%4;
+                motorCurrent[kissMotorPos] = serialBuf[STARTCOUNT+i*2]*10;
+                #ifdef MAH_CORRECTION
+                temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
+                temp /= (uint32_t)100;
+                motorCurrent[kissMotorPos] = (uint16_t)temp;
+                #endif
+                current += motorCurrent[kissMotorPos];             
+              }
+            }
+          break;
+        }
+        
+        #ifdef CROSSHAIR_ANGLE
+        angleY = 0; //FIXME
+        #endif
+
+        
+        //FIXME : Add MSP for RPM, Temps and mAh per ESC/Motor
+        /*#ifdef MAH_CORRECTION
+        LipoMAH = 0;
+        #endif        
+        current = 0;
+        for (i = 0; i < 4; i++)
+        {
+          uint8_t i10 = i * 10;
+          motorKERPM[i] = ((serialBuf[91 + i10 + STARTCOUNT] << 8) | serialBuf[92 + i10 + STARTCOUNT]) / (MAGNETPOLECOUNT / 2);
+          ESCTemps[i] = ((serialBuf[83 + i10 + STARTCOUNT] << 8) | serialBuf[84 + i10 + STARTCOUNT]);
+          ESCmAh[i] = ((serialBuf[89 + i10 + STARTCOUNT] << 8) | serialBuf[90 + i10 + STARTCOUNT]);
+          #ifdef MAH_CORRECTION
+          uint32_t temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.s.m_ESCCorrection[i];
+          temp /= (uint32_t)100;
+          ESCmAh[i] = (uint16_t)temp;
+          LipoMAH += ESCmAh[i];
+          #endif
+        }*/
+
+        LipoVoltage += settings.s.m_voltCorrect * 10;
+
+        #ifndef KISS_OSD_CONFIG
+        //failSafeState = serialBuf[41 + STARTCOUNT]; //FIXME
+        failSafeState = 0; //FIXME
+        #endif
+
+        // Data sanity check. Return false if we get invalid data FIXME: Needed or not for BF???
+        /*for (i = 0; i < 4; i++)
+        {
+          if (ESCTemps[i] > 160 ||
+              motorCurrent[i] > 10000 ||
+              motorKERPM[i] > 700 ||
+              ESCVoltage[i] > 10000)
+          {
+            return false;
+          }
+        }
+        if (LipoVoltage > 10000 ||
+            throttle > 100 ||
+            roll > 2000 ||
+            pitch > 2000 ||
+            yaw > 2000)
+        {
+          return false;
+        }*/
+
+        #ifdef BF32_MODE
+        if(telemetryMSP == MAX_TELEMETRY_MSPS-1) 
+        {
+        #endif    
+      
+        ProcessConversionAndFilters();
+
+        #ifndef KISS_OSD_CONFIG
+        if (armedOnce)
+        {
+          GenerateStats();
+        }
+        #endif
+        #ifdef BF32_MODE
+        }
+        #endif
+      }
+      else
+      {
+        return false;
+      }
+    }
+  }
+  if (recBytes != minBytes)
+  {
+    return false;
+  }
+  return true;
+}
+
+#ifndef KISS_OSD_CONFIG
+void ReadFCSettings(boolean skipValues, uint8_t sMode)
+{
+  menuDisabled = true; return; //FIXME: ReadFCSettings does not work :(
+  
+  recBytes = 0;
+  uint8_t mspCmd;
+
+  while (recBytes < minBytes && micros() - LastLoopTime < 20000)
+  {
+    const uint8_t STARTCOUNT = 5;
+    if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
+    if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
+    if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
+    if (recBytes == 4) minBytes = serialBuf[3] + 6; // got the transmission length
+    if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
+    if (recBytes > 0) bufMinusOne = recBytes;
+    if (minBytes > 0) checksumDebug = minBytes;
+    if (recBytes == minBytes)
+    {
+      uint8_t checksum = serialBuf[3];
+      uint8_t i;
+      for (i = STARTCOUNT-1; i < minBytes; i++) {
+        checksum ^= serialBuf[i];
+      }
+      checksumDebug = checksum;
+      bufMinusOne = serialBuf[minBytes-1];
+
+      if (checksum == 0)
+      {
+        fcSettingsReceived = true;
+        if(!skipValues)
+        {
+          uint32_t temp = 0;
+          uint8_t kissMotorPos = 0;
+          uint8_t current_armed;
+          switch(mspCmd)
+          {
+            case MSP_API_VERSION:
+              protoVersion = serialBuf[STARTCOUNT + 2];
+              if(protoVersion < 36) menuDisabled = true;
+            break;
+            case MSP_PID:
+              for(i=0; i<10; i++)
+              {
+                pid_p[i] = serialBuf[STARTCOUNT + i * 3];
+                pid_i[i] = serialBuf[STARTCOUNT + i * 3 + 1];
+                pid_d[i] = serialBuf[STARTCOUNT + i * 3 + 2];
+              }
+            break;
+            case MSP_RC_TUNING:
+              rcrate[0] = serialBuf[STARTCOUNT];
+              rccurve[0] = serialBuf[STARTCOUNT + 1];
+              rate[0] = serialBuf[STARTCOUNT + 2];
+              rate[1] = serialBuf[STARTCOUNT + 3];
+              rate[2] = serialBuf[STARTCOUNT + 4];
+              dynThrPID = serialBuf[STARTCOUNT + 5];
+              thr_Mid = serialBuf[STARTCOUNT + 6];
+              thr_Expo = serialBuf[STARTCOUNT + 7];
+              tpa_breakpoint = ((serialBuf[9 + STARTCOUNT] << 8) | serialBuf[8 + STARTCOUNT]);
+              rccurve[2] = serialBuf[STARTCOUNT + 10];
+              rcrate[2] = serialBuf[STARTCOUNT + 11];
+            break;
+            case MSP_FILTER_CONFIG:
+              memcpy(&bf32_filters, &serialBuf[STARTCOUNT], sizeof(bf32_filters));
+            break;
+            case MSP_VTX_CONFIG:
+              vTxType = serialBuf[STARTCOUNT];
+              vTxBand = serialBuf[STARTCOUNT + 1];
+              vTxChannel = serialBuf[STARTCOUNT + 2];
+              oldvTxBand = vTxBand;
+              oldvTxChannel = vTxChannel;
+              vTx_powerIDX = serialBuf[STARTCOUNT + 3];
+              oldvTx_powerIDX = vTx_powerIDX;
+              vTx_pitmode = serialBuf[STARTCOUNT + 4];
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+void SendFCSettings(uint8_t mspCmd)
+{
+  uint8_t checksum;
+  uint8_t transLength;
+  uint8_t i;
+  
+  switch(mspCmd)
+  {
+    case MSP_SET_PID:
+      transLength = 10;
+      for(i=0; i<10; i++)
+      {
+        serialBuf[i * 3] = pid_p[i];
+        serialBuf[i * 3 + 1] = pid_p[i];
+        serialBuf[i * 3 + 2] = pid_p[i];
+      }
+    break;
+    case MSP_SET_RC_TUNING:
+    break;
+    case MSP_SET_FILTER_CONFIG:
+    break;
+    case MSP_SET_VTX_CONFIG:
+    break;
+    default:
+    return;
+  }
+  checksum ^= mspCmd;
+  for(i=0; i<2; i++) NewSerial.write(mspHeader[i]);
+  NewSerial.write('<');
+  NewSerial.write(transLength);
+  checksum ^= transLength;
+  NewSerial.write(mspCmd);
+  checksum ^= mspCmd;
+  for(i=0; i<transLength; i++)
+  {
+    NewSerial.write(serialBuf[i]);
+    checksum ^= serialBuf[i];
+  }
+  NewSerial.write(checksum);
+}
+#endif
 #endif
