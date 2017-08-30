@@ -78,6 +78,8 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 
 #ifdef STEELE_PDB
 static const char KISS_OSD_VER[] PROGMEM = "steele pdb config v2.4.1";
+#elif defined(BF32_MODE)
+static const char KISS_OSD_VER[] PROGMEM = "bf32 osd config v2.4.1";
 #else
 static const char KISS_OSD_VER[] PROGMEM = "kiss osd config v2.4.1";
 #endif

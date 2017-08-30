@@ -1,10 +1,11 @@
 #include "Max7456Config.h"
 #include "Config.h"
-#ifdef STEELE_PDB
+#if defined(STEELE_PDB) || defined(IMPULSERC_VTX)
 #include "fontCompressedSteelePDB.h"
 #else
 #include "fontCompressed.h"
-#endif#include "CSettings.h"
+#endif
+#include "CSettings.h"
 
 extern CSettings settings;
 

@@ -690,7 +690,7 @@ void loop(){
     #ifdef SHOW_KISS_LOGO
     if(!logoDone && armed == 0 && !menuActive && !armedOnce && settings.m_IconSettings[KISS_ICON] == 1)
     {
-      #ifdef STEELE_PDB
+      #if defined(IMPULSERC_VTX) || defined(STEELE_PDB)
       uint8_t logoCol = settings.COLS/2-3;
       uint8_t logoRow = settings.ROWS/2-2;
       static const char impulseRC_logo[][7] PROGMEM = { { 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0x00 },
@@ -721,11 +721,13 @@ void loop(){
         OSD.setCursor(logoCol, logoRow);
         OSD.print(fixPStr(impulseRC_logo2[i]));
         logoRow++;            
-      }        
+      }
+      #ifdef STEELE_PDB        
       logoCol = settings.COLS/2-2;
       OSD.setCursor(logoCol, logoRow);
       static const char mustache[] PROGMEM = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
       OSD.print(fixPStr(mustache));
+      #endif
       #else
       uint8_t logoCol = 11;
       uint8_t logoRow = 5;
