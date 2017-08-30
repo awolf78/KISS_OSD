@@ -1,4 +1,4 @@
-static uint8_t minBytes = 0;
+static uint8_t minBytes = 100;
 static uint8_t minBytesSettings = 0;
 static uint8_t recBytes = 0;
 #ifdef KISS_OSD_CONFIG
@@ -556,6 +556,7 @@ void SendFCSettings(uint8_t sMode)
 #else
 
 #define MSP_API_VERSION           1    //out message
+#define MSP_MODE_RANGES          34    //out message         Returns all mode ranges
 #define MSP_VTX_CONFIG           88    //out message         Get vtx settings - betaflight
 #define MSP_SET_VTX_CONFIG       89    //in message          Set vtx settings - betaflight
 #define MSP_FILTER_CONFIG        92
@@ -585,6 +586,8 @@ void SendFCSettings(uint8_t sMode)
 #define MSP_CURRENT_METERS       129   //out message         Amperage (per meter)
 
 #define MSP_CELLS                130   //out message         FrSky SPort Telemtry
+
+#define MSP_EXTRA_ESC_DATA       134    //out message         Extra ESC data from 32-Bit ESCs (Temperature, RPM)
 
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
@@ -620,7 +623,7 @@ void SendFCSettings(uint8_t sMode)
 #define MSP_CONFIG               66    //out message         baseflight-specific settings that aren't covered elsewhere
 #define MSP_SET_CONFIG           67    //in message          baseflight-specific settings save
 
-static uint8_t armBox = 0;
+static uint32_t armBox = 0, failSafeBox = 0;
 
 static const char mspHeader[] = { '$', 'M', '>' };
 
@@ -648,7 +651,7 @@ boolean ReadTelemetry()
     if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
     if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
     if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 4) minBytes = serialBuf[3] + 6; // got the transmission length
+    if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
     if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
     if (recBytes == minBytes)
     {
@@ -657,14 +660,11 @@ boolean ReadTelemetry()
       for (i = STARTCOUNT-1; i < minBytes; i++) {
         checksum ^= serialBuf[i];
       }
-      checksumDebug = checksum;
-      bufMinusOne = serialBuf[minBytes-1];
 
       if (checksum == 0)
       {
         uint32_t temp = 0;
         uint8_t kissMotorPos = 0;
-        uint8_t bitShift = 1;
         uint8_t current_armed;
         switch(mspCmd)
         {
@@ -679,19 +679,29 @@ boolean ReadTelemetry()
             LipoVoltage = serialBuf[STARTCOUNT]*10; //8-bit WTF???
             LipoMAH = ((serialBuf[2 + STARTCOUNT] << 8) | serialBuf[1 + STARTCOUNT]);
             current = ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
+            #ifndef KISS_OSD_CONFIG
+            /*if(serialBuf[7 + STARTCOUNT] == 4 && protoVersion > 36) failSafeState = 10;
+            else failSafeState = 0;*/ 
+            #endif
           break;
           case MSP_BOXIDS:
-            for(i=0; i<8; i++)
+            armBox = 0;
+            temp = 1;
+            for(i=0; (i + STARTCOUNT)<(minBytes-1); i++)
             {
-              if(serialBuf[i + STARTCOUNT] == 0) armBox |= bitShift;
-              bitShift <<= 1;
+              if(serialBuf[i + STARTCOUNT] == 0) armBox |= temp;
+              if(serialBuf[i + STARTCOUNT] == 27) failSafeBox |= temp;
+              temp <<= 1;
             }
           break;
-          case MSP_STATUS:
+          case MSP_STATUS:            
+            temp = ((serialBuf[9 + STARTCOUNT] << 24) | (serialBuf[8 + STARTCOUNT] << 16) | (serialBuf[7 + STARTCOUNT] << 8) | serialBuf[6 + STARTCOUNT]);
+            current_armed = (temp & armBox) != 0;
             #ifndef KISS_OSD_CONFIG
             FCProfile = serialBuf[10 + STARTCOUNT];
-            #endif
-            current_armed = (serialBuf[6 + STARTCOUNT] & armBox) != 0;
+            failSafeState = 0;
+            if(temp & failSafeBox) failSafeState = 10;
+            #endif            
             // switch disarmed => armed
             if (armed == 0 && current_armed > 0)
             {
@@ -757,67 +767,69 @@ boolean ReadTelemetry()
             armed = current_armed;     
           break;
           case MSP_VOLTAGE_METERS:
-            if(minBytes == 13)
+            if(minBytes > 6)
             {
               uint16_t voltSum = 0;
-              for(i=0; i<4; i++)
+              uint16_t ESCfound = 0;
+              for(i=0; (STARTCOUNT+1+i*2)<minBytes; i++)
               {
-                kissMotorPos = (i+2)%4;
-                ESCVoltage[kissMotorPos] = serialBuf[STARTCOUNT+i*2]*10;
-                voltSum += ESCVoltage[kissMotorPos];              
+                kissMotorPos = (i+3)%4;
+                ESCVoltage[kissMotorPos] = serialBuf[STARTCOUNT+1+i*2]*10;
+                if(ESCVoltage[kissMotorPos] > 5)
+                {
+                  voltSum += ESCVoltage[kissMotorPos];              
+                  ESCfound++;
+                }
               }
-              LipoVoltage = voltSum / 4;
+              if(ESCfound > 0) LipoVoltage = voltSum / ESCfound;
             }
           break;
           case MSP_CURRENT_METERS:
-            if(minBytes == 13)
+            if(minBytes > 9)
             {
+              int16_t oldcurrent = current;
+              int16_t oldLipoMAH = LipoMAH;
               current = 0;
-              for(i=0; i<4; i++)
+              #ifdef MAH_CORRECTION
+              LipoMAH = 0;
+              #endif
+              for(i=0; (STARTCOUNT+i*5+4)<minBytes; i++)
               {
-                kissMotorPos = (i+2)%4;
-                motorCurrent[kissMotorPos] = serialBuf[STARTCOUNT+i*2]*10;
+                kissMotorPos = (i+3)%4;
+                ESCmAh[kissMotorPos] = ((serialBuf[STARTCOUNT+i*5+2] << 8) | serialBuf[STARTCOUNT+i*5+1]);
+                motorCurrent[kissMotorPos] = ((serialBuf[STARTCOUNT+i*5+4] << 8) | serialBuf[STARTCOUNT+i*5+3]);
                 #ifdef MAH_CORRECTION
                 temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
                 temp /= (uint32_t)100;
                 motorCurrent[kissMotorPos] = (uint16_t)temp;
+                temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
+                temp /= (uint32_t)100;
+                ESCmAh[kissMotorPos] = (uint16_t)temp;
+                LipoMAH += ESCmAh[kissMotorPos];
                 #endif
                 current += motorCurrent[kissMotorPos];             
               }
+              if(oldcurrent > current) current = oldcurrent;
+              if(oldLipoMAH > LipoMAH) LipoMAH = oldLipoMAH;
             }
           break;
+          case MSP_EXTRA_ESC_DATA:
+            for(i=0; (STARTCOUNT+i*3+2)<minBytes; i++)
+            {
+              kissMotorPos = (i+2)%4;
+              ESCTemps[kissMotorPos] = serialBuf[STARTCOUNT+i*3];
+              motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+i*3+2] << 8) | serialBuf[STARTCOUNT+i*3+1])/ (MAGNETPOLECOUNT/2);
+            }
+          break;
+          default:
+          return true;
         }
         
         #ifdef CROSSHAIR_ANGLE
         angleY = 0; //FIXME
         #endif
 
-        
-        //FIXME : Add MSP for RPM, Temps and mAh per ESC/Motor
-        /*#ifdef MAH_CORRECTION
-        LipoMAH = 0;
-        #endif        
-        current = 0;
-        for (i = 0; i < 4; i++)
-        {
-          uint8_t i10 = i * 10;
-          motorKERPM[i] = ((serialBuf[91 + i10 + STARTCOUNT] << 8) | serialBuf[92 + i10 + STARTCOUNT]) / (MAGNETPOLECOUNT / 2);
-          ESCTemps[i] = ((serialBuf[83 + i10 + STARTCOUNT] << 8) | serialBuf[84 + i10 + STARTCOUNT]);
-          ESCmAh[i] = ((serialBuf[89 + i10 + STARTCOUNT] << 8) | serialBuf[90 + i10 + STARTCOUNT]);
-          #ifdef MAH_CORRECTION
-          uint32_t temp = (uint32_t)ESCmAh[i] * (uint32_t)settings.s.m_ESCCorrection[i];
-          temp /= (uint32_t)100;
-          ESCmAh[i] = (uint16_t)temp;
-          LipoMAH += ESCmAh[i];
-          #endif
-        }*/
-
         LipoVoltage += settings.s.m_voltCorrect * 10;
-
-        #ifndef KISS_OSD_CONFIG
-        //failSafeState = serialBuf[41 + STARTCOUNT]; //FIXME
-        failSafeState = 0; //FIXME
-        #endif
 
         // Data sanity check. Return false if we get invalid data FIXME: Needed or not for BF???
         /*for (i = 0; i < 4; i++)
@@ -871,10 +883,9 @@ boolean ReadTelemetry()
 
 #ifndef KISS_OSD_CONFIG
 void ReadFCSettings(boolean skipValues, uint8_t sMode)
-{
-  menuDisabled = true; return; //FIXME: ReadFCSettings does not work :(
-  
+{ 
   recBytes = 0;
+  minBytes = 100;
   uint8_t mspCmd;
 
   while (recBytes < minBytes && micros() - LastLoopTime < 20000)
@@ -884,7 +895,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
     if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
     if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
     if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 4) minBytes = serialBuf[3] + 6; // got the transmission length
+    if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
     if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
     if (recBytes > 0) bufMinusOne = recBytes;
     if (minBytes > 0) checksumDebug = minBytes;
@@ -946,6 +957,12 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               oldvTx_powerIDX = vTx_powerIDX;
               vTx_pitmode = serialBuf[STARTCOUNT + 4];
             break;
+            case MSP_MODE_RANGES:
+              for(i=STARTCOUNT; (i+4)<minBytes; i+=4)
+              {
+                if(serialBuf[i] == 0) armOnYaw = false;
+              }
+            break;
           }
         }
       }
@@ -962,28 +979,48 @@ void SendFCSettings(uint8_t mspCmd)
   switch(mspCmd)
   {
     case MSP_SET_PID:
-      transLength = 10;
+      transLength = 30;
       for(i=0; i<10; i++)
       {
         serialBuf[i * 3] = pid_p[i];
-        serialBuf[i * 3 + 1] = pid_p[i];
-        serialBuf[i * 3 + 2] = pid_p[i];
+        serialBuf[i * 3 + 1] = pid_i[i];
+        serialBuf[i * 3 + 2] = pid_d[i];
       }
     break;
     case MSP_SET_RC_TUNING:
+      transLength = 12;
+      serialBuf[0] = rcrate[0];
+      serialBuf[1] = rccurve[0];
+      serialBuf[2] = rate[0];
+      serialBuf[3] = rate[1];
+      serialBuf[4] = rate[2];
+      serialBuf[5] = dynThrPID;
+      serialBuf[6] = thr_Mid;
+      serialBuf[7] = thr_Expo;
+      serialBuf[8] = (byte)(tpa_breakpoint & 0x00FF);
+      serialBuf[9] = (byte)((tpa_breakpoint & 0xFF00) >> 8);
+      serialBuf[10] = rccurve[2];
+      serialBuf[11] = rcrate[2];
     break;
     case MSP_SET_FILTER_CONFIG:
+      transLength = sizeof(bf32_filters);
+      memcpy(serialBuf, &bf32_filters, sizeof(bf32_filters));
     break;
     case MSP_SET_VTX_CONFIG:
+      transLength = 5;
+      serialBuf[0] = vTxType;
+      serialBuf[1] = vTxBand;
+      serialBuf[2] = vTxChannel;
+      serialBuf[3] = vTx_powerIDX;
+      serialBuf[4] = vTx_pitmode;
     break;
     default:
     return;
   }
-  checksum ^= mspCmd;
   for(i=0; i<2; i++) NewSerial.write(mspHeader[i]);
   NewSerial.write('<');
   NewSerial.write(transLength);
-  checksum ^= transLength;
+  checksum = transLength;
   NewSerial.write(mspCmd);
   checksum ^= mspCmd;
   for(i=0; i<transLength; i++)

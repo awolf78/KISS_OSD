@@ -110,25 +110,17 @@ boolean checkCode(int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxV
   return changed;
 }
 
-boolean checkCode(volatile int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+boolean checkCode(uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
-  int16_t value2 = value;
-  boolean changed = checkCode(value2, STEP, minVal, maxVal);
-  value = value2;
-  return changed;
-}
-
-boolean checkCode(volatile uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
-{
-  int16_t tempValue = value;
+  int16_t tempValue = (int16_t)value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
   value = (uint8_t) tempValue;
   return changed;
 }
 
-boolean checkCode(volatile uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
+boolean checkCode(uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
-  int16_t tempValue = value;
+  int16_t tempValue = (int16_t)value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
   value = (uint16_t) tempValue;
   return changed;
@@ -254,38 +246,49 @@ void* RatesYawMenu()
 
 void* RatesMenu()
 {
-  if(code &  inputChecker.ROLL_RIGHT)
+  int16_t temp;
+
+  switch(activeRatesMenuItem)
   {
-    switch(activeRatesMenuItem)
-    {
-      case 0:
+    case 0:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)RatesRollMenu;
-      break;
-      case 1:
+      }
+    break;
+    case 1:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)RatesPitchMenu;
-      break;
-      case 2:
+      }
+    break;
+    case 2:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         return (void*)RatesYawMenu;
-      break;
-      #ifdef BF32_MODE
-      case 3:
-        fcSettingModeChanged[FC_RATES] |= checkCode(thr_Mid, 10, 0, 100);
-      break;
-      case 4:
-        fcSettingModeChanged[FC_RATES] |= checkCode(thr_Expo, 10, 0, 100);
-      break;
-      case 5:
-      #else
-      case 3:
-      #endif
+      }
+    break;
+    #ifdef BF32_MODE
+    case 3:
+      fcSettingModeChanged[FC_RATES] |= checkCode(thr_Mid, 10, 0, 100);
+    break;
+    case 4:
+      fcSettingModeChanged[FC_RATES] |= checkCode(thr_Expo, 10, 0, 100);
+    break;
+    case 5:
+    #else
+    case 3:
+    #endif
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
         cleanScreen();
         activeRatesMenuItem = 0;
         return (void*)MainMenu;
-      break;
-    }
+      }
+    break;
   }
 
   #ifdef BF32_MODE
@@ -313,8 +316,8 @@ void* RatesMenu()
   OSD.printP( startCol, ++startRow, PITCH_STR, activeRatesMenuItem );
   OSD.printP( startCol, ++startRow, YAW_STR, activeRatesMenuItem );
   #ifdef BF32_MODE
-  OSD.printIntArrow( startCol, ++startRow, THR_MID, thr_Mid, 0, activeRatesMenuItem, "", 1);
-  OSD.printIntArrow( startCol, ++startRow, THR_EXPO, thr_Expo, 0, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, THR_MID, thr_Mid, 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, THR_EXPO, thr_Expo, 2, activeRatesMenuItem, "", 1);
   #endif
   OSD.printP( startCol, ++startRow, BACK_STR, activeRatesMenuItem );
 
@@ -351,7 +354,7 @@ void* TPAMenu()
       fcSettingModeChanged[FC_TPA] |= checkCode(dynThrPID, 10, 0, 100);
     break;
     case 1:
-      fcSettingModeChanged[FC_TPA] |= checkCode(tpa_breakpoint, 10, 100, 200);
+      fcSettingModeChanged[FC_TPA] |= checkCode(tpa_breakpoint, 10, 1000, 2000);
     break;     
     case 2:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -383,12 +386,12 @@ void* TPAMenu()
   static const char TPA_MENU_TITLE_STR[] PROGMEM = "tpa menu";
   OSD.printP(settings.COLS/2 - strlen_P(TPA_MENU_TITLE_STR)/2, ++startRow, TPA_MENU_TITLE_STR);
   
-  OSD.printIntArrow( startCol, ++startRow, TPA_BF32_STR, dynThrPID, 0, activeTPAMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, TPA_BF32_STR, dynThrPID, 2, activeTPAMenuItem, "", 1);
 
-  OSD.printIntArrow( startCol, ++startRow, TPA_BREAK_STR, tpa_breakpoint, 0, activeTPAMenuItem, "0", 1);
+  OSD.printIntArrow( startCol, ++startRow, TPA_BREAK_STR, tpa_breakpoint, 0, activeTPAMenuItem, "", 1);
   
-  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeLPFMenuItem );
-  OSD.printP( startCol, ++startRow, BACK_STR, activeLPFMenuItem);
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeTPAMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeTPAMenuItem);
   
   return (void*)TPAMenu;
 }
@@ -719,7 +722,7 @@ void* FilterMenu()
 //static const char BACK_STR[] PROGMEM =                "back";
   
   uint8_t startRow = 0;
-  uint8_t startCol = settings.COLS/2 - (strlen_P(GYRO_SOFT_LPF_STR)+6)/2;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(GYRO_SOFT_LPF_STR)+7)/2;
   static const char FILTER_MENU_TITLE_STR[] PROGMEM = "filter menu";
   OSD.printP(settings.COLS/2 - strlen_P(FILTER_MENU_TITLE_STR)/2, startRow, FILTER_MENU_TITLE_STR);
 
@@ -1015,53 +1018,50 @@ static bool vTxSettingChanged = false;
 #ifdef IMPULSERC_VTX
 void* vTxMenu()
 {
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  switch(activeVTXMenuItem)
   {
-    switch(activeVTXMenuItem)
-    {
-      case 0:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxMinPower, 1, 0, 2);
-      break;
-      case 1:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
-      break;
-      case 2:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
-      break;
-      case 3:
-        vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
-      break;
-      case 4:
-        if(code &  inputChecker.ROLL_RIGHT)
+    case 0:
+      vTxSettingChanged |= checkCode(settings.s.m_vTxMinPower, 1, 0, 2);
+    break;
+    case 1:
+      vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
+    break;
+    case 2:
+      vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
+    break;
+    case 3:
+      vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
+    break;
+    case 4:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        vTxMinPower = settings.s.m_vTxMinPower;
+        vTxPower = settings.s.m_vTxPower;
+        vTxBand = settings.s.m_vTxBand;
+        vTxChannel = settings.s.m_vTxChannel;
+        settingChanged |= vTxSettingChanged;
+        menuActive = false;
+        menuWasActive = true;
+        vtx_set_frequency(vTxBand, vTxChannel);
+        return (void*)MainMenu;
+      }
+    break;
+    case 5:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeVTXMenuItem = 0;
+        if(vTxSettingChanged)
         {
-          vTxMinPower = settings.s.m_vTxMinPower;
-          vTxPower = settings.s.m_vTxPower;
-          vTxBand = settings.s.m_vTxBand;
-          vTxChannel = settings.s.m_vTxChannel;
-          settingChanged |= vTxSettingChanged;
-          menuActive = false;
-          menuWasActive = true;
-          vtx_set_frequency(vTxBand, vTxChannel);
-          return (void*)MainMenu;
+          settings.s.m_vTxMinPower = vTxMinPower;
+          settings.s.m_vTxPower = vTxPower;
+          settings.s.m_vTxBand = vTxBand;
+          settings.s.m_vTxChannel = vTxChannel;
         }
-      break;
-      case 5:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          activeVTXMenuItem = 0;
-          if(vTxSettingChanged)
-          {
-            settings.s.m_vTxMinPower = vTxMinPower;
-            settings.s.m_vTxPower = vTxPower;
-            settings.s.m_vTxBand = vTxBand;
-            settings.s.m_vTxChannel = vTxChannel;
-          }
-          vTxSettingChanged = false;
-          cleanScreen();
-          return (void*)MainMenu;
-        }
-      break;
-    }
+        vTxSettingChanged = false;
+        cleanScreen();
+        return (void*)MainMenu;
+      }
+    break;
   }
   static const uint8_t VTX_MENU_ITEMS = 6;
   activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
@@ -1186,116 +1186,114 @@ void* MainMenu()
   uint8_t i;
   bool crossHairChanged = false;
   int16_t temp;
-  if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
+
+  switch(activeMenuItem)
   {
-    switch(activeMenuItem)
-    {
-      case 0:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          cleanScreen();
-          return (void*)TuneMenu;
-        }
-      break;
-      case 1:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          cleanScreen();
-          return (void*)RatesMenu;
-        }
-      break;
-      case 2:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          cleanScreen();
-          return (void*)FilterMenu;
-        }
-      break;      
-      case 3:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          cleanScreen();
-          return (void*)BatteryMenu;
-        }
-      break;
-      case 4:
+    case 0:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        return (void*)TuneMenu;
+      }
+    break;
+    case 1:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        return (void*)RatesMenu;
+      }
+    break;
+    case 2:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        return (void*)FilterMenu;
+      }
+    break;      
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        return (void*)BatteryMenu;
+      }
+    break;
+    case 4:
 #ifdef IMPULSERC_VTX
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          cleanScreen();
-          return (void*)vTxMenu;
-        }
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        return (void*)vTxMenu;
+      }
 #else
-        if(code &  inputChecker.ROLL_RIGHT && vTxType > 0)
-        {
-          cleanScreen();
-          return (void*)vTxMenu;
-        }
+      if(code &  inputChecker.ROLL_RIGHT && vTxType > 0)
+      {
+        cleanScreen();
+        return (void*)vTxMenu;
+      }
 #endif
-      break;
-      case 5:
-        #ifdef CROSSHAIR_ANGLE
-        temp = settings.s.m_angleOffset;
-        settingChanged |= checkCode(temp, 1, -70, 0);
-        settings.s.m_angleOffset = temp;
-        #else
-        symbolOnOffChanged = checkCode(settings.s.m_displaySymbols, 1, 0, 1);
-        settingChanged |= symbolOnOffChanged;
-        #endif
-      break;
-      case 6:
-        settingChanged |= checkCode(settings.s.m_timerMode, 1, 0, 2);        
-      break;
-      #ifdef CROSSHAIR
-      case 7:
-        crossHairChanged |= checkCode(settings.s.m_crossHair, 1, 0, 8);
-        if(crossHairChanged) logoDone = true;
-        settingChanged |= crossHairChanged;
-      break;
-      case 8:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          menuActive = false;
-          menuWasActive = true;
-        }
-      break;
-      case 9:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          menuActive = false;
-          menuWasActive = true;
-          settingChanged = false;          
-          for(i=0; i<MAX_SETTING_MODES; i++)
-          {
-            fcSettingModeChanged[i] = false;
-          }
-          settings.ReadSettings();
-          fcSettingsReceived = false;
-        }
+    break;
+    case 5:
+      #ifdef CROSSHAIR_ANGLE
+      temp = settings.s.m_angleOffset;
+      settingChanged |= checkCode(temp, 1, -70, 0);
+      settings.s.m_angleOffset = temp;
       #else
-      case 7:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          menuActive = false;
-          menuWasActive = true;
-        }
-      break;
-      case 8:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          menuActive = false;
-          menuWasActive = true;
-          settingChanged = false;          
-          for(i=0; i<MAX_SETTING_MODES; i++)
-          {
-            fcSettingModeChanged[i] = false;
-          }
-          settings.ReadSettings();
-          fcSettingsReceived = false;
-        }
+      symbolOnOffChanged = checkCode(settings.s.m_displaySymbols, 1, 0, 1);
+      settingChanged |= symbolOnOffChanged;
       #endif
-      break;
-    }
+    break;
+    case 6:
+      settingChanged |= checkCode(settings.s.m_timerMode, 1, 0, 2);        
+    break;
+    #ifdef CROSSHAIR
+    case 7:
+      crossHairChanged |= checkCode(settings.s.m_crossHair, 1, 0, 8);
+      if(crossHairChanged) logoDone = true;
+      settingChanged |= crossHairChanged;
+    break;
+    case 8:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        menuActive = false;
+        menuWasActive = true;
+      }
+    break;
+    case 9:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        menuActive = false;
+        menuWasActive = true;
+        settingChanged = false;          
+        for(i=0; i<MAX_SETTING_MODES; i++)
+        {
+          fcSettingModeChanged[i] = false;
+        }
+        settings.ReadSettings();
+        fcSettingsReceived = false;
+      }
+    #else
+    case 7:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        menuActive = false;
+        menuWasActive = true;
+      }
+    break;
+    case 8:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        menuActive = false;
+        menuWasActive = true;
+        settingChanged = false;          
+        for(i=0; i<MAX_SETTING_MODES; i++)
+        {
+          fcSettingModeChanged[i] = false;
+        }
+        settings.ReadSettings();
+        fcSettingsReceived = false;
+      }
+    #endif
+    break;
   }
 
   #ifdef CROSSHAIR

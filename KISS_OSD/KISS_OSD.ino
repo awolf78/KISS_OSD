@@ -313,7 +313,7 @@ static uint8_t pid_p[10], pid_i[10], pid_d[10];
 static uint8_t checksumDebug = 255, bufMinusOne = 255;
 #else
 static uint16_t pid_p[3], pid_i[3], pid_d[3];
-#endif
+
 struct _FC_FILTERS
 {
   uint8_t lpf_frq;
@@ -336,6 +336,7 @@ struct _FC_TPA
   uint8_t ctpa_bp2;
   uint8_t ctpa_infl[4];
 } fc_tpa;
+#endif
 static uint16_t rcrate[3], rate[3], rccurve[3];
 static uint16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
 
@@ -405,18 +406,14 @@ enum _SETTING_MODES
   FC_TPA = 1
 };
 static uint8_t telemetryMSP = 0;
-static const uint8_t MAX_TELEMETRY_MSPS = 6;
-static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129 }; //FIXME: Move define for MSPs
+static const uint8_t MAX_TELEMETRY_MSPS = 7;
+static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129, 134 }; //FIXME: Move define for MSPs
 extern void mspRequest(uint8_t mspCommand);
 static const unsigned long minLoop = 5000;
-/*static const uint8_t MAX_SETTING_MODES = 5;
-static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 1, 112, 111, 92, 88 }; //FIXME: Move define for MSPs
-static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0, 202, 204, 93, 89 }; //FIXME: Move define for MSPs
-static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false };*/
-static const uint8_t MAX_SETTING_MODES = 4;
-static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 112, 111, 92, 88 }; //FIXME: Move define for MSPs
-static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 202, 204, 93, 89 }; //FIXME: Move define for MSPs
-static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false };
+static const uint8_t MAX_SETTING_MODES = 6;
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 1, 112, 111, 92, 88, 34 }; //FIXME: Move define for MSPs
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0, 202, 204, 93, 89, 35 }; //FIXME: Move define for MSPs
+static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
 #else
 enum _SETTING_MODES 
 {
@@ -655,9 +652,9 @@ void loop(){
       triggerCleanScreen = true;
       logoDone = true;
       fcNotConnectedCount = 0;
-      OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
+      /*OSD.printInt16(0, settings.ROWS/2, checksumDebug, 0);
       OSD.printInt16(0, settings.ROWS/2+1, bufMinusOne, 0);
-      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);
+      OSD.printInt16(0, settings.ROWS/2+2, settingMode, 0);*/
       return;
     }
 

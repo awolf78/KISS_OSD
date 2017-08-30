@@ -339,8 +339,8 @@ static uint8_t printCount = 0;
 
 #ifdef BF32_MODE
 static uint8_t telemetryMSP = 0;
-static const uint8_t MAX_TELEMETRY_MSPS = 6;
-static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129 }; //FIXME: Move define for MSPs
+static const uint8_t MAX_TELEMETRY_MSPS = 7;
+static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129, 134 }; //FIXME: Move define for MSPs
 extern void mspRequest(uint8_t mspCommand);
 static const unsigned long minLoop = 2500;
 #else

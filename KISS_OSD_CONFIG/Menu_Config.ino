@@ -89,15 +89,15 @@ boolean checkCode(int16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxV
 
 boolean checkCode(uint16_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
-  int16_t value2 = value;
+  int16_t value2 = (int16_t)value;
   boolean changed = checkCode(value2, STEP, minVal, maxVal);
-  value = value2;
+  value = (uint16_t)value2;
   return changed;
 }
 
 boolean checkCode(uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
-  int16_t tempValue = value;
+  int16_t tempValue = (int16_t)value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
   value = (uint8_t) tempValue;
   return changed;
@@ -105,7 +105,7 @@ boolean checkCode(uint8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxV
 
 boolean checkCode(int8_t &value, int16_t STEP, int16_t minVal = 0, int16_t maxVal = 32000)
 {
-  int16_t tempValue = value;
+  int16_t tempValue = (int16_t)value;
   boolean changed = checkCode(tempValue, STEP, minVal, maxVal);
   value = (int8_t) tempValue;
   return changed;
@@ -436,28 +436,25 @@ void* IconsMenu()
 
 void* RSSIMenu()
 {
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  switch(activeRSSIMenuItem)
   {
-    switch(activeRSSIMenuItem)
-    {
-      case 0:
-        settingChanged |= checkCode(settings.s.m_RSSIchannel, 1, -1, 3);
-      break;
-      case 1:
-        settingChanged |= checkCode(settings.s.m_RSSImax, 10, -1001, 1000);
-      break;
-      case 2:
-        settingChanged |= checkCode(settings.s.m_RSSImin, 10, -1001, 1000);
-      break;
-      case 3:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          activeRSSIMenuItem = 0;          
-          cleanScreen();
-          return (void*)DisplayMenu;
-        }
-      break;
-    }
+    case 0:
+      settingChanged |= checkCode(settings.s.m_RSSIchannel, 1, -1, 3);
+    break;
+    case 1:
+      settingChanged |= checkCode(settings.s.m_RSSImax, 10, -1001, 1000);
+    break;
+    case 2:
+      settingChanged |= checkCode(settings.s.m_RSSImin, 10, -1001, 1000);
+    break;
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeRSSIMenuItem = 0;          
+        cleanScreen();
+        return (void*)DisplayMenu;
+      }
+    break;
   }
   static const uint8_t RSSI_MENU_ITEMS = 4;
   activeRSSIMenuItem = checkMenuItem(activeRSSIMenuItem, RSSI_MENU_ITEMS);
@@ -724,23 +721,21 @@ void* vTxMenu()
 #else
 void* vTxMenu()
 {
-  if((code &  inputChecker.ROLL_LEFT) ||  (code &  inputChecker.ROLL_RIGHT))
+  switch(activeVTXMenuItem)
   {
-    switch(activeVTXMenuItem)
-    {
-      case 0:
-        settingChanged |= checkCode(settings.s.m_vTxMaxPower, 50);
-      break;
-      case 1:
-        if(code &  inputChecker.ROLL_RIGHT)
-        {
-          activeVTXMenuItem = 0;          
-          cleanScreen();
-          return (void*)MiscMenu;
-        }
-      break;
-    }
+    case 0:
+      settingChanged |= checkCode(settings.s.m_vTxMaxPower, 50);
+    break;
+    case 1:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeVTXMenuItem = 0;          
+        cleanScreen();
+        return (void*)MiscMenu;
+      }
+    break;
   }
+  
   static const uint8_t VTX_MENU_ITEMS = 2;
   activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
   
