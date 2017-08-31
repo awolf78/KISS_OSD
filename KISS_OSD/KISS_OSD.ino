@@ -1106,26 +1106,31 @@ void loop(){
             uint8_t ESCnumber = statPage - 1;
             #else
             uint8_t ESCnumber = statPage;
-            #endif                    
+            #endif
+            #ifdef BF32_MODE
+            uint8_t ESCLookup = (ESCnumber+1)%4;
+            #else
+            uint8_t ESCLookup = ESCnumber-1;
+            #endif                
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[ESCnumber-1], 2, "a");
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_A_STR, maxCurrent[ESCLookup], 2, "a");
 
             #ifdef ADVANCED_ESC_STATS
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_AVG_MAX_A_STR, ESCstatGenerators[ESCnumber-1].GetAverage(), 2, "a");
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_AVG_MAX_A_STR, ESCstatGenerators[ESCLookup].GetAverage(), 2, "a");
             #endif
   
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[ESCnumber-1], 2, "v");
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MINV_STR, minVoltage[ESCLookup], 2, "v");
   
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[ESCnumber-1], 1, "kr");
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_RPM_STR, maxKERPM[ESCLookup], 1, "kr");
             
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[ESCnumber-1], 0, tempSymbol);                    
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_TEMP_STR, maxTemps[ESCLookup], 0, tempSymbol);                    
             
             OSD.printInt16( startCol, ++middle_infos_y, ESC_STAT_STR, ESCnumber, 0);
-            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[ESCnumber-1], 0, "mah");             
+            OSD.printInt16P( startCol + strlen(ESC_STAT_STR) + 1, middle_infos_y, ESC_MAH_STR, ESCmAh[ESCLookup], 0, "mah");             
           break;
         }
      }

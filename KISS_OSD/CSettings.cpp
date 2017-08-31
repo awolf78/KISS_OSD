@@ -44,7 +44,7 @@ bool CSettings::cleanEEPROM()
 
 void CSettings::LoadDefaults()
 {
-  #ifdef STEELE_PDB
+  #if defined(STEELE_PDB) | defined(IMPULSERC_VTX)
   s.m_batWarning = 0;
   s.m_batMAH[0] = 1300; //1300 mAh by default
   s.m_batMAH[1] = 1500; //1500 mAh by default
@@ -54,7 +54,11 @@ void CSettings::LoadDefaults()
   s.m_batWarningPercent = 25; //25% by default
   FixBatWarning();
   s.m_DVchannel = 4; //fixed positions
+  #ifdef IMPULSERC_VTX
+  s.m_tempUnit = 0; //°C default
+  #else
   s.m_tempUnit = 1; //°F default
+  #endif
   m_lastMAH = 0;
   s.m_fontSize = 1;
   s.m_displaySymbols = 1;

@@ -767,54 +767,60 @@ boolean ReadTelemetry()
             armed = current_armed;     
           break;
           case MSP_VOLTAGE_METERS:
-            if(minBytes > 6)
+            if(minBytes > 9)
             {
               uint16_t voltSum = 0;
-              uint16_t ESCfound = 0;
-              for(i=0; (STARTCOUNT+1+i*2)<minBytes; i++)
+              uint8_t ESCfound = 0;
+              uint8_t index = STARTCOUNT;
+              while((index+1) < minBytes)
               {
-                kissMotorPos = (i+3)%4;
-                ESCVoltage[kissMotorPos] = serialBuf[STARTCOUNT+1+i*2]*10;
-                if(ESCVoltage[kissMotorPos] > 5)
+                if(serialBuf[index] > 59 && serialBuf[index] <64)
                 {
-                  voltSum += ESCVoltage[kissMotorPos];              
-                  ESCfound++;
+                  kissMotorPos = ((serialBuf[index]-60)+2)%4;
+                  ESCVoltage[kissMotorPos] = serialBuf[index+1]*10;
+                  if(ESCVoltage[kissMotorPos] > 5)
+                  {
+                    voltSum += ESCVoltage[kissMotorPos];              
+                    ESCfound++;
+                  }                  
                 }
+                index += 2;
               }
-              if(ESCfound > 0) LipoVoltage = voltSum / ESCfound;
+              if(ESCfound > 0) LipoVoltage = voltSum / (uint16_t)ESCfound;
             }
           break;
           case MSP_CURRENT_METERS:
-            if(minBytes > 9)
+            if(minBytes > 14)
             {
-              int16_t oldcurrent = current;
-              int16_t oldLipoMAH = LipoMAH;
-              current = 0;
               #ifdef MAH_CORRECTION
+              current = 0;
               LipoMAH = 0;
               #endif
-              for(i=0; (STARTCOUNT+i*5+4)<minBytes; i++)
+              uint8_t index = STARTCOUNT;
+              while((index+4) < minBytes)
               {
-                kissMotorPos = (i+3)%4;
-                ESCmAh[kissMotorPos] = ((serialBuf[STARTCOUNT+i*5+2] << 8) | serialBuf[STARTCOUNT+i*5+1]);
-                motorCurrent[kissMotorPos] = ((serialBuf[STARTCOUNT+i*5+4] << 8) | serialBuf[STARTCOUNT+i*5+3]);
-                #ifdef MAH_CORRECTION
-                temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
-                temp /= (uint32_t)100;
-                motorCurrent[kissMotorPos] = (uint16_t)temp;
-                temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
-                temp /= (uint32_t)100;
-                ESCmAh[kissMotorPos] = (uint16_t)temp;
-                LipoMAH += ESCmAh[kissMotorPos];
-                #endif
-                current += motorCurrent[kissMotorPos];             
+                if(serialBuf[index] > 59 && serialBuf[index] <64)
+                {
+                  kissMotorPos = ((serialBuf[index]-60)+2)%4;
+                  ESCmAh[kissMotorPos] = ((serialBuf[index+2] << 8) | serialBuf[index+1]);
+                  motorCurrent[kissMotorPos] = ((serialBuf[index+4] << 8) | serialBuf[index+3]) / 10;
+                  #ifdef MAH_CORRECTION
+                  temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
+                  temp /= (uint32_t)100;
+                  motorCurrent[kissMotorPos] = (uint16_t)temp;
+                  temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
+                  temp /= (uint32_t)100;
+                  ESCmAh[kissMotorPos] = (uint16_t)temp;
+                  LipoMAH += ESCmAh[kissMotorPos];
+                  current += motorCurrent[kissMotorPos]; 
+                  #endif
+                }
+                index += 5;
               }
-              if(oldcurrent > current) current = oldcurrent;
-              if(oldLipoMAH > LipoMAH) LipoMAH = oldLipoMAH;
             }
           break;
           case MSP_EXTRA_ESC_DATA:
-            for(i=0; (STARTCOUNT+i*3+2)<minBytes; i++)
+            for(i=0; (STARTCOUNT+i*3+2)<minBytes && i<4; i++)
             {
               kissMotorPos = (i+2)%4;
               ESCTemps[kissMotorPos] = serialBuf[STARTCOUNT+i*3];
