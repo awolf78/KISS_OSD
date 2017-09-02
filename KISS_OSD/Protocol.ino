@@ -679,10 +679,6 @@ boolean ReadTelemetry()
             LipoVoltage = serialBuf[STARTCOUNT]*10; //8-bit WTF???
             LipoMAH = ((serialBuf[2 + STARTCOUNT] << 8) | serialBuf[1 + STARTCOUNT]);
             current = ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
-            #ifndef KISS_OSD_CONFIG
-            /*if(serialBuf[7 + STARTCOUNT] == 4 && protoVersion > 36) failSafeState = 10;
-            else failSafeState = 0;*/ 
-            #endif
           break;
           case MSP_BOXIDS:
             armBox = 0;
@@ -793,6 +789,8 @@ boolean ReadTelemetry()
             if(minBytes > 14)
             {
               #ifdef MAH_CORRECTION
+              uint16_t oldcurrent = current;
+              uint16_t oldLipoMah = LipoMAH;
               current = 0;
               LipoMAH = 0;
               #endif
@@ -817,6 +815,10 @@ boolean ReadTelemetry()
                 }
                 index += 5;
               }
+              #ifdef MAH_CORRECTION
+              if(current == 0) current = oldcurrent;
+              if(LipoMAH == 0) LipoMAH = oldLipoMah;
+              #endif
             }
           break;
           case MSP_EXTRA_ESC_DATA:
@@ -837,42 +839,18 @@ boolean ReadTelemetry()
 
         LipoVoltage += settings.s.m_voltCorrect * 10;
 
-        // Data sanity check. Return false if we get invalid data FIXME: Needed or not for BF???
-        /*for (i = 0; i < 4; i++)
-        {
-          if (ESCTemps[i] > 160 ||
-              motorCurrent[i] > 10000 ||
-              motorKERPM[i] > 700 ||
-              ESCVoltage[i] > 10000)
-          {
-            return false;
-          }
-        }
-        if (LipoVoltage > 10000 ||
-            throttle > 100 ||
-            roll > 2000 ||
-            pitch > 2000 ||
-            yaw > 2000)
-        {
-          return false;
-        }*/
-
-        #ifdef BF32_MODE
         if(telemetryMSP == MAX_TELEMETRY_MSPS-1) 
         {
-        #endif    
       
-        ProcessConversionAndFilters();
-
-        #ifndef KISS_OSD_CONFIG
-        if (armedOnce)
-        {
-          GenerateStats();
+          ProcessConversionAndFilters();
+  
+          #ifndef KISS_OSD_CONFIG
+          if (armedOnce)
+          {
+            GenerateStats();
+          }
+          #endif
         }
-        #endif
-        #ifdef BF32_MODE
-        }
-        #endif
       }
       else
       {
@@ -903,8 +881,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
     if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
     if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
     if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
-    if (recBytes > 0) bufMinusOne = recBytes;
-    if (minBytes > 0) checksumDebug = minBytes;
+
     if (recBytes == minBytes)
     {
       uint8_t checksum = serialBuf[3];
@@ -912,8 +889,6 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
       for (i = STARTCOUNT-1; i < minBytes; i++) {
         checksum ^= serialBuf[i];
       }
-      checksumDebug = checksum;
-      bufMinusOne = serialBuf[minBytes-1];
 
       if (checksum == 0)
       {
@@ -938,17 +913,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               }
             break;
             case MSP_RC_TUNING:
-              rcrate[0] = serialBuf[STARTCOUNT];
-              rccurve[0] = serialBuf[STARTCOUNT + 1];
-              rate[0] = serialBuf[STARTCOUNT + 2];
-              rate[1] = serialBuf[STARTCOUNT + 3];
-              rate[2] = serialBuf[STARTCOUNT + 4];
-              dynThrPID = serialBuf[STARTCOUNT + 5];
-              thr_Mid = serialBuf[STARTCOUNT + 6];
-              thr_Expo = serialBuf[STARTCOUNT + 7];
-              tpa_breakpoint = ((serialBuf[9 + STARTCOUNT] << 8) | serialBuf[8 + STARTCOUNT]);
-              rccurve[2] = serialBuf[STARTCOUNT + 10];
-              rcrate[2] = serialBuf[STARTCOUNT + 11];
+              memcpy(&bf32_rates, &serialBuf[STARTCOUNT], sizeof(bf32_rates));
             break;
             case MSP_FILTER_CONFIG:
               memcpy(&bf32_filters, &serialBuf[STARTCOUNT], sizeof(bf32_filters));
@@ -994,23 +959,12 @@ void SendFCSettings(uint8_t mspCmd)
       }
     break;
     case MSP_SET_RC_TUNING:
-      transLength = 12;
-      serialBuf[0] = rcrate[0];
-      serialBuf[1] = rccurve[0];
-      serialBuf[2] = rate[0];
-      serialBuf[3] = rate[1];
-      serialBuf[4] = rate[2];
-      serialBuf[5] = dynThrPID;
-      serialBuf[6] = thr_Mid;
-      serialBuf[7] = thr_Expo;
-      serialBuf[8] = (byte)(tpa_breakpoint & 0x00FF);
-      serialBuf[9] = (byte)((tpa_breakpoint & 0xFF00) >> 8);
-      serialBuf[10] = rccurve[2];
-      serialBuf[11] = rcrate[2];
+      transLength = sizeof(bf32_rates);
+      memcpy(&serialBuf[0], &bf32_rates, sizeof(bf32_rates));
     break;
     case MSP_SET_FILTER_CONFIG:
       transLength = sizeof(bf32_filters);
-      memcpy(serialBuf, &bf32_filters, sizeof(bf32_filters));
+      memcpy(&serialBuf[0], &bf32_filters, sizeof(bf32_filters));
     break;
     case MSP_SET_VTX_CONFIG:
       transLength = 5;
@@ -1019,6 +973,9 @@ void SendFCSettings(uint8_t mspCmd)
       serialBuf[2] = vTxChannel;
       serialBuf[3] = vTx_powerIDX;
       serialBuf[4] = vTx_pitmode;
+    break;
+    case MSP_SELECT_SETTING:
+      //FIXME: PID and Rate profiles
     break;
     default:
     return;

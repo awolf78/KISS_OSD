@@ -290,8 +290,6 @@ enum _ROLL_PITCH_YAW
 
 
 #ifdef BF32_MODE
-static uint8_t rc_rate, rc_expo, dynThrPID, thr_Mid, thr_Expo, rc_yawExpo, rc_yawRate;
-static uint16_t tpa_breakpoint;
 
 struct BF32_FILTERS
 {
@@ -307,10 +305,23 @@ struct BF32_FILTERS
   uint8_t dterm_filter_type;
 } bf32_filters;
 
+struct BF32_RATES
+{
+  uint8_t rcRate;
+  uint8_t rcExpo;
+  uint8_t rates[3];
+  uint8_t dynThrPID;
+  uint8_t thr_Mid;
+  uint8_t thr_Expo;
+  uint16_t tpa_breakpoint;
+  uint8_t rc_yawExpo;
+  uint8_t rc_yawRate;
+} bf32_rates;
+
 static uint8_t vTx_powerIDX, oldvTx_powerIDX, vTx_pitmode;
 
 static uint8_t pid_p[10], pid_i[10], pid_d[10];
-static uint8_t checksumDebug = 255, bufMinusOne = 255;
+//static uint8_t checksumDebug = 255, bufMinusOne = 255;
 #else
 static uint16_t pid_p[3], pid_i[3], pid_d[3];
 
@@ -617,6 +628,9 @@ void loop(){
             #endif      
           }
           fcSettingChanged = false;
+          #ifdef BF32_MODE
+          mspRequest(250); //MSP_EEPROM_WRITE
+          #endif
         }
         else fcNotConnectedCount++;
       }

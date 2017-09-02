@@ -153,16 +153,23 @@ uint8_t checkMenuItem(uint8_t menuItem, uint8_t maxItems)
 
 void* ThreeItemPlusBackMenu(bool &settingChanged, uint8_t &active3MenuItem, uint16_t &item1, uint16_t &item2, uint16_t &item3, int16_t item1_step, int16_t item2_step, int16_t item3_step, char* title, void* prevPage, void* thisPage, const char *itemDescription1 = 0, const char *itemDescription2 = 0, const char *itemDescription3 = 0)
 {
+  #ifdef BF32_MODE
+  const int16_t minVal = 0;
+  const int16_t maxVal = 255;
+  #else
+  const int16_t minVal = 0;
+  const int16_t maxVal = 32000;
+  #endif  
   switch(active3MenuItem)
   {
     case 0:
-      settingChanged |= checkCode(item1, item1_step);
+      settingChanged |= checkCode(item1, item1_step, minVal, maxVal);
     break;
     case 1:
-      settingChanged |= checkCode(item2, item2_step);        
+      settingChanged |= checkCode(item2, item2_step, minVal, maxVal);        
     break;
     case 2:
-      settingChanged |= checkCode(item3, item3_step);        
+      settingChanged |= checkCode(item3, item3_step, minVal, maxVal);        
     break;
     case 3:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -232,11 +239,7 @@ void* RatesRollMenu()
 
 void* RatesPitchMenu()
 {
-  #ifdef BF32_MODE
-  return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_ROLL], rate[_PITCH], rccurve[_ROLL], RATE_STEP, RATE_STEP, RATE_STEP, "pitch", (void*)RatesMenu, (void*) RatesPitchMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
-  #else
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_PITCH], rate[_PITCH], rccurve[_PITCH], RATE_STEP, RATE_STEP, RATE_STEP, "pitch", (void*)RatesMenu, (void*) RatesPitchMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
-  #endif
 }
 
 void* RatesYawMenu()
@@ -244,10 +247,101 @@ void* RatesYawMenu()
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_RATES], activeRatesPitchMenuItem, rcrate[_YAW], rate[_YAW], rccurve[_YAW], RATE_STEP, RATE_STEP, RATE_STEP, "yaw", (void*)RatesMenu, (void*) RatesYawMenu, RATES_DESC_STR1, RATES_DESC_STR2, RATES_DESC_STR3);
 }
 
+
+#ifdef BF32_MODE
 void* RatesMenu()
 {
-  int16_t temp;
+  OSD.topOffset = 2;
+  switch(activeRatesMenuItem)
+  {
+    case 0:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rcRate, 10, 0, 255);
+    break;
+    case 1:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[0], 10, 0, 100);
+    break;
+    case 2:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[1], 10, 0, 100);
+    break;
+    case 3:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rcExpo, 10, 0, 100);
+    break;
+    case 4:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rc_yawRate, 10, 0, 255);
+    break;
+    case 5:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[2], 10, 0, 100);
+    break;
+    case 6:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rc_yawExpo, 10, 0, 100);
+    break;
+    case 7:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.thr_Mid, 10, 0, 100);
+    break;
+    case 8:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.thr_Expo, 10, 0, 100);
+    break;
+    case 9:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activeRatesMenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+        OSD.topOffset = 3;
+      }
+    break;
+    case 10:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activeRatesMenuItem = 0;
+        OSD.topOffset = 3;
+        return (void*)MainMenu;
+      }
+    break;
+  }
 
+  static const uint8_t RATES_MENU_ITEMS = 11;
+  activeRatesMenuItem = checkMenuItem(activeRatesMenuItem, RATES_MENU_ITEMS);
+
+  static const char RC_RATE_RP_STR[] PROGMEM =       "rc rate r/p :";
+  static const char SUPER_RATE_ROLL_STR[] PROGMEM =  "s rate roll :";
+  static const char SUPER_RATE_PITCH_STR[] PROGMEM = "s rate pitch:";
+  static const char RC_EXPO_RP_STR[] PROGMEM =       "rc expo r/p :";
+  static const char RC_RATE_YAW_STR[] PROGMEM =      "rc rate yaw :";
+  static const char SUPER_RATE_YAW_STR[] PROGMEM =   "s rate yaw  :";
+  static const char RC_EXPO_YAW[] PROGMEM =          "rc expo yaw :";
+  static const char THR_MID_STR[] PROGMEM =          "thrtl mid   :";
+  static const char THR_EXPO_STR[] PROGMEM =         "thrtl expo  :";
+//static const char SAVE_EXIT_STR[] PROGMEM =        "save+exit";
+//static const char BACK_STR[] PROGMEM =             "back";
+  
+  uint8_t startRow = 0;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(RC_RATE_RP_STR)+4)/2;
+  static const char RATES_TITLE_STR[] PROGMEM = "rates menu";
+  OSD.printP(settings.COLS/2 - strlen_P(RATES_TITLE_STR)/2, ++startRow, RATES_TITLE_STR);
+
+  OSD.printIntArrow( startCol, ++startRow, RC_RATE_RP_STR, bf32_rates.rcRate, 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, SUPER_RATE_ROLL_STR, bf32_rates.rates[0], 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, SUPER_RATE_PITCH_STR, bf32_rates.rates[1], 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, RC_EXPO_RP_STR, bf32_rates.rcExpo, 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, RC_RATE_YAW_STR, bf32_rates.rc_yawRate, 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, SUPER_RATE_YAW_STR, bf32_rates.rates[2], 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, RC_EXPO_YAW, bf32_rates.rc_yawExpo, 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, THR_MID_STR, bf32_rates.thr_Mid, 2, activeRatesMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, THR_EXPO_STR, bf32_rates.thr_Expo, 2, activeRatesMenuItem, "", 1);
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeRatesMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activeRatesMenuItem );
+
+  return (void*)RatesMenu;
+}
+
+
+#else
+
+
+void* RatesMenu()
+{
   switch(activeRatesMenuItem)
   {
     case 0:
@@ -271,17 +365,7 @@ void* RatesMenu()
         return (void*)RatesYawMenu;
       }
     break;
-    #ifdef BF32_MODE
     case 3:
-      fcSettingModeChanged[FC_RATES] |= checkCode(thr_Mid, 10, 0, 100);
-    break;
-    case 4:
-      fcSettingModeChanged[FC_RATES] |= checkCode(thr_Expo, 10, 0, 100);
-    break;
-    case 5:
-    #else
-    case 3:
-    #endif
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -291,20 +375,12 @@ void* RatesMenu()
     break;
   }
 
-  #ifdef BF32_MODE
-  static const uint8_t RATES_MENU_ITEMS = 6;
-  #else
   static const uint8_t RATES_MENU_ITEMS = 4;
-  #endif
   activeRatesMenuItem = checkMenuItem(activeRatesMenuItem, RATES_MENU_ITEMS);
   
 //static const char ROLL_STR[] PROGMEM =  "roll  ";
 //static const char PITCH_STR[] PROGMEM = "pitch ";
 //static const char YAW_STR[] PROGMEM =   "yaw   ";
-  #ifdef BF32_MODE
-  static const char THR_MID[] PROGMEM =   "thr mid :";
-  static const char THR_EXPO[] PROGMEM =  "thr expo:";
-  #endif
 //static const char BACK_STR[] PROGMEM =  "back";
   
   uint8_t startRow = 1;
@@ -315,14 +391,11 @@ void* RatesMenu()
   OSD.printP( startCol, ++startRow, ROLL_STR, activeRatesMenuItem );
   OSD.printP( startCol, ++startRow, PITCH_STR, activeRatesMenuItem );
   OSD.printP( startCol, ++startRow, YAW_STR, activeRatesMenuItem );
-  #ifdef BF32_MODE
-  OSD.printIntArrow( startCol, ++startRow, THR_MID, thr_Mid, 2, activeRatesMenuItem, "", 1);
-  OSD.printIntArrow( startCol, ++startRow, THR_EXPO, thr_Expo, 2, activeRatesMenuItem, "", 1);
-  #endif
   OSD.printP( startCol, ++startRow, BACK_STR, activeRatesMenuItem );
 
   return (void*)RatesMenu;
 }
+#endif
 
 extern void* TuneMenu();
 
@@ -340,10 +413,63 @@ void* PIDPitchMenu()
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDPitchMenuItem,  pid_p[_PITCH], pid_i[_PITCH], pid_d[_PITCH], P_STEP, I_STEP, D_STEP, "pitch", (void*)TuneMenu, (void*) PIDPitchMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
 }
 
+
+#ifdef BF32_MODE
+void* PIDYawMenu()
+{
+  switch(activePIDYawMenuItem)
+  {
+    case 0:
+      fcSettingModeChanged[FC_PIDS] |= checkCode(pid_p[_YAW], 10, 0, 255);
+    break;
+    case 1:
+      fcSettingModeChanged[FC_PIDS] |= checkCode(pid_i[_YAW], 10, 0, 255);
+    break;     
+    case 2:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        activePIDYawMenuItem = 0;
+        menuActive = false;
+        menuWasActive = true;
+      }
+    case 3:
+      if(code &  inputChecker.ROLL_RIGHT)
+      {
+        cleanScreen();
+        activePIDYawMenuItem = 0;
+        return (void*)TuneMenu;
+      }
+    break;
+  }
+
+  static const uint8_t PID_YAW_MENU_ITEMS = 4;
+  activePIDYawMenuItem = checkMenuItem(activePIDYawMenuItem, PID_YAW_MENU_ITEMS);
+  
+//static const char PID_DESC_STR1[] PROGMEM =    "p : "; 
+//static const char PID_DESC_STR2[] PROGMEM =    "i : "; 
+//static const char SAVE_EXIT_STR[] PROGMEM =    "save+exit";
+//static const char BACK_STR[] PROGMEM =         "back";
+  
+  uint8_t startRow = 1;
+  uint8_t startCol = settings.COLS/2 - strlen_P(SAVE_EXIT_STR)/2;
+  static const char PID_YAW_MENU_TITLE_STR[] PROGMEM = "yaw";
+  OSD.printP(settings.COLS/2 - strlen_P(PID_YAW_MENU_TITLE_STR)/2, ++startRow, PID_YAW_MENU_TITLE_STR);
+  
+  OSD.printIntArrow( startCol, ++startRow, PID_DESC_STR1, pid_p[_YAW], 0, activePIDYawMenuItem, "", 1);
+
+  OSD.printIntArrow( startCol, ++startRow, PID_DESC_STR2, pid_i[_YAW], 0, activePIDYawMenuItem, "", 1);
+  
+  OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activePIDYawMenuItem );
+  OSD.printP( startCol, ++startRow, BACK_STR, activePIDYawMenuItem);
+  
+  return(void*)PIDYawMenu;
+}
+#else
 void* PIDYawMenu()
 {
   return ThreeItemPlusBackMenu(fcSettingModeChanged[FC_PIDS], activePIDYawMenuItem,  pid_p[_YAW], pid_i[_YAW], pid_d[_YAW], P_STEP, I_STEP, D_STEP, "yaw", (void*)TuneMenu, (void*) PIDYawMenu, PID_DESC_STR1, PID_DESC_STR2, PID_DESC_STR3);
 }
+#endif
 
 #ifdef BF32_MODE
 void* TPAMenu()
@@ -351,10 +477,10 @@ void* TPAMenu()
   switch(activeTPAMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_TPA] |= checkCode(dynThrPID, 10, 0, 100);
+      fcSettingModeChanged[FC_TPA] |= checkCode(bf32_rates.dynThrPID, 10, 0, 100);
     break;
     case 1:
-      fcSettingModeChanged[FC_TPA] |= checkCode(tpa_breakpoint, 10, 1000, 2000);
+      fcSettingModeChanged[FC_TPA] |= checkCode(bf32_rates.tpa_breakpoint, 10, 1000, 2000);
     break;     
     case 2:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -386,9 +512,9 @@ void* TPAMenu()
   static const char TPA_MENU_TITLE_STR[] PROGMEM = "tpa menu";
   OSD.printP(settings.COLS/2 - strlen_P(TPA_MENU_TITLE_STR)/2, ++startRow, TPA_MENU_TITLE_STR);
   
-  OSD.printIntArrow( startCol, ++startRow, TPA_BF32_STR, dynThrPID, 2, activeTPAMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, TPA_BF32_STR, bf32_rates.dynThrPID, 2, activeTPAMenuItem, "", 1);
 
-  OSD.printIntArrow( startCol, ++startRow, TPA_BREAK_STR, tpa_breakpoint, 0, activeTPAMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, TPA_BREAK_STR, bf32_rates.tpa_breakpoint, 0, activeTPAMenuItem, "", 1);
   
   OSD.printP( startCol, ++startRow, SAVE_EXIT_STR, activeTPAMenuItem );
   OSD.printP( startCol, ++startRow, BACK_STR, activeTPAMenuItem);
@@ -694,6 +820,7 @@ void* FilterMenu()
         menuWasActive = true;
         OSD.topOffset = 3;
       }
+    break;
     case 11:
       if(code &  inputChecker.ROLL_RIGHT)
       {
