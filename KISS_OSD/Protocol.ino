@@ -589,6 +589,8 @@ void SendFCSettings(uint8_t sMode)
 
 #define MSP_EXTRA_ESC_DATA       134    //out message         Extra ESC data from 32-Bit ESCs (Temperature, RPM)
 
+#define MSP_STATUS_EX            150    //out message         cycletime, errors_count, CPU load, sensor present etc
+
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
 #define MSP_SET_PID              202   //in message          P I D coeff (9 are used currently)
@@ -637,6 +639,8 @@ void mspRequest(uint8_t mspCommand)
   txChecksum ^= mspCommand;
   NewSerial.write(txChecksum);
 }
+
+extern void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = true);
 
 boolean ReadTelemetry()
 {
@@ -690,11 +694,28 @@ boolean ReadTelemetry()
               temp <<= 1;
             }
           break;
-          case MSP_STATUS:            
+          case MSP_STATUS_EX:            
             temp = ((serialBuf[9 + STARTCOUNT] << 24) | (serialBuf[8 + STARTCOUNT] << 16) | (serialBuf[7 + STARTCOUNT] << 8) | serialBuf[6 + STARTCOUNT]);
             current_armed = (temp & armBox) != 0;
             #ifndef KISS_OSD_CONFIG
-            FCProfile = serialBuf[10 + STARTCOUNT];
+            if(pidProfileChanged)
+            {
+              if(pidProfile == serialBuf[10 + STARTCOUNT])
+              {
+                mspRequest(MSP_PID);
+                pidProfileChanged = false;
+              }
+            }
+            else pidProfile = serialBuf[10 + STARTCOUNT];
+            if(rateProfileChanged)
+            {
+              if(rateProfile == serialBuf[14 + STARTCOUNT])
+              {
+                mspRequest(MSP_RC_TUNING);
+                rateProfileChanged = false;
+              }
+            }
+            else rateProfile = serialBuf[14 + STARTCOUNT];
             failSafeState = 0;
             if(temp & failSafeBox) failSafeState = 10;
             #endif            
@@ -799,14 +820,15 @@ boolean ReadTelemetry()
               {
                 if(serialBuf[index] > 59 && serialBuf[index] <64)
                 {
-                  kissMotorPos = ((serialBuf[index]-60)+2)%4;
+                  uint8_t bfMotorPos = serialBuf[index]-60;
+                  kissMotorPos = (bfMotorPos+2)%4;
                   ESCmAh[kissMotorPos] = ((serialBuf[index+2] << 8) | serialBuf[index+1]);
                   motorCurrent[kissMotorPos] = ((serialBuf[index+4] << 8) | serialBuf[index+3]) / 10;
                   #ifdef MAH_CORRECTION
-                  temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
+                  temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[bfMotorPos];
                   temp /= (uint32_t)100;
                   motorCurrent[kissMotorPos] = (uint16_t)temp;
-                  temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
+                  temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[bfMotorPos];
                   temp /= (uint32_t)100;
                   ESCmAh[kissMotorPos] = (uint16_t)temp;
                   LipoMAH += ESCmAh[kissMotorPos];
@@ -829,6 +851,14 @@ boolean ReadTelemetry()
               motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+i*3+2] << 8) | serialBuf[STARTCOUNT+i*3+1])/ (MAGNETPOLECOUNT/2);
             }
           break;
+          #ifndef KISS_CONFIG_TOOL
+          case MSP_PID:
+            ReadFCSettings(false,MSP_PID,false);
+          break;
+          case MSP_RC_TUNING:
+            ReadFCSettings(false,MSP_RC_TUNING,false);
+          break;
+          #endif
           default:
           return true;
         }
@@ -866,21 +896,28 @@ boolean ReadTelemetry()
 }
 
 #ifndef KISS_OSD_CONFIG
-void ReadFCSettings(boolean skipValues, uint8_t sMode)
+void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = true)
 { 
-  recBytes = 0;
-  minBytes = 100;
+  if(notReceived)
+  {
+    recBytes = 0;
+    minBytes = 100;
+  }
   uint8_t mspCmd;
+  if(!notReceived) mspCmd = sMode;
 
-  while (recBytes < minBytes && micros() - LastLoopTime < 20000)
+  while((recBytes < minBytes && micros() - LastLoopTime < 20000) || !notReceived)
   {
     const uint8_t STARTCOUNT = 5;
-    if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
-    if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
-    if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
+    if(notReceived)
+    {
+      if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+      if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
+      if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
+      if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
+      if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
+      if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
+    }
 
     if (recBytes == minBytes)
     {
@@ -905,15 +942,18 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               if(protoVersion < 36) menuDisabled = true;
             break;
             case MSP_PID:
-              for(i=0; i<10; i++)
+              if(!rateProfileChanged)
               {
-                pid_p[i] = serialBuf[STARTCOUNT + i * 3];
-                pid_i[i] = serialBuf[STARTCOUNT + i * 3 + 1];
-                pid_d[i] = serialBuf[STARTCOUNT + i * 3 + 2];
+                for(i=0; i<10; i++)
+                {
+                  pid_p[i] = serialBuf[STARTCOUNT + i * 3];
+                  pid_i[i] = serialBuf[STARTCOUNT + i * 3 + 1];
+                  pid_d[i] = serialBuf[STARTCOUNT + i * 3 + 2];
+                }
               }
             break;
             case MSP_RC_TUNING:
-              memcpy(&bf32_rates, &serialBuf[STARTCOUNT], sizeof(bf32_rates));
+              if(!pidProfileChanged) memcpy(&bf32_rates, &serialBuf[STARTCOUNT], sizeof(bf32_rates));
             break;
             case MSP_FILTER_CONFIG:
               memcpy(&bf32_filters, &serialBuf[STARTCOUNT], sizeof(bf32_filters));
@@ -938,6 +978,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
         }
       }
     }
+    if(!notReceived) return;
   }
 }
 
@@ -975,7 +1016,13 @@ void SendFCSettings(uint8_t mspCmd)
       serialBuf[4] = vTx_pitmode;
     break;
     case MSP_SELECT_SETTING:
-      //FIXME: PID and Rate profiles
+      transLength = 1;
+      if(pidProfileChanged) serialBuf[0] = pidProfile;
+      else if(rateProfileChanged)
+           {
+             serialBuf[0] = 0;
+             serialBuf[0] |= (1 << 7) | rateProfile;
+           }
     break;
     default:
     return;

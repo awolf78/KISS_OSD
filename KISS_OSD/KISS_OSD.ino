@@ -321,7 +321,8 @@ struct BF32_RATES
 static uint8_t vTx_powerIDX, oldvTx_powerIDX, vTx_pitmode;
 
 static uint8_t pid_p[10], pid_i[10], pid_d[10];
-//static uint8_t checksumDebug = 255, bufMinusOne = 255;
+static boolean pidProfileChanged = false, rateProfileChanged = false;
+static uint8_t rateProfile = 0, pidProfile = 0, oldPidProfile = 0, oldRateProfile = 0, rateProfileSelected = 0;
 #else
 static uint16_t pid_p[3], pid_i[3], pid_d[3];
 
@@ -418,7 +419,7 @@ enum _SETTING_MODES
 };
 static uint8_t telemetryMSP = 0;
 static const uint8_t MAX_TELEMETRY_MSPS = 7;
-static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 101, 128, 129, 134 }; //FIXME: Move define for MSPs
+static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 150, 128, 129, 134 }; //FIXME: Move define for MSPs
 extern void mspRequest(uint8_t mspCommand);
 static const unsigned long minLoop = 5000;
 static const uint8_t MAX_SETTING_MODES = 6;
@@ -497,6 +498,9 @@ void setup()
   #endif
 }
 
+#ifdef BF32_MODE
+extern void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = true);
+#endif
 
 void loop(){
   uint8_t i = 0;
@@ -910,6 +914,10 @@ void loop(){
           cleanScreen();
           activePage = (void*)MainMenu;
           fcSettingsReceived = false;
+          #ifdef BF32_MODE
+          oldPidProfile = pidProfile;
+          oldRateProfile = rateProfile;
+          #endif
         }
         fptr temp = (fptr) activePage;
         activePage = (void*)temp();

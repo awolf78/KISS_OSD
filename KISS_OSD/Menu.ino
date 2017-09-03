@@ -251,37 +251,50 @@ void* RatesYawMenu()
 #ifdef BF32_MODE
 void* RatesMenu()
 {
-  OSD.topOffset = 2;
+  OSD.topOffset = 1;
+  boolean newrateProfile;
   switch(activeRatesMenuItem)
   {
     case 0:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rcRate, 10, 0, 255);
+      newrateProfile = checkCode(rateProfile, 1, 0, 2);
+      if(newrateProfile)
+      {
+        rateProfileChanged = true;
+        rateProfileSelected = rateProfile;
+        SendFCSettings(210); //MSP_SELECT_SETTING
+        fcSettingModeChanged[FC_RATES] |= rateProfileChanged;
+        newrateProfile = false;
+      }
+      if(rateProfileSelected != rateProfile) mspRequest(111);//MSP_RC_TUNING
     break;
     case 1:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[0], 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rcRate, 10, 0, 255);
     break;
     case 2:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[1], 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[0], 10, 0, 100);
     break;
     case 3:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rcExpo, 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[1], 10, 0, 100);
     break;
     case 4:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rc_yawRate, 10, 0, 255);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rcExpo, 10, 0, 100);
     break;
     case 5:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[2], 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rc_yawRate, 10, 0, 255);
     break;
     case 6:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rc_yawExpo, 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rates[2], 10, 0, 100);
     break;
     case 7:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.thr_Mid, 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.rc_yawExpo, 10, 0, 100);
     break;
     case 8:
-      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.thr_Expo, 10, 0, 100);
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.thr_Mid, 10, 0, 100);
     break;
     case 9:
+      fcSettingModeChanged[FC_RATES] |= checkCode(bf32_rates.thr_Expo, 10, 0, 100);
+    break;
+    case 10:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         activeRatesMenuItem = 0;
@@ -290,7 +303,7 @@ void* RatesMenu()
         OSD.topOffset = 3;
       }
     break;
-    case 10:
+    case 11:
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
@@ -301,9 +314,10 @@ void* RatesMenu()
     break;
   }
 
-  static const uint8_t RATES_MENU_ITEMS = 11;
+  static const uint8_t RATES_MENU_ITEMS = 12;
   activeRatesMenuItem = checkMenuItem(activeRatesMenuItem, RATES_MENU_ITEMS);
 
+  static const char RATE_PROFILE_STR[] PROGMEM =     "rate profile:";
   static const char RC_RATE_RP_STR[] PROGMEM =       "rc rate r/p :";
   static const char SUPER_RATE_ROLL_STR[] PROGMEM =  "s rate roll :";
   static const char SUPER_RATE_PITCH_STR[] PROGMEM = "s rate pitch:";
@@ -319,8 +333,9 @@ void* RatesMenu()
   uint8_t startRow = 0;
   uint8_t startCol = settings.COLS/2 - (strlen_P(RC_RATE_RP_STR)+4)/2;
   static const char RATES_TITLE_STR[] PROGMEM = "rates menu";
-  OSD.printP(settings.COLS/2 - strlen_P(RATES_TITLE_STR)/2, ++startRow, RATES_TITLE_STR);
+  OSD.printP(settings.COLS/2 - strlen_P(RATES_TITLE_STR)/2, startRow, RATES_TITLE_STR);
 
+  OSD.printIntArrow( startCol, ++startRow, RATE_PROFILE_STR, rateProfile, 0, activeRatesMenuItem);
   OSD.printIntArrow( startCol, ++startRow, RC_RATE_RP_STR, bf32_rates.rcRate, 2, activeRatesMenuItem, "", 1);
   OSD.printIntArrow( startCol, ++startRow, SUPER_RATE_ROLL_STR, bf32_rates.rates[0], 2, activeRatesMenuItem, "", 1);
   OSD.printIntArrow( startCol, ++startRow, SUPER_RATE_PITCH_STR, bf32_rates.rates[1], 2, activeRatesMenuItem, "", 1);
@@ -876,7 +891,7 @@ void* FilterMenu()
 
 void* TuneMenu()
 {
-  if(code &  inputChecker.ROLL_RIGHT)
+  if(code &  inputChecker.ROLL_RIGHT || code &  inputChecker.ROLL_LEFT)
   {
     switch(activeTuneMenuItem)
     {
@@ -902,6 +917,16 @@ void* TuneMenu()
           return (void*)CustomTPAMenu;
       break;        
       case 5:
+      #elif defined(BF32_MODE)
+      case 4:
+          pidProfileChanged |= checkCode(pidProfile, 1, 0, 2);
+          if(pidProfileChanged)
+          {
+            SendFCSettings(210); //MSP_SELECT_SETTING
+            fcSettingModeChanged[FC_PIDS] = pidProfileChanged;
+          }
+      break;        
+      case 5:
       #else
       case 4:
       #endif
@@ -912,7 +937,7 @@ void* TuneMenu()
     }
   }
 
-  #ifdef CUSTOM_TPA
+  #if defined(CUSTOM_TPA) || defined(BF32_MODE)
   static const uint8_t TUNE_MENU_ITEMS = 6;
   #else
   static const uint8_t TUNE_MENU_ITEMS = 5;
@@ -925,6 +950,9 @@ void* TuneMenu()
   static const char TPA_STR[] PROGMEM =         "tpa";
   #ifdef CUSTOM_TPA
   static const char CUSTOM_TPA_STR[] PROGMEM =  "custom tpa";
+  #endif
+  #ifdef BF32_MODE
+  static const char PID_PROFILE_STR[] PROGMEM = "pid profile:";
   #endif  
 //static const char BACK_STR[] PROGMEM =        "back";
   
@@ -943,6 +971,9 @@ void* TuneMenu()
   OSD.printP( startCol, ++startRow, TPA_STR, activeTuneMenuItem);
   #ifdef CUSTOM_TPA
   OSD.printP( startCol, ++startRow, CUSTOM_TPA_STR, activeTuneMenuItem);  
+  #endif
+  #ifdef BF32_MODE
+  OSD.printIntArrow( startCol, ++startRow, PID_PROFILE_STR, pidProfile, 0, activeTuneMenuItem);
   #endif
   OSD.printP( startCol, ++startRow, BACK_STR, activeTuneMenuItem);
   
@@ -1327,6 +1358,9 @@ void* MainMenu()
       if(code &  inputChecker.ROLL_RIGHT)
       {
         cleanScreen();
+        #ifdef BF32_MODE
+        rateProfileSelected = rateProfile;
+        #endif
         return (void*)RatesMenu;
       }
     break;
@@ -1418,6 +1452,16 @@ void* MainMenu()
         }
         settings.ReadSettings();
         fcSettingsReceived = false;
+        #ifdef BF32_MODE
+        pidProfile = oldPidProfile;
+        pidProfileChanged = true;
+        SendFCSettings(210); //MSP_SELECT_SETTING
+        rateProfile = oldRateProfile;
+        pidProfileChanged = false;
+        rateProfileChanged = true;
+        SendFCSettings(210); //MSP_SELECT_SETTING
+        rateProfileChanged = false;
+        #endif
       }
     #endif
     break;
