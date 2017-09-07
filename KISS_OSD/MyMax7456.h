@@ -15,6 +15,7 @@ class CMyMax7456 : public MAX7456
     void printIntArrow(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t menuItem, const char* suffix = "", uint8_t blanks = 0);
     void printTime(volatile uint8_t col, uint8_t row, unsigned long time, const char* prefix = "", _OSDItemPos item = CSettings::OSD_ITEMS_POS_SIZE);
     void blink1sec();
+    void printSpaces(uint8_t col, uint8_t row, uint8_t printLength);
     void printSpaces(uint8_t printLength);
     uint8_t checkPrintLength(volatile uint8_t col, uint8_t row, uint8_t printLength, uint8_t &blanks, _OSDItemPos item);
     void checkArrow(uint8_t currentRow, uint8_t menuItem);

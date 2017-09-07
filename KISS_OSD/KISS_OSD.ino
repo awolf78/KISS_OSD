@@ -86,11 +86,16 @@ static bool doItOnce = true;
 #endif
 #ifdef RC_SPLIT_CONTROL
 #include "MiniSoftSerial.h"
+#ifdef IMPULSERC_VTX
+MiniSoftSerial softSerial(A3);
+#else
 MiniSoftSerial softSerial(A1);
+#endif
 bool oldRCsplitState = false;
 bool newRCsplitState = false;
 unsigned long RCsplitChangeTime = 0;
 #endif
+
 
 #ifdef STEELE_PDB
 static const char KISS_OSD_VER[] PROGMEM = "steele pdb v2.4.1";
@@ -398,6 +403,7 @@ static unsigned long vTxPowerTime = 0;
 static uint8_t oldPrintCount = 0;
 static uint8_t printCount = 0;
 static bool statsActive = false;
+unsigned long armingStatusChangeTime = 0;
 #ifdef ADVANCED_STATS
 static const uint8_t STAT_GENERATOR_SIZE = 6;
 CStatGenerator statGenerators[STAT_GENERATOR_SIZE] = { CStatGenerator(5,20), CStatGenerator(20,40), CStatGenerator(40,60), CStatGenerator(60,80), CStatGenerator(80,100), CStatGenerator(95,100) };
@@ -678,6 +684,17 @@ void loop(){
 
     if(telemetryReceived) code = inputChecker.ProcessStickInputs(roll, pitch, yaw, armed);
 
+    #ifdef CAMERA_CONTROL
+    if(armed == 0 && throttle > 50)
+    {
+      SendFCSettings(98); //MSP_CAMERA_CONTROL
+      code = 0;
+      cleanScreen();
+      static const char CAMERA_CONTROL_STR[] PROGMEM = "camera control";
+      OSD.printP(settings.COLS/2 - strlen_P(CAMERA_CONTROL_STR)/2, settings.ROWS - 1, CAMERA_CONTROL_STR);
+    }
+    #endif
+
     /*OSD.printInt16(0, settings.ROWS/2, armed, 0);
     OSD.printInt16(0, settings.ROWS/2+1, vTxPowerActive, 0);*/
     if(settings.m_lastMAH > 0)
@@ -808,6 +825,35 @@ void loop(){
     }
     #endif
 
+    #ifdef ARMING_STATUS
+    static const char ARMED_STR[] PROGMEM =       "  armed    ";
+    static const char DISARMED_STR[] PROGMEM =    " disarmed  ";
+    static const char _3D_MODE_STR[] PROGMEM =    " 3d mode   ";
+    static const char TURTLE_MODE_STR[] PROGMEM = "turtle mode";
+    uint8_t colArm = settings.COLS/2 - strlen_P(TURTLE_MODE_STR)/2;
+    uint8_t rowArm = settings.ROWS/2+2;
+    if(_millis - armingStatusChangeTime < 1000 || armed == 2)
+    {
+      switch(armed)
+      {
+        case 0:
+          if(settings.s.m_stats != 1) OSD.printP(colArm, rowArm, DISARMED_STR);
+        break;
+        case 1:
+          OSD.printP(colArm, rowArm, ARMED_STR);
+        break; 
+        case 2:
+          OSD.printP(colArm, rowArm, _3D_MODE_STR);
+        break; 
+        case 3:
+          OSD.blink1sec();
+          OSD.printP(colArm, rowArm, TURTLE_MODE_STR);
+        break;       
+      }
+    }
+    else if(logoDone) OSD.printSpaces(colArm, rowArm, strlen_P(TURTLE_MODE_STR));
+    #endif
+
       #ifdef DEBUG
       vTxType = 2;
       OSD.printInt16(0,8,protoVersion,0);
@@ -844,8 +890,12 @@ void loop(){
       {
         ReviveOSD();
       }
-      
+
+      #ifdef CAMERA_CONTROL
+      if(batterySelect || (!menuActive && !armOnYaw && yaw > 1900 && armed == 0 && throttle < 50))
+      #else
       if(batterySelect || (!menuActive && !armOnYaw && yaw > 1900 && armed == 0))
+      #endif
       {
         if(!showBat)
         {
@@ -1521,8 +1571,7 @@ void loop(){
               batWarnSymbol = !batWarnSymbol;
               flipOnce = false;              
             }
-            OSD.setCursor(settings.COLS/2 - strlen_P(BATTERY_LOW)/2, settings.ROWS/2 +3);
-            OSD.printSpaces(11);
+            OSD.printSpaces(settings.COLS/2 - strlen_P(BATTERY_LOW)/2, settings.ROWS/2 +3, 11);
           }
         }
         else
@@ -1537,7 +1586,11 @@ void loop(){
           }
         }
 
+        #ifdef ARMING_STATUS
+        if(armed > 0 && _millis - armingStatusChangeTime > 1000 && armed != 2)
+        #else
         if(armed > 0)
+        #endif
         {
           if(settings.s.m_voltWarning > 0 && settings.s.m_minVolts > (LipoVoltage / 10) && !timer1sec)
           {
@@ -1545,8 +1598,7 @@ void loop(){
           }
           else
           {
-            OSD.setCursor(settings.COLS/2 - 3, settings.ROWS/2 + 2);
-            OSD.printSpaces(5);
+            OSD.printSpaces(settings.COLS/2 - 3, settings.ROWS/2 + 2, 5);
           }        
         }
         

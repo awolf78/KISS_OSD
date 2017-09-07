@@ -27,6 +27,8 @@
 #define MAH_CORRECTION
 //#define CROSSHAIR_ANGLE
 #define RC_SPLIT_CONTROL
+#define ARMING_STATUS
+//#define CAMERA_CONTROL
 
 
 
