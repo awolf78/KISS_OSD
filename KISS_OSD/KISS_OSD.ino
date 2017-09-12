@@ -642,7 +642,18 @@ void loop(){
           mspRequest(250); //MSP_EEPROM_WRITE
           #endif
         }
-        else fcNotConnectedCount++;
+        else 
+        {
+          fcNotConnectedCount++;
+          #ifdef BF32_MODE
+          if(telemetryMSP == (MAX_TELEMETRY_MSPS-1)) //skipping MSP_EXTRA_ESC_DATA if it does not exist
+          {
+            telemetryReceived = true;
+            telemetryMSP = 0;
+            fcNotConnectedCount = 0;
+          }
+          #endif
+        }
       }
       else 
       {
@@ -851,7 +862,7 @@ void loop(){
         break;       
       }
     }
-    else if(logoDone) OSD.printSpaces(colArm, rowArm, strlen_P(TURTLE_MODE_STR));
+    else if(logoDone && !statsActive) OSD.printSpaces(colArm, rowArm, strlen_P(TURTLE_MODE_STR));
     #endif
 
       #ifdef DEBUG

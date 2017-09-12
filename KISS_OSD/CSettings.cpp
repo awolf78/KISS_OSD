@@ -288,20 +288,30 @@ int16_t CSettings::ReadInt16_t(byte lsbPos, byte msbPos)
   return value;
 }
 
-void CSettings::ReadSettingsInternal()
+void CSettings::ReadSettingsInternal(bool readFromBuf, uint8_t sizeOverride)
 {
   uint16_t i;
-  for(i=0; i<sizeof(s); i++) m_byteBuf[i] = EEPROM.read(i+3);
-  memcpy(&s, &m_byteBuf[0], sizeof(s));
+  if(!readFromBuf) for(i=0; i<sizeof(s); i++) m_byteBuf[i] = EEPROM.read(i+3);
+  uint8_t sizeRead = sizeof(s);
+  uint8_t bufStartIndex = 0;
+  if(sizeOverride > 0) 
+  {
+    sizeRead = sizeOverride;
+    bufStartIndex = 1;
+  }
+  memcpy(&s, &m_byteBuf[bufStartIndex], sizeRead);
   m_DISPLAY_DV[DISPLAY_RSSI] = s.m_DISPLAY_DV_RSSI;
   memcpy(m_DISPLAY_DV, &s.m_DISPLAY_DV_[0], sizeof(s.m_DISPLAY_DV_));
   memcpy(m_OSDItems, &s.m_OSDItems_[0], sizeof(s.m_OSDItems_));
   memcpy(&m_OSDItems[18], s.m_OSDItemsRSSIp, sizeof(s.m_OSDItemsRSSIp));
   m_IconSettings[0] = s.m_IconSettingsPROPS_ICON;
   memcpy(&m_IconSettings[1], s.m_IconSettings_, sizeof(s.m_IconSettings_));
-  
-  m_lastMAH = ReadInt16_t(251, 252);
-  s.m_maxWatts = ReadInt16_t(253, 254);
+
+  if(!readFromBuf)
+  {
+    m_lastMAH = ReadInt16_t(251, 252);
+    s.m_maxWatts = ReadInt16_t(253, 254);
+  }
 }
 
 void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
@@ -377,10 +387,10 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
   }
 }
 
-void CSettings::ReadSettings()
+void CSettings::ReadSettings(bool readFromBuf, uint8_t sizeOverride)
 {
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x18) //first start of OSD - or older version
+  if(settingsVer < 0x18 && !readFromBuf) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
@@ -388,7 +398,7 @@ void CSettings::ReadSettings()
   }
   else
   {
-    ReadSettingsInternal();
+    ReadSettingsInternal(readFromBuf, sizeOverride);
   }
   FixBatWarning();
 }
@@ -403,7 +413,7 @@ void CSettings::WriteInt16_t(byte lsbPos, byte msbPos, int16_t value)
   EEPROM.update(msbPos, msb); // MSB
 }
 
-void CSettings::WriteSettings()
+void CSettings::WriteSettings(bool bufWriteOnly)
 {
   s.m_DISPLAY_DV_RSSI = m_DISPLAY_DV[DISPLAY_RSSI];
   memcpy(&s.m_DISPLAY_DV_[0], m_DISPLAY_DV, sizeof(s.m_DISPLAY_DV_));
@@ -411,11 +421,15 @@ void CSettings::WriteSettings()
   memcpy(s.m_OSDItemsRSSIp, &m_OSDItems[18], sizeof(s.m_OSDItemsRSSIp));
   s.m_IconSettingsPROPS_ICON = m_IconSettings[0];
   memcpy(s.m_IconSettings_, &m_IconSettings[1], sizeof(s.m_IconSettings_));
-  memcpy(&m_byteBuf[0], &s, sizeof(s));
+  uint8_t bufIndex = 0;
+  if(bufWriteOnly) bufIndex = 1;
+  memcpy(&m_byteBuf[bufIndex], &s, sizeof(s));
   uint16_t i;
-  for(i=0; i<sizeof(s); i++) EEPROM.update(i+3, m_byteBuf[i]);
-  
-  WriteInt16_t(253, 254, s.m_maxWatts);
+  if(!bufWriteOnly) 
+  {
+    for(i=0; i<sizeof(s); i++) EEPROM.update(i+3, m_byteBuf[i]);
+    WriteInt16_t(253, 254, s.m_maxWatts);
+  }
 }
 
 void CSettings::FixBatWarning()

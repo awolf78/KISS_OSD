@@ -429,6 +429,14 @@ void loop() {
     if (!telemetryReceived)
     {
       fcNotConnectedCount++;
+      #ifdef BF32_MODE
+      if(telemetryMSP == (MAX_TELEMETRY_MSPS-1)) //skipping MSP_EXTRA_ESC_DATA if it does not exist
+      {
+        telemetryReceived = true;
+        telemetryMSP = 0;
+        fcNotConnectedCount = 0;
+      }
+      #endif
     }
     else 
     {
@@ -451,7 +459,11 @@ void loop() {
     #ifndef UPDATE_FONT_ONLY
     if (fcNotConnectedCount > 500)
     {
+      #ifdef BF32_MODE
+      static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to fc";
+      #else
       static const char FC_NOT_CONNECTED_STR[] PROGMEM = "no connection to kiss fc";
+      #endif
       OSD.printP(settings.COLS / 2 - strlen_P(FC_NOT_CONNECTED_STR) / 2, settings.ROWS / 2, FC_NOT_CONNECTED_STR);
       triggerCleanScreen = true;
       fcNotConnectedCount = 0;

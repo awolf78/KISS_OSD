@@ -175,6 +175,74 @@ inline void ArmDisarmEvents()
   armed = current_armed;
 }
 
+uint8_t kissProtocolCRC8(const uint8_t *data, uint8_t startIndex, uint8_t stopIndex) 
+{
+  uint8_t crc = 0;
+  for (uint8_t i = startIndex; i < stopIndex; i++) 
+  {
+    crc ^= data[i];
+    for (uint8_t j = 0; j < 8; j++) 
+    {
+      if ((crc & 0x80) != 0) 
+      {
+        crc = (uint8_t) ((crc << 1) ^ 0xD5);
+      } 
+      else 
+      {
+        crc <<= 1;
+      }
+    }
+  }
+  return crc;
+}
+
+#ifdef SERIAL_SETTINGS
+static uint8_t zeroCount = 0, oneCount = 0;
+
+inline void SerialSettings()
+{
+  if(recBytes == 1)
+  {
+    if(serialBuf[0] == 0) zeroCount++;
+    else zeroCount = 0;
+    if(serialBuf[0] == 1) oneCount++;
+    else oneCount = 0;
+    if(zeroCount == 5)
+    {
+      settings.WriteSettings(true);
+      uint16_t i;
+      for(i=0; i<5; i++) NewSerial.write((byte)0);
+      serialBuf[0] = (uint8_t)(sizeof(settings.s)+1);
+      for(i=0; i<(sizeof(settings.s)+1); i++) NewSerial.write(serialBuf[i]);
+      NewSerial.write(kissProtocolCRC8(serialBuf, 0, sizeof(settings.s)+1));
+    }
+    if(oneCount == 5)
+    {
+      unsigned long startSettingTime = micros();
+      minBytes = 100;
+      recBytes = 0;
+      while(recBytes < minBytes && micros() - startSettingTime < 20000)
+      {
+        if(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+        if(recBytes == 1) 
+        { 
+          minBytes = serialBuf[0]; 
+          recBytes = 0; 
+        }
+        if(recBytes == minBytes)
+        {
+          if(kissProtocolCRC8(serialBuf, 0, minBytes) == serialBuf[minBytes-1])
+          {
+            settings.ReadSettings(true, minBytes-1);
+            settings.WriteSettings();
+          }
+        }
+      }
+    }
+  }
+}
+#endif
+
 
 #ifndef BF32_MODE
 boolean ReadTelemetry()
@@ -328,26 +396,7 @@ uint8_t getCheckSum(uint8_t *buf, uint8_t startIndex, uint8_t stopIndex)
   return (uint8_t)(checksum / dataCount);
 }
 
-uint8_t kissProtocolCRC8(const uint8_t *data, uint8_t startIndex, uint8_t stopIndex) 
-{
-  uint8_t crc = 0;
-  for (uint8_t i = startIndex; i < stopIndex; i++) 
-  {
-    crc ^= data[i];
-    for (uint8_t j = 0; j < 8; j++) 
-    {
-      if ((crc & 0x80) != 0) 
-      {
-        crc = (uint8_t) ((crc << 1) ^ 0xD5);
-      } 
-      else 
-      {
-        crc <<= 1;
-      }
-    }
-  }
-  return crc;
-}
+
 
 #ifndef KISS_OSD_CONFIG
 extern unsigned long _StartupTime;
@@ -361,7 +410,10 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
   while (recBytes < minBytes && micros() - LastLoopTime < 20000)
   {
     uint8_t STARTCOUNT = 2;
-    while (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    #ifdef SERIAL_SETTINGS
+    SerialSettings();
+    #endif
     if (getSettingModes[sMode] == 0x30)
     {
       if (recBytes == 1 && serialBuf[0] != 5) recBytes = 0; // check for start byte, reset if its wrong
@@ -807,6 +859,7 @@ boolean ReadTelemetry()
               #endif
             }
           break;
+          //MUST BE LAST AT ALL TIMES!!!
           case MSP_EXTRA_ESC_DATA:
             for(i=0; (STARTCOUNT+i*3+2)<minBytes && i<4; i++)
             {
@@ -876,6 +929,9 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = tru
     if(notReceived)
     {
       if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+      #ifdef SERIAL_SETTINGS
+      SerialSettings();
+      #endif
       if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
       if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
       if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong

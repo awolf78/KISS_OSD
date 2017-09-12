@@ -71,8 +71,8 @@ class CSettings
 {
   public:
   CSettings(uint8_t *byteBuf);
-  void ReadSettings();
-  void WriteSettings();
+  void ReadSettings(bool readFromBuf = false, uint8_t sizeOverride = 0);
+  void WriteSettings(bool bufWriteOnly = false);
   void FixBatWarning();
   void WriteLastMAH();
   void LoadDefaults();
@@ -142,7 +142,7 @@ class CSettings
   private:
   uint8_t *m_byteBuf;
   void UpgradeFromPreviousVersion(uint8_t ver);
-  void ReadSettingsInternal();
+  void ReadSettingsInternal(bool readFromBuf = false, uint8_t sizeOverride = 0);
   int16_t ReadInt16_t(byte lsbPos, byte msbPos);
   void WriteInt16_t(byte lsbPos, byte msbPos, int16_t value);
 };

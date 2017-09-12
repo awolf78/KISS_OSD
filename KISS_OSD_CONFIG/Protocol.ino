@@ -813,6 +813,7 @@ boolean ReadTelemetry()
               if(oldLipoMAH > LipoMAH) LipoMAH = oldLipoMAH;
             }
           break;
+          //MUST BE LAST AT ALL TIMES!!!
           case MSP_EXTRA_ESC_DATA:
             for(i=0; (STARTCOUNT+i*3+2)<minBytes; i++)
             {
