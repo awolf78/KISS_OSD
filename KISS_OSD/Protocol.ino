@@ -216,6 +216,7 @@ inline void SerialSettings()
       serialBuf[1] = settings.m_settingVersion;
       for(i=0; i<(sizeof(settings.s)+2); i++) NewSerial.write(serialBuf[i]);
       NewSerial.write(kissProtocolCRC8(serialBuf, 0, sizeof(settings.s)+2));
+      zeroCount = 0;
     }
     if(oneCount == 5)
     {
@@ -240,6 +241,8 @@ inline void SerialSettings()
           }
         }
       }
+      recBytes = 0;
+      oneCount = 0;
     }
   }
 }

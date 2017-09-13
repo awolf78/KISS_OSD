@@ -538,7 +538,7 @@ void loop(){
   if(newRCsplitState != oldRCsplitState && (_millis-RCsplitChangeTime) > 5000)
   {
     static const uint8_t rc_split_record[] = {0x55, 0x01, 0x02, 0xf5, 0xaa};
-    softSerial.write(rc_split_record, 5);
+    softSerial.write(rc_split_record, (uint8_t)5);
     if(newRCsplitState && !oldRCsplitState) RCsplitChangeTime = _millis;
     else RCsplitChangeTime = 0;
     oldRCsplitState = newRCsplitState;
