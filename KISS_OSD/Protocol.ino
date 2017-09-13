@@ -212,9 +212,10 @@ inline void SerialSettings()
       settings.WriteSettings(true);
       uint16_t i;
       for(i=0; i<5; i++) NewSerial.write((byte)0);
-      serialBuf[0] = (uint8_t)(sizeof(settings.s)+1);
-      for(i=0; i<(sizeof(settings.s)+1); i++) NewSerial.write(serialBuf[i]);
-      NewSerial.write(kissProtocolCRC8(serialBuf, 0, sizeof(settings.s)+1));
+      serialBuf[0] = (uint8_t)(sizeof(settings.s)+2);
+      serialBuf[1] = settings.m_settingVersion;
+      for(i=0; i<(sizeof(settings.s)+2); i++) NewSerial.write(serialBuf[i]);
+      NewSerial.write(kissProtocolCRC8(serialBuf, 0, sizeof(settings.s)+2));
     }
     if(oneCount == 5)
     {
@@ -227,13 +228,14 @@ inline void SerialSettings()
         if(recBytes == 1) 
         { 
           minBytes = serialBuf[0]; 
-          recBytes = 0; 
         }
         if(recBytes == minBytes)
         {
           if(kissProtocolCRC8(serialBuf, 0, minBytes) == serialBuf[minBytes-1])
           {
-            settings.ReadSettings(true, minBytes-1);
+            uint8_t settingSize = minBytes-1;
+            if(settingSize > sizeof(settings.s)) settingSize = (uint8_t)sizeof(settings.s);
+            settings.ReadSettings(true, settingSize);
             settings.WriteSettings();
           }
         }
@@ -864,8 +866,8 @@ boolean ReadTelemetry()
             for(i=0; (STARTCOUNT+i*3+2)<minBytes && i<4; i++)
             {
               kissMotorPos = (i+2)%4;
-              ESCTemps[kissMotorPos] = serialBuf[STARTCOUNT+i*3];
-              motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+i*3+2] << 8) | serialBuf[STARTCOUNT+i*3+1])/ (MAGNETPOLECOUNT/2);
+              ESCTemps[kissMotorPos] = serialBuf[STARTCOUNT+1+i*3];
+              motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+1+i*3+2] << 8) | serialBuf[STARTCOUNT+1+i*3+1])/ (MAGNETPOLECOUNT/2);
             }
           break;
           #ifndef KISS_CONFIG_TOOL

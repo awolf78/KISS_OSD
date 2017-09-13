@@ -389,12 +389,13 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
 
 void CSettings::ReadSettings(bool readFromBuf, uint8_t sizeOverride)
 {
+  m_settingVersion = 0x18;
   uint8_t settingsVer = EEPROM.read(0x01);
-  if(settingsVer < 0x18 && !readFromBuf) //first start of OSD - or older version
+  if(settingsVer < m_settingVersion && !readFromBuf) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,0x18);
+    EEPROM.update(0x01,m_settingVersion);
   }
   else
   {
@@ -422,7 +423,7 @@ void CSettings::WriteSettings(bool bufWriteOnly)
   s.m_IconSettingsPROPS_ICON = m_IconSettings[0];
   memcpy(s.m_IconSettings_, &m_IconSettings[1], sizeof(s.m_IconSettings_));
   uint8_t bufIndex = 0;
-  if(bufWriteOnly) bufIndex = 1;
+  if(bufWriteOnly) bufIndex = 2;
   memcpy(&m_byteBuf[bufIndex], &s, sizeof(s));
   uint16_t i;
   if(!bufWriteOnly) 

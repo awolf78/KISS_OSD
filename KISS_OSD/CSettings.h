@@ -138,6 +138,7 @@ class CSettings
   static const uint8_t ICON_SETTINGS_SIZE = 7;
   uint8_t m_IconSettings[ICON_SETTINGS_SIZE];
   uint8_t m_oldDisplaySymbols;
+  uint8_t m_settingVersion;
   
   private:
   uint8_t *m_byteBuf;

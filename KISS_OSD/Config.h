@@ -29,19 +29,19 @@
 #define RC_SPLIT_CONTROL
 #define ARMING_STATUS
 //#define CAMERA_CONTROL
-//#define SERIAL_SETTINGS
+#define SERIAL_SETTINGS
 
 
 // INTERNALS - DO NOT CHANGE
 //=============================
 //#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
-//#define BF32_MODE
+#define BF32_MODE
 
 
 // vTx config
 //=============================
-//#define  IMPULSERC_VTX
+#define  IMPULSERC_VTX
 
 
 // DO NOT CHANGE
