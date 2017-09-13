@@ -8,12 +8,12 @@ class CMyMax7456 : public MAX7456
 {
   public:
     CMyMax7456(uint8_t chipSelect);
-    uint8_t printInt16(volatile uint8_t col, uint8_t row, int16_t value, uint8_t dec, const char* suffix = "", uint8_t blanks = 0, _OSDItemPos item = 0, const char* prefix = "");
+    uint8_t printInt16(volatile uint8_t col, uint8_t row, int16_t value, uint8_t dec, const char* suffix = "", uint8_t blanks = 0, _OSDItemPos item = (_OSDItemPos)0, const char* prefix = "");
     void printP(uint8_t col, uint8_t row, const char *key, uint8_t menuItem = 200);
     void printInt16P(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, const char* suffix = "", uint8_t blanks = 0);
     void printInt16(uint8_t col, uint8_t row, char *key, int16_t value, uint8_t dec, const char* suffix = "", uint8_t blanks = 0);
     void printIntArrow(uint8_t col, uint8_t row, const char *key, int16_t value, uint8_t dec, uint8_t menuItem, const char* suffix = "", uint8_t blanks = 0);
-    void printTime(volatile uint8_t col, uint8_t row, unsigned long time, const char* prefix = "", _OSDItemPos item = CSettings::OSD_ITEMS_POS_SIZE);
+    void printTime(volatile uint8_t col, uint8_t row, unsigned long time, const char* prefix = "", _OSDItemPos item = (_OSDItemPos)CSettings::OSD_ITEMS_POS_SIZE);
     void blink1sec();
     void printSpaces(uint8_t col, uint8_t row, uint8_t printLength);
     void printSpaces(uint8_t printLength);
