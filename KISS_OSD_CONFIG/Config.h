@@ -6,8 +6,8 @@
 //#define FORCE_NTSC
 //#define FORCE_PAL
 
-#define NEW_FILTER
-#define MAH_CORRECTION
+//#define NEW_FILTER
+//#define MAH_CORRECTION
 
 // INTERNALS - DO NOT CHANGE
 //=============================
@@ -16,10 +16,11 @@
 //#define FORCE_CLEAN_EEPROM
 //#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
-//#define BF32_MODE
+#define BF32_MODE
 
 // vTx config
 //=============================
-//#define IMPULSERC_VTX
+#define IMPULSERC_VTX
+#define AUSSIE_CHANNELS
 
 #endif

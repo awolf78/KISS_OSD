@@ -497,6 +497,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               }
               break;
             case FC_VTX:
+              #ifndef IMPULSERC_VTX
               vTxType = serialBuf[index + STARTCOUNT];
               index++;
               vTxChannel = serialBuf[index + STARTCOUNT];
@@ -510,6 +511,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               index += 2;
               vTxHighPower = ((serialBuf[index + STARTCOUNT] << 8) | serialBuf[index + 1 + STARTCOUNT]);
               oldvTxHighPower = vTxHighPower;
+              #endif
               break;
             case FC_FILTERS:
               memcpy(&fc_filters, &serialBuf[STARTCOUNT], sizeof(fc_filters));
@@ -568,12 +570,16 @@ void SendFCSettings(uint8_t sMode)
       index = 18;
       break;
     case FC_VTX:
+      #ifndef IMPULSERC_VTX
       serialBuf[STARTCOUNT + index++] = (byte) vTxType;
       serialBuf[STARTCOUNT + index++] = (byte)((vTxBand * 8) + vTxChannel);
       serialBuf[STARTCOUNT + index++] = (byte)((vTxLowPower & 0xFF00) >> 8);
       serialBuf[STARTCOUNT + index++] = (byte)(vTxLowPower & 0x00FF);
       serialBuf[STARTCOUNT + index++] = (byte)((vTxHighPower & 0xFF00) >> 8);
       serialBuf[STARTCOUNT + index++] = (byte)(vTxHighPower & 0x00FF);
+      #else
+      return;
+      #endif
       break;
     case FC_FILTERS:      
       serialBuf[STARTCOUNT + index++] = fc_filters.lpf_frq;
@@ -714,7 +720,9 @@ void mspRequest(uint8_t mspCommand)
   NewSerial.write(txChecksum);
 }
 
+#ifndef KISS_OSD_CONFIG
 extern void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = true);
+#endif
 
 boolean ReadTelemetry()
 {
@@ -755,6 +763,7 @@ boolean ReadTelemetry()
           case MSP_ANALOG:
             LipoVoltage = serialBuf[STARTCOUNT]*10; //8-bit WTF???
             LipoMAH = ((serialBuf[2 + STARTCOUNT] << 8) | serialBuf[1 + STARTCOUNT]);
+            rssiVal = ((serialBuf[4 + STARTCOUNT] << 8) | serialBuf[3 + STARTCOUNT]);
             current = ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
           break;
           case MSP_BOXIDS:
@@ -873,7 +882,7 @@ boolean ReadTelemetry()
               motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+1+i*3+2] << 8) | serialBuf[STARTCOUNT+1+i*3+1])/ (MAGNETPOLECOUNT/2);
             }
           break;
-          #ifndef KISS_CONFIG_TOOL
+          #ifndef KISS_OSD_CONFIG
           case MSP_PID:
             ReadFCSettings(false,MSP_PID,false);
           break;
@@ -981,6 +990,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = tru
               memcpy(&bf32_filters, &serialBuf[STARTCOUNT], sizeof(bf32_filters));
             break;
             case MSP_VTX_CONFIG:
+              #ifndef IMPULSERC_VTX
               vTxType = serialBuf[STARTCOUNT];
               vTxBand = serialBuf[STARTCOUNT + 1];
               vTxChannel = serialBuf[STARTCOUNT + 2];
@@ -989,6 +999,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = tru
               vTx_powerIDX = serialBuf[STARTCOUNT + 3];
               oldvTx_powerIDX = vTx_powerIDX;
               vTx_pitmode = serialBuf[STARTCOUNT + 4];
+              #endif
             break;
             case MSP_MODE_RANGES:
               for(i=STARTCOUNT; (i+4)<minBytes; i+=4)
@@ -1041,12 +1052,16 @@ void SendFCSettings(uint8_t mspCmd)
       memcpy(&serialBuf[0], &bf32_filters, sizeof(bf32_filters));
     break;
     case MSP_SET_VTX_CONFIG:
+      #ifndef IMPULSERC_VTX
       transLength = 5;
       serialBuf[0] = vTxType;
       serialBuf[1] = vTxBand;
       serialBuf[2] = vTxChannel;
       serialBuf[3] = vTx_powerIDX;
       serialBuf[4] = vTx_pitmode;
+      #else
+      return;
+      #endif
     break;
     case MSP_SELECT_SETTING:
       transLength = 1;

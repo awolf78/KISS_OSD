@@ -109,7 +109,7 @@ static volatile uint8_t vTxChannel, vTxBand, vTxPower, oldvTxChannel, oldvTxBand
 const uint8_t VTX_BAND_COUNT = 5;
 const uint8_t VTX_CHANNEL_COUNT = 8;
 //static unsigned long changevTxTime = 0;
-static const char bandSymbols[][2] = { {'a', 0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
+static const char bandSymbols[][2] PROGMEM = { {'a', 0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
 
 const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
   { 5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725 }, //A

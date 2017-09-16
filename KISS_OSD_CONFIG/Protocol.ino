@@ -15,10 +15,11 @@ CMeanFilter voltageFilter(filterCount), ampTotalFilter(filterCount);
 CMeanFilter ESCKRfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
 CMeanFilter ESCAmpfilter[4] = { CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2), CMeanFilter(filterCount2) };
 static boolean airTimerStarted = false;
+static uint8_t current_armed = 0;
+static uint32_t tmp32 = 0;
 
 inline void GenerateStats()
 {
-  uint32_t tmp32 = 0;
   uint8_t i;
   MaxTemp = findMax4(MaxTemp, ESCTemps, 4);
   MaxRPMs = findMax4(MaxRPMs, motorKERPM, 4);
@@ -101,6 +102,152 @@ inline void ProcessConversionAndFilters()
   }
 }
 
+inline void ArmDisarmEvents()
+{
+  // switch disarmed => armed
+  #ifdef ARMING_STATUS
+  if(armed != current_armed) 
+  {
+    armingStatusChangeTime = millis();
+  }
+  #endif
+  if (armed == 0 && current_armed > 0)
+  {
+    triggerCleanScreen = true;
+    armedOnce = true;
+    last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
+    DV_change_time = 0;
+    #ifndef KISS_OSD_CONFIG
+    statsActive = false;
+    #endif
+    #ifdef RC_SPLIT_CONTROL
+    if(settings.s.m_RCSplitControl > 0) newRCsplitState = true;
+    #endif
+  }
+  // switch armed => disarmed
+  else
+  {
+    if (armed > 0 && current_armed == 0)
+    {
+      if(settings.s.m_timerMode < 2) airTimerStarted = false;
+      if(start_time > 0)
+      {
+        if(settings.s.m_timerMode < 2)
+        {
+          total_time = total_time + (millis() - start_time);
+          start_time = 0;
+        }
+        else total_time = millis() - start_time;
+      }             
+      triggerCleanScreen = true;
+      if (settings.s.m_batWarning > 0)
+      {
+        settings.m_lastMAH = totalMAH;
+        settings.WriteLastMAH();
+        settings.m_lastMAH = 0;
+      }
+      else
+      {
+        settings.m_lastMAH = 0;
+        settings.WriteLastMAH();
+      }
+      settings.UpdateMaxWatt(MaxWatt);
+      #ifdef RC_SPLIT_CONTROL
+      newRCsplitState = false;
+      #endif
+    }
+    else if (armed > 0)
+    {
+      if (throttle < 5 && !airTimerStarted)
+      {
+        time = 0;
+      }
+      else
+      {
+        airTimerStarted = true;
+        if (start_time == 0) start_time = millis();
+        time = millis() - start_time;
+      }
+      if(settings.s.m_timerMode > 0) time += total_time;
+    }
+  }
+  if(settings.s.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
+  armed = current_armed;
+}
+
+uint8_t kissProtocolCRC8(const uint8_t *data, uint8_t startIndex, uint8_t stopIndex) 
+{
+  uint8_t crc = 0;
+  for (uint8_t i = startIndex; i < stopIndex; i++) 
+  {
+    crc ^= data[i];
+    for (uint8_t j = 0; j < 8; j++) 
+    {
+      if ((crc & 0x80) != 0) 
+      {
+        crc = (uint8_t) ((crc << 1) ^ 0xD5);
+      } 
+      else 
+      {
+        crc <<= 1;
+      }
+    }
+  }
+  return crc;
+}
+
+#ifdef SERIAL_SETTINGS
+static uint8_t zeroCount = 0, oneCount = 0;
+
+inline void SerialSettings()
+{
+  if(recBytes == 1)
+  {
+    if(serialBuf[0] == 0) zeroCount++;
+    else zeroCount = 0;
+    if(serialBuf[0] == 1) oneCount++;
+    else oneCount = 0;
+    if(zeroCount == 5)
+    {
+      settings.WriteSettings(true);
+      uint16_t i;
+      for(i=0; i<5; i++) NewSerial.write((byte)0);
+      serialBuf[0] = (uint8_t)(sizeof(settings.s)+2);
+      serialBuf[1] = settings.m_settingVersion;
+      for(i=0; i<(sizeof(settings.s)+2); i++) NewSerial.write(serialBuf[i]);
+      NewSerial.write(kissProtocolCRC8(serialBuf, 0, sizeof(settings.s)+2));
+      zeroCount = 0;
+    }
+    if(oneCount == 5)
+    {
+      unsigned long startSettingTime = micros();
+      minBytes = 100;
+      recBytes = 0;
+      while(recBytes < minBytes && micros() - startSettingTime < 20000)
+      {
+        if(NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+        if(recBytes == 1) 
+        { 
+          minBytes = serialBuf[0]; 
+        }
+        if(recBytes == minBytes)
+        {
+          if(kissProtocolCRC8(serialBuf, 0, minBytes) == serialBuf[minBytes-1])
+          {
+            uint8_t settingSize = minBytes-1;
+            if(settingSize > sizeof(settings.s)) settingSize = (uint8_t)sizeof(settings.s);
+            settings.ReadSettings(true, settingSize);
+            settings.WriteSettings();
+          }
+        }
+      }
+      recBytes = 0;
+      oneCount = 0;
+    }
+  }
+}
+#endif
+
 
 #ifndef BF32_MODE
 boolean ReadTelemetry()
@@ -143,72 +290,10 @@ boolean ReadTelemetry()
         angleY = ((serialBuf[33 + STARTCOUNT] << 8) | serialBuf[34 + STARTCOUNT]) / 100;
         #endif
 
-        int8_t current_armed = serialBuf[16 + STARTCOUNT];
+        current_armed = serialBuf[16 + STARTCOUNT];
         if (current_armed < 0) return false;
 
-        // switch disarmed => armed
-        if (armed == 0 && current_armed > 0)
-        {
-          triggerCleanScreen = true;
-          armedOnce = true;
-          last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
-          DV_change_time = 0;
-          #ifndef KISS_OSD_CONFIG
-          statsActive = false;
-          #endif
-          #ifdef RC_SPLIT_CONTROL
-          if(settings.s.m_RCSplitControl > 0) newRCsplitState = true;
-          #endif
-        }
-        // switch armed => disarmed
-        else
-        {
-          if (armed > 0 && current_armed == 0)
-          {
-            if(settings.s.m_timerMode < 2) airTimerStarted = false;
-            if(start_time > 0)
-            {
-              if(settings.s.m_timerMode < 2)
-              {
-                total_time = total_time + (millis() - start_time);
-                start_time = 0;
-              }
-              else total_time = millis() - start_time;
-            }             
-            triggerCleanScreen = true;
-            if (settings.s.m_batWarning > 0)
-            {
-              settings.m_lastMAH = totalMAH;
-              settings.WriteLastMAH();
-              settings.m_lastMAH = 0;
-            }
-            else
-            {
-              settings.m_lastMAH = 0;
-              settings.WriteLastMAH();
-            }
-            settings.UpdateMaxWatt(MaxWatt);
-            #ifdef RC_SPLIT_CONTROL
-            newRCsplitState = false;
-            #endif
-          }
-          else if (armed > 0)
-          {
-            if (throttle < 5 && !airTimerStarted)
-            {
-              time = 0;
-            }
-            else
-            {
-              airTimerStarted = true;
-              if (start_time == 0) start_time = millis();
-              time = millis() - start_time;
-            }
-            if(settings.s.m_timerMode > 0) time += total_time;
-          }
-        }
-        if(settings.s.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
-        armed = current_armed;
+        ArmDisarmEvents();
 
         #ifdef MAH_CORRECTION
         LipoMAH = 0;
@@ -219,8 +304,8 @@ boolean ReadTelemetry()
         
         uint8_t voltDev = 0;
         uint32_t temp = 0;
-        uint32_t tmp32 = 0;
         current = 0;
+        tmp32 = 0;
         for (i = 0; i < 4; i++)
         {
           uint8_t i10 = i * 10;
@@ -242,7 +327,7 @@ boolean ReadTelemetry()
           if (tempVoltage > 5) // the ESC's read the voltage better then the FC
           {
             ESCVoltage[i] = tempVoltage;
-            tmp32 += tempVoltage;
+            tmp32 += (uint32_t)tempVoltage;
             voltDev++;
           }
           uint8_t i2 = i * 2;
@@ -252,7 +337,7 @@ boolean ReadTelemetry()
         if (voltDev != 0)
         {
           tmp32 = tmp32 / (uint32_t)voltDev;
-          LipoVoltage = (uint16_t)temp;
+          LipoVoltage = (uint16_t)tmp32;
         }
         LipoVoltage += settings.s.m_voltCorrect * 10;
 
@@ -316,26 +401,7 @@ uint8_t getCheckSum(uint8_t *buf, uint8_t startIndex, uint8_t stopIndex)
   return (uint8_t)(checksum / dataCount);
 }
 
-uint8_t kissProtocolCRC8(const uint8_t *data, uint8_t startIndex, uint8_t stopIndex) 
-{
-  uint8_t crc = 0;
-  for (uint8_t i = startIndex; i < stopIndex; i++) 
-  {
-    crc ^= data[i];
-    for (uint8_t j = 0; j < 8; j++) 
-    {
-      if ((crc & 0x80) != 0) 
-      {
-        crc = (uint8_t) ((crc << 1) ^ 0xD5);
-      } 
-      else 
-      {
-        crc <<= 1;
-      }
-    }
-  }
-  return crc;
-}
+
 
 #ifndef KISS_OSD_CONFIG
 extern unsigned long _StartupTime;
@@ -349,7 +415,10 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
   while (recBytes < minBytes && micros() - LastLoopTime < 20000)
   {
     uint8_t STARTCOUNT = 2;
-    while (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+    #ifdef SERIAL_SETTINGS
+    SerialSettings();
+    #endif
     if (getSettingModes[sMode] == 0x30)
     {
       if (recBytes == 1 && serialBuf[0] != 5) recBytes = 0; // check for start byte, reset if its wrong
@@ -589,6 +658,8 @@ void SendFCSettings(uint8_t sMode)
 
 #define MSP_EXTRA_ESC_DATA       134    //out message         Extra ESC data from 32-Bit ESCs (Temperature, RPM)
 
+#define MSP_STATUS_EX            150    //out message         cycletime, errors_count, CPU load, sensor present etc
+
 #define MSP_SET_RAW_RC           200   //in message          8 rc chan
 #define MSP_SET_RAW_GPS          201   //in message          fix, numsat, lat, lon, alt, speed
 #define MSP_SET_PID              202   //in message          P I D coeff (9 are used currently)
@@ -623,7 +694,12 @@ void SendFCSettings(uint8_t sMode)
 #define MSP_CONFIG               66    //out message         baseflight-specific settings that aren't covered elsewhere
 #define MSP_SET_CONFIG           67    //in message          baseflight-specific settings save
 
+#define MSP_CAMERA_CONTROL       98
+
 static uint32_t armBox = 0, failSafeBox = 0;
+#ifdef ARMING_STATUS
+static uint32_t dShotReverseBox = 0;
+#endif
 
 static const char mspHeader[] = { '$', 'M', '>' };
 
@@ -637,6 +713,10 @@ void mspRequest(uint8_t mspCommand)
   txChecksum ^= mspCommand;
   NewSerial.write(txChecksum);
 }
+
+#ifndef KISS_OSD_CONFIG
+extern void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = true);
+#endif
 
 boolean ReadTelemetry()
 {
@@ -665,7 +745,6 @@ boolean ReadTelemetry()
       {
         uint32_t temp = 0;
         uint8_t kissMotorPos = 0;
-        uint8_t current_armed;
         switch(mspCmd)
         {
           case MSP_RC:
@@ -679,149 +758,131 @@ boolean ReadTelemetry()
             LipoVoltage = serialBuf[STARTCOUNT]*10; //8-bit WTF???
             LipoMAH = ((serialBuf[2 + STARTCOUNT] << 8) | serialBuf[1 + STARTCOUNT]);
             current = ((serialBuf[6 + STARTCOUNT] << 8) | serialBuf[5 + STARTCOUNT]);
-            #ifndef KISS_OSD_CONFIG
-            /*if(serialBuf[7 + STARTCOUNT] == 4 && protoVersion > 36) failSafeState = 10;
-            else failSafeState = 0;*/ 
-            #endif
           break;
           case MSP_BOXIDS:
             armBox = 0;
+            failSafeBox = 0;
+            #ifdef ARMING_STATUS
+            dShotReverseBox = 0;
+            #endif
             temp = 1;
             for(i=0; (i + STARTCOUNT)<(minBytes-1); i++)
             {
               if(serialBuf[i + STARTCOUNT] == 0) armBox |= temp;
               if(serialBuf[i + STARTCOUNT] == 27) failSafeBox |= temp;
+              #ifdef ARMING_STATUS
+              if(serialBuf[i + STARTCOUNT] == 35) dShotReverseBox |= temp;
+              #endif
               temp <<= 1;
             }
           break;
-          case MSP_STATUS:            
+          case MSP_STATUS_EX:            
             temp = ((serialBuf[9 + STARTCOUNT] << 24) | (serialBuf[8 + STARTCOUNT] << 16) | (serialBuf[7 + STARTCOUNT] << 8) | serialBuf[6 + STARTCOUNT]);
             current_armed = (temp & armBox) != 0;
+            #ifdef ARMING_STATUS
+            if(temp & dShotReverseBox) current_armed = 3;
+            #endif
             #ifndef KISS_OSD_CONFIG
-            FCProfile = serialBuf[10 + STARTCOUNT];
+            if(pidProfileChanged)
+            {
+              if(pidProfile == serialBuf[10 + STARTCOUNT])
+              {
+                mspRequest(MSP_PID);
+                pidProfileChanged = false;
+              }
+            }
+            else pidProfile = serialBuf[10 + STARTCOUNT];
+            if(rateProfileChanged)
+            {
+              if(rateProfile == serialBuf[14 + STARTCOUNT])
+              {
+                mspRequest(MSP_RC_TUNING);
+                rateProfileChanged = false;
+              }
+            }
+            else rateProfile = serialBuf[14 + STARTCOUNT];
             failSafeState = 0;
             if(temp & failSafeBox) failSafeState = 10;
             #endif            
-            // switch disarmed => armed
-            if (armed == 0 && current_armed > 0)
-            {
-              triggerCleanScreen = true;
-              armedOnce = true;
-              last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
-              DV_change_time = 0;
-              #ifndef KISS_OSD_CONFIG
-              statsActive = false;
-              #endif
-              #ifdef RC_SPLIT_CONTROL
-              if(settings.s.m_RCSplitControl > 0) newRCsplitState = true;
-              #endif
-            }
-            // switch armed => disarmed
-            else
-            {
-              if (armed > 0 && current_armed == 0)
-              {
-                if(settings.s.m_timerMode < 2) airTimerStarted = false;
-                if(start_time > 0)
-                {
-                  if(settings.s.m_timerMode < 2)
-                  {
-                    total_time = total_time + (millis() - start_time);
-                    start_time = 0;
-                  }
-                  else total_time = millis() - start_time;
-                }             
-                triggerCleanScreen = true;
-                if (settings.s.m_batWarning > 0)
-                {
-                  settings.m_lastMAH = totalMAH;
-                  settings.WriteLastMAH();
-                  settings.m_lastMAH = 0;
-                }
-                else
-                {
-                  settings.m_lastMAH = 0;
-                  settings.WriteLastMAH();
-                }
-                settings.UpdateMaxWatt(MaxWatt);
-                #ifdef RC_SPLIT_CONTROL
-                newRCsplitState = false;
-                #endif
-              }
-              else if (armed > 0)
-              {
-                if (throttle < 5 && !airTimerStarted)
-                {
-                  time = 0;
-                }
-                else
-                {
-                  airTimerStarted = true;
-                  if (start_time == 0) start_time = millis();
-                  time = millis() - start_time;
-                }
-                if(settings.s.m_timerMode > 0) time += total_time;
-              }
-            }
-            if(settings.s.m_timerMode == 2 && airTimerStarted) time = millis() - start_time;
-            armed = current_armed;     
+            ArmDisarmEvents();
           break;
           case MSP_VOLTAGE_METERS:
-            if(minBytes > 6)
+            if(minBytes > 9)
             {
               uint16_t voltSum = 0;
-              uint16_t ESCfound = 0;
-              for(i=0; (STARTCOUNT+1+i*2)<minBytes; i++)
+              uint8_t ESCfound = 0;
+              uint8_t index = STARTCOUNT;
+              while((index+1) < minBytes)
               {
-                kissMotorPos = (i+3)%4;
-                ESCVoltage[kissMotorPos] = serialBuf[STARTCOUNT+1+i*2]*10;
-                if(ESCVoltage[kissMotorPos] > 5)
+                if(serialBuf[index] > 59 && serialBuf[index] <64)
                 {
-                  voltSum += ESCVoltage[kissMotorPos];              
-                  ESCfound++;
+                  kissMotorPos = ((serialBuf[index]-60)+2)%4;
+                  ESCVoltage[kissMotorPos] = serialBuf[index+1]*10;
+                  if(ESCVoltage[kissMotorPos] > 5)
+                  {
+                    voltSum += ESCVoltage[kissMotorPos];              
+                    ESCfound++;
+                  }                  
                 }
+                index += 2;
               }
-              if(ESCfound > 0) LipoVoltage = voltSum / ESCfound;
+              if(ESCfound > 0) LipoVoltage = voltSum / (uint16_t)ESCfound;
             }
           break;
           case MSP_CURRENT_METERS:
-            if(minBytes > 9)
+            if(minBytes > 14)
             {
-              int16_t oldcurrent = current;
-              int16_t oldLipoMAH = LipoMAH;
-              current = 0;
               #ifdef MAH_CORRECTION
+              uint16_t oldcurrent = current;
+              uint16_t oldLipoMah = LipoMAH;
+              current = 0;
               LipoMAH = 0;
               #endif
-              for(i=0; (STARTCOUNT+i*5+4)<minBytes; i++)
+              uint8_t index = STARTCOUNT;
+              while((index+4) < minBytes)
               {
-                kissMotorPos = (i+3)%4;
-                ESCmAh[kissMotorPos] = ((serialBuf[STARTCOUNT+i*5+2] << 8) | serialBuf[STARTCOUNT+i*5+1]);
-                motorCurrent[kissMotorPos] = ((serialBuf[STARTCOUNT+i*5+4] << 8) | serialBuf[STARTCOUNT+i*5+3]);
-                #ifdef MAH_CORRECTION
-                temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
-                temp /= (uint32_t)100;
-                motorCurrent[kissMotorPos] = (uint16_t)temp;
-                temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[kissMotorPos];
-                temp /= (uint32_t)100;
-                ESCmAh[kissMotorPos] = (uint16_t)temp;
-                LipoMAH += ESCmAh[kissMotorPos];
-                #endif
-                current += motorCurrent[kissMotorPos];             
+                if(serialBuf[index] > 59 && serialBuf[index] <64)
+                {
+                  uint8_t bfMotorPos = serialBuf[index]-60;
+                  kissMotorPos = (bfMotorPos+2)%4;
+                  ESCmAh[kissMotorPos] = ((serialBuf[index+2] << 8) | serialBuf[index+1]);
+                  motorCurrent[kissMotorPos] = constrain(((serialBuf[index+4] << 8) | serialBuf[index+3]) / 10, 0, 10000);
+                  #ifdef MAH_CORRECTION
+                  temp = (uint32_t)motorCurrent[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[bfMotorPos];
+                  temp /= (uint32_t)100;
+                  motorCurrent[kissMotorPos] = (uint16_t)temp;
+                  temp = (uint32_t)ESCmAh[kissMotorPos] * (uint32_t)settings.s.m_ESCCorrection[bfMotorPos];
+                  temp /= (uint32_t)100;
+                  ESCmAh[kissMotorPos] = (uint16_t)temp;
+                  LipoMAH += ESCmAh[kissMotorPos];
+                  current += motorCurrent[kissMotorPos]; 
+                  #endif
+                }
+                index += 5;
               }
-              if(oldcurrent > current) current = oldcurrent;
-              if(oldLipoMAH > LipoMAH) LipoMAH = oldLipoMAH;
+              #ifdef MAH_CORRECTION
+              if(current == 0) current = oldcurrent;
+              if(LipoMAH == 0) LipoMAH = oldLipoMah;
+              #endif
             }
           break;
           //MUST BE LAST AT ALL TIMES!!!
           case MSP_EXTRA_ESC_DATA:
-            for(i=0; (STARTCOUNT+i*3+2)<minBytes; i++)
+            for(i=0; (STARTCOUNT+i*3+2)<minBytes && i<4; i++)
             {
               kissMotorPos = (i+2)%4;
-              ESCTemps[kissMotorPos] = serialBuf[STARTCOUNT+i*3];
-              motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+i*3+2] << 8) | serialBuf[STARTCOUNT+i*3+1])/ (MAGNETPOLECOUNT/2);
+              ESCTemps[kissMotorPos] = serialBuf[STARTCOUNT+1+i*3];
+              motorKERPM[kissMotorPos] = ((serialBuf[STARTCOUNT+1+i*3+2] << 8) | serialBuf[STARTCOUNT+1+i*3+1])/ (MAGNETPOLECOUNT/2);
             }
           break;
+          #ifndef KISS_OSD_CONFIG
+          case MSP_PID:
+            ReadFCSettings(false,MSP_PID,false);
+          break;
+          case MSP_RC_TUNING:
+            ReadFCSettings(false,MSP_RC_TUNING,false);
+          break;
+          #endif
           default:
           return true;
         }
@@ -832,42 +893,18 @@ boolean ReadTelemetry()
 
         LipoVoltage += settings.s.m_voltCorrect * 10;
 
-        // Data sanity check. Return false if we get invalid data FIXME: Needed or not for BF???
-        /*for (i = 0; i < 4; i++)
-        {
-          if (ESCTemps[i] > 160 ||
-              motorCurrent[i] > 10000 ||
-              motorKERPM[i] > 700 ||
-              ESCVoltage[i] > 10000)
-          {
-            return false;
-          }
-        }
-        if (LipoVoltage > 10000 ||
-            throttle > 100 ||
-            roll > 2000 ||
-            pitch > 2000 ||
-            yaw > 2000)
-        {
-          return false;
-        }*/
-
-        #ifdef BF32_MODE
         if(telemetryMSP == MAX_TELEMETRY_MSPS-1) 
         {
-        #endif    
       
-        ProcessConversionAndFilters();
-
-        #ifndef KISS_OSD_CONFIG
-        if (armedOnce)
-        {
-          GenerateStats();
+          ProcessConversionAndFilters();
+  
+          #ifndef KISS_OSD_CONFIG
+          if (armedOnce)
+          {
+            GenerateStats();
+          }
+          #endif
         }
-        #endif
-        #ifdef BF32_MODE
-        }
-        #endif
       }
       else
       {
@@ -883,23 +920,32 @@ boolean ReadTelemetry()
 }
 
 #ifndef KISS_OSD_CONFIG
-void ReadFCSettings(boolean skipValues, uint8_t sMode)
+void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = true)
 { 
-  recBytes = 0;
-  minBytes = 100;
+  if(notReceived)
+  {
+    recBytes = 0;
+    minBytes = 100;
+  }
   uint8_t mspCmd;
+  if(!notReceived) mspCmd = sMode;
 
-  while (recBytes < minBytes && micros() - LastLoopTime < 20000)
+  while((recBytes < minBytes && micros() - LastLoopTime < 20000) || !notReceived)
   {
     const uint8_t STARTCOUNT = 5;
-    if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
-    if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
-    if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
-    if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
-    if (recBytes > 0) bufMinusOne = recBytes;
-    if (minBytes > 0) checksumDebug = minBytes;
+    if(notReceived)
+    {
+      if (NewSerial.available()) serialBuf[recBytes++] = NewSerial.read();
+      #ifdef SERIAL_SETTINGS
+      SerialSettings();
+      #endif
+      if (recBytes == 1 && serialBuf[0] != mspHeader[0]) recBytes = 0; // check for MSP header, reset if its wrong
+      if (recBytes == 2 && serialBuf[1] != mspHeader[1]) recBytes = 0; // check for MSP header, reset if its wrong
+      if (recBytes == 3 && serialBuf[2] != mspHeader[2]) recBytes = 0; // check for MSP header, reset if its wrong
+      if (recBytes == 4) minBytes = serialBuf[3] + STARTCOUNT + 1; // got the transmission length
+      if (recBytes == 5) mspCmd = serialBuf[4]; // MSP command
+    }
+
     if (recBytes == minBytes)
     {
       uint8_t checksum = serialBuf[3];
@@ -907,17 +953,12 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
       for (i = STARTCOUNT-1; i < minBytes; i++) {
         checksum ^= serialBuf[i];
       }
-      checksumDebug = checksum;
-      bufMinusOne = serialBuf[minBytes-1];
 
       if (checksum == 0)
       {
         fcSettingsReceived = true;
         if(!skipValues)
         {
-          uint32_t temp = 0;
-          uint8_t kissMotorPos = 0;
-          uint8_t current_armed;
           switch(mspCmd)
           {
             case MSP_API_VERSION:
@@ -925,25 +966,18 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
               if(protoVersion < 36) menuDisabled = true;
             break;
             case MSP_PID:
-              for(i=0; i<10; i++)
+              if(!rateProfileChanged)
               {
-                pid_p[i] = serialBuf[STARTCOUNT + i * 3];
-                pid_i[i] = serialBuf[STARTCOUNT + i * 3 + 1];
-                pid_d[i] = serialBuf[STARTCOUNT + i * 3 + 2];
+                for(i=0; i<10; i++)
+                {
+                  pid_p[i] = serialBuf[STARTCOUNT + i * 3];
+                  pid_i[i] = serialBuf[STARTCOUNT + i * 3 + 1];
+                  pid_d[i] = serialBuf[STARTCOUNT + i * 3 + 2];
+                }
               }
             break;
             case MSP_RC_TUNING:
-              rcrate[0] = serialBuf[STARTCOUNT];
-              rccurve[0] = serialBuf[STARTCOUNT + 1];
-              rate[0] = serialBuf[STARTCOUNT + 2];
-              rate[1] = serialBuf[STARTCOUNT + 3];
-              rate[2] = serialBuf[STARTCOUNT + 4];
-              dynThrPID = serialBuf[STARTCOUNT + 5];
-              thr_Mid = serialBuf[STARTCOUNT + 6];
-              thr_Expo = serialBuf[STARTCOUNT + 7];
-              tpa_breakpoint = ((serialBuf[9 + STARTCOUNT] << 8) | serialBuf[8 + STARTCOUNT]);
-              rccurve[2] = serialBuf[STARTCOUNT + 10];
-              rcrate[2] = serialBuf[STARTCOUNT + 11];
+              if(!pidProfileChanged) memcpy(&bf32_rates, &serialBuf[STARTCOUNT], sizeof(bf32_rates));
             break;
             case MSP_FILTER_CONFIG:
               memcpy(&bf32_filters, &serialBuf[STARTCOUNT], sizeof(bf32_filters));
@@ -968,8 +1002,20 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
         }
       }
     }
+    if(!notReceived) return;
   }
 }
+
+#ifdef CAMERA_CONTROL
+typedef enum {
+    CAMERA_CONTROL_KEY_ENTER,
+    CAMERA_CONTROL_KEY_LEFT,
+    CAMERA_CONTROL_KEY_UP,
+    CAMERA_CONTROL_KEY_RIGHT,
+    CAMERA_CONTROL_KEY_DOWN,
+    CAMERA_CONTROL_KEYS_COUNT
+} cameraControlKey_e;
+#endif
 
 void SendFCSettings(uint8_t mspCmd)
 {
@@ -989,23 +1035,12 @@ void SendFCSettings(uint8_t mspCmd)
       }
     break;
     case MSP_SET_RC_TUNING:
-      transLength = 12;
-      serialBuf[0] = rcrate[0];
-      serialBuf[1] = rccurve[0];
-      serialBuf[2] = rate[0];
-      serialBuf[3] = rate[1];
-      serialBuf[4] = rate[2];
-      serialBuf[5] = dynThrPID;
-      serialBuf[6] = thr_Mid;
-      serialBuf[7] = thr_Expo;
-      serialBuf[8] = (byte)(tpa_breakpoint & 0x00FF);
-      serialBuf[9] = (byte)((tpa_breakpoint & 0xFF00) >> 8);
-      serialBuf[10] = rccurve[2];
-      serialBuf[11] = rcrate[2];
+      transLength = sizeof(bf32_rates);
+      memcpy(&serialBuf[0], &bf32_rates, sizeof(bf32_rates));
     break;
     case MSP_SET_FILTER_CONFIG:
       transLength = sizeof(bf32_filters);
-      memcpy(serialBuf, &bf32_filters, sizeof(bf32_filters));
+      memcpy(&serialBuf[0], &bf32_filters, sizeof(bf32_filters));
     break;
     case MSP_SET_VTX_CONFIG:
       transLength = 5;
@@ -1015,6 +1050,27 @@ void SendFCSettings(uint8_t mspCmd)
       serialBuf[3] = vTx_powerIDX;
       serialBuf[4] = vTx_pitmode;
     break;
+    case MSP_SELECT_SETTING:
+      transLength = 1;
+      if(pidProfileChanged) serialBuf[0] = pidProfile;
+      else if(rateProfileChanged)
+           {
+             serialBuf[0] = 0;
+             serialBuf[0] |= (1 << 7) | rateProfile;
+           }
+    break;
+    #ifdef CAMERA_CONTROL
+    case MSP_CAMERA_CONTROL:
+      transLength = 1;
+      serialBuf[0] = 100;
+      if(code & inputChecker.PITCH_UP) serialBuf[0] = CAMERA_CONTROL_KEY_UP;
+      if(code & inputChecker.PITCH_DOWN) serialBuf[0] = CAMERA_CONTROL_KEY_DOWN;
+      if(code & inputChecker.ROLL_LEFT) serialBuf[0] = CAMERA_CONTROL_KEY_LEFT;
+      if(code & inputChecker.ROLL_RIGHT) serialBuf[0] = CAMERA_CONTROL_KEY_RIGHT;
+      if(code & inputChecker.YAW_RIGHT) serialBuf[0] = CAMERA_CONTROL_KEY_ENTER;
+      if(serialBuf[0] == 100) return;
+    break;
+    #endif
     default:
     return;
   }

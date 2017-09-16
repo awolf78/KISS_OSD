@@ -129,7 +129,11 @@ void CSettings::LoadDefaults()
   s.m_timerMode = 1;
   s.m_voltCorrect = 0;
   s.m_crossHair = 0;
+  #ifdef BF32_MODE
+  s.m_RSSIchannel = 4;
+  #else
   s.m_RSSIchannel = -1;
+  #endif
   for(i=0; i<ICON_SETTINGS_SIZE; i++)
   {
     m_IconSettings[i] = 1;  
@@ -145,6 +149,11 @@ void CSettings::LoadDefaults()
   s.m_angleOffset = -20;
   s.m_RCSplitControl = 0;
   s.m_vTxMinPower = 0;
+  #ifdef IMPULSERC_VTX
+  s.m_AussieChannels = 0;
+  #else
+  s.m_AussieChannels = 1;
+  #endif
 
   #else
   
@@ -228,7 +237,11 @@ void CSettings::LoadDefaults()
   s.m_timerMode = 1;
   s.m_voltCorrect = 0;
   s.m_crossHair = 0;
+  #ifdef BF32_MODE
+  s.m_RSSIchannel = 4; //telemetry
+  #else
   s.m_RSSIchannel = 3; //AUX4
+  #endif
   for(i=0; i<ICON_SETTINGS_SIZE; i++)
   {
     m_IconSettings[i] = 1;  
@@ -243,6 +256,7 @@ void CSettings::LoadDefaults()
   s.m_angleOffset = -20;
   s.m_RCSplitControl = 0;
   s.m_vTxMinPower = 0;
+  s.m_AussieChannels = 1;
   
   #endif
 }
@@ -384,12 +398,20 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
     {
       s.m_vTxMinPower = 0;
     }
+    if(ver < 0x19)
+    {
+      #ifdef IMPULSERC_VTX
+      s.m_AussieChannels = 1;
+      #else
+      s.m_AussieChannels = 0;
+      #endif
+    }
   }
 }
 
 void CSettings::ReadSettings(bool readFromBuf, uint8_t sizeOverride)
 {
-  m_settingVersion = 0x18;
+  m_settingVersion = 0x19;
   uint8_t settingsVer = EEPROM.read(0x01);
   if(settingsVer < m_settingVersion && !readFromBuf) //first start of OSD - or older version
   {

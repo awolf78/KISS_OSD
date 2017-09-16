@@ -1176,16 +1176,27 @@ static bool vTxSettingChanged = false;
 #ifdef IMPULSERC_VTX
 void* vTxMenu()
 {
+  uint8_t maxPower = 2;
+  #ifdef AUSSIE_CHANNELS
+  if(settings.s.m_AussieChannels == 0) maxPower = 0;
+  int8_t _oldvTxBand = (int8_t)settings.s.m_vTxBand;
+  #endif
   switch(activeVTXMenuItem)
   {
     case 0:
-      vTxSettingChanged |= checkCode(settings.s.m_vTxMinPower, 1, 0, 2);
+      vTxSettingChanged |= checkCode(settings.s.m_vTxMinPower, 1, 0, maxPower);
     break;
     case 1:
-      vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, 2);
+      vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, maxPower);
     break;
     case 2:
       vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, 4);
+      #ifdef AUSSIE_CHANNELS
+      if(settings.s.m_vTxBand == 2 && settings.s.m_AussieChannels == 0)
+      {
+        settings.s.m_vTxBand += (int8_t)settings.s.m_vTxBand - (int8_t)_oldvTxBand;
+      }
+      #endif
     break;
     case 3:
       vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, 7);
@@ -1244,7 +1255,7 @@ void* vTxMenu()
   OSD.print( fixPStr(VTX_POWERS_STR[settings.s.m_vTxPower]) );
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
-  OSD.print( fixStr(bandSymbols[settings.s.m_vTxBand]) );
+  OSD.print( fixPStr(bandSymbols[settings.s.m_vTxBand]) );
   
   OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, settings.s.m_vTxChannel+1, 0, activeVTXMenuItem, "=" );
   OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[settings.s.m_vTxBand][settings.s.m_vTxChannel]), 0, "mhz" );
@@ -1326,7 +1337,7 @@ void* vTxMenu()
   else OSD.printInt16(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, vTxHighPower, 0, "mw", 1);
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
-  OSD.print( fixStr(bandSymbols[vTxBand]) );
+  OSD.print( fixPStr(bandSymbols[vTxBand]) );
   
   OSD.printIntArrow( startCol, ++startRow, VTX_CHANNEL_STR, vTxChannel+1, 0, activeVTXMenuItem, "=" );
   OSD.printInt16( startCol + strlen_P(VTX_CHANNEL_STR) + 3, startRow, (int16_t)pgm_read_word(&vtx_frequencies[vTxBand][vTxChannel]), 0, "mhz" );

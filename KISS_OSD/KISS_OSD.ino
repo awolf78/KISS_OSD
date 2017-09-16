@@ -138,7 +138,7 @@ static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM
     { 5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880 }, //F
     { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }  //R
   };
-static const char bandSymbols[VTX_BAND_COUNT][2] = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
+static const char bandSymbols[VTX_BAND_COUNT][2] PROGMEM = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
 
 #ifdef IMPULSERC_VTX
 static uint8_t vTxPower, vTxMinPower;
@@ -217,6 +217,7 @@ static uint16_t MaxWatt = 0;
 static uint8_t  MaxTemp = 0;
 static uint16_t MinBat = 0;
 static uint8_t  MinRSSI = 100;
+static int16_t rssiVal;
 static int16_t angleY = 0;
 static uint16_t motorKERPM[4] = {0,0,0,0};
 static uint16_t maxKERPM[4] = {0,0,0,0};
@@ -843,7 +844,7 @@ void loop(){
     static const char TURTLE_MODE_STR[] PROGMEM = "turtle mode";
     uint8_t colArm = settings.COLS/2 - strlen_P(TURTLE_MODE_STR)/2;
     uint8_t rowArm = settings.ROWS/2+2;
-    if(_millis - armingStatusChangeTime < 1000 || armed == 2)
+    if(_millis - armingStatusChangeTime < 1000 || armed == 3)
     {
       switch(armed)
       {
@@ -862,7 +863,7 @@ void loop(){
         break;       
       }
     }
-    else if(logoDone && !statsActive) OSD.printSpaces(colArm, rowArm, strlen_P(TURTLE_MODE_STR));
+    else if(logoDone && !statsActive && !menuActive) OSD.printSpaces(colArm, rowArm, strlen_P(TURTLE_MODE_STR));
     #endif
 
       #ifdef DEBUG
@@ -1236,7 +1237,7 @@ void loop(){
         if(!timer1sec) doItOnce = true;
         currentRT = currentRT2;
         LipoMAH = LipoMAH2;
-        AuxChanVals[settings.s.m_RSSIchannel] = rssi2;
+        if(settings.s.m_RSSIchannel < 4) AuxChanVals[settings.s.m_RSSIchannel] = rssi2;
         #endif 
 
         printCount = 0;
@@ -1501,10 +1502,9 @@ void loop(){
         #endif
 
         #ifdef RSSI_
-        static int16_t rssiVal;
         if(settings.s.m_RSSIchannel > -1)
         {
-          rssiVal = AuxChanVals[settings.s.m_RSSIchannel];
+          if(settings.s.m_RSSIchannel < 4) rssiVal = AuxChanVals[settings.s.m_RSSIchannel];
           if(rssiVal > 100)
           {
             rssiVal = rssiFilter.ProcessValue(rssiVal);
@@ -1513,7 +1513,7 @@ void loop(){
               int16_t rssiMin = settings.s.m_RSSImin+1000;
               rssiVal = ((rssiVal+1000)-rssiMin)/((settings.s.m_RSSImax+1000)-rssiMin);
             }
-            else while(rssiVal > 100) rssiVal /= 10;          
+            else while(rssiVal > 120) rssiVal /= 10;          
           }
           if(MinRSSI > rssiVal && armedOnce) MinRSSI = rssiVal;
         }
@@ -1598,7 +1598,7 @@ void loop(){
         }
 
         #ifdef ARMING_STATUS
-        if(armed > 0 && _millis - armingStatusChangeTime > 1000 && armed != 2)
+        if(armed > 0 && _millis - armingStatusChangeTime > 1000 && armed != 3)
         #else
         if(armed > 0)
         #endif
