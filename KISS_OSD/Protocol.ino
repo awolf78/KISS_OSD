@@ -232,7 +232,7 @@ inline void SerialSettings()
         }
         if(recBytes == minBytes)
         {
-          if(kissProtocolCRC8(serialBuf, 0, minBytes) == serialBuf[minBytes-1])
+          if(kissProtocolCRC8(serialBuf, 0, minBytes-1) == serialBuf[minBytes-1])
           {
             uint8_t settingSize = minBytes-1;
             if(settingSize > sizeof(settings.s)) settingSize = (uint8_t)sizeof(settings.s);
