@@ -16,11 +16,11 @@
 //#define FORCE_CLEAN_EEPROM
 //#define STEELE_PDB
 //#define STEELE_PDB_OVERRIDE
-#define BF32_MODE
+//#define BF32_MODE
 
 // vTx config
 //=============================
-#define IMPULSERC_VTX
-#define AUSSIE_CHANNELS
+//#define IMPULSERC_VTX
+//#define AUSSIE_CHANNELS
 
 #endif

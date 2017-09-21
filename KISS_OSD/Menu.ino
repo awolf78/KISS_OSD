@@ -1075,9 +1075,9 @@ void* BatteryMenu()
       settingChanged |= checkCode(settings.s.m_minVolts, 1, 90, 250);
     break;
     case 5:
-      temp = settings.s.m_voltCorrect;
+      temp = (int16_t)settings.s.m_voltCorrect;
       settingChanged |= checkCode(temp, 1, -10, 10);
-      settings.s.m_voltCorrect = temp;
+      settings.s.m_voltCorrect = (int8_t)temp;
     break;
     #ifdef MAH_CORRECTION
     case 6:
