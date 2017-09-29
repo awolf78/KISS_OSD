@@ -1235,15 +1235,15 @@ void* vTxMenu()
   static const uint8_t VTX_MENU_ITEMS = 6;
   activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
   
-  static const char VTX_MIN_POWER_STR[] PROGMEM =  "min power:";
-  static const char VTX_POWER_STR[] PROGMEM =      "power    :";
-  static const char VTX_BAND_STR[] PROGMEM =       "band     :";
-  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel  :";
+  static const char VTX_MIN_POWER_STR[] PROGMEM =  "power disarmed:";
+  static const char VTX_POWER_STR[] PROGMEM =      "power armed   :";
+  static const char VTX_BAND_STR[] PROGMEM =       "band          :";
+  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel       :";
   static const char SET_EXIT_STR[] PROGMEM =       "set+exit";
 //static const char BACK_STR[] PROGMEM =           "back";
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (strlen_P(VTX_POWER_STR)+6)/2;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(VTX_POWER_STR)+9)/2;
   static const char VTX_TITLE_STR[] PROGMEM = "vtx menu";
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
@@ -1265,19 +1265,40 @@ void* vTxMenu()
   
   return (void*)vTxMenu;
 }
+
+
 #else
+
+#ifdef BF32_MODE
+static const char TRAMP_VTX_POWERS_STR[][6] PROGMEM = { {"25mw "}, {"200mw"}, {"400mw"}, {"600mw"} };
+static const char UNIFY_VTX_POWERS_STR[][6] PROGMEM = { {"25mw "}, {"200mw"}, {"500mw"}, {"800mw"} };
+#endif
+
 void* vTxMenu()
 {
+  #ifdef BF32_MODE
+  uint8_t maxPwrIdx = 3;
+  if(settings.s.m_vTxMaxPower == 200) maxPwrIdx = 1;
+  #else
   int16_t maxWatt = 600;
   if(settings.s.m_vTxMaxPower > 0) maxWatt = settings.s.m_vTxMaxPower;
   else if(vTxType == 3) maxWatt = 800;
+  #endif
   switch(activeVTXMenuItem)
   {
     case 0:
+      #ifdef BF32_MODE
+        fcSettingModeChanged[FC_VTX] |= checkCode(vTx_powerIDX, 1, 0, maxPwrIdx);
+      #else
       if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxLowPower, 10, 5, maxWatt);
+      #endif
     break;
     case 1:
+      #ifdef BF32_MODE
+        fcSettingModeChanged[FC_VTX] |= checkCode(vTx_powerIDX, 1, 0, maxPwrIdx);
+      #else
       if(vTxPowerKnobChannel == -1) fcSettingModeChanged[FC_VTX] |= checkCode(vTxHighPower, 25, 25, maxWatt);
+      #endif
     break;
     case 2:
       fcSettingModeChanged[FC_VTX] |= checkCode(vTxBand, 1, 0, 4);
@@ -1293,8 +1314,12 @@ void* vTxMenu()
         menuWasActive = true;
         oldvTxBand = vTxBand;
         oldvTxChannel = vTxChannel;
+        #ifdef BF32_MODE
+        oldvTx_powerIDX = vTx_powerIDX;
+        #else
         oldvTxLowPower = vTxLowPower;
         oldvTxHighPower = vTxHighPower;
+        #endif
       }
     break;
     case 5:
@@ -1304,8 +1329,12 @@ void* vTxMenu()
         cleanScreen();
         vTxBand = oldvTxBand;
         vTxChannel = oldvTxChannel;
+        #ifdef BF32_MODE
+        vTx_powerIDX = oldvTx_powerIDX;
+        #else
         vTxLowPower = oldvTxLowPower;
         vTxHighPower = oldvTxHighPower;
+        #endif
         fcSettingModeChanged[FC_VTX] = false;
         return (void*)MainMenu;
       }
@@ -1315,23 +1344,28 @@ void* vTxMenu()
   static const uint8_t VTX_MENU_ITEMS = 6;
   activeVTXMenuItem = checkMenuItem(activeVTXMenuItem, VTX_MENU_ITEMS);
   
-  static const char VTX_LOW_POWER_STR[] PROGMEM =  "low power : ";
-  static const char VTX_HIGH_POWER_STR[] PROGMEM = "high power: ";
-  static const char VTX_BAND_STR[] PROGMEM =       "band      : ";
-  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel   : ";
+  static const char VTX_LOW_POWER_STR[] PROGMEM =  "power disarmed:";
+  static const char VTX_HIGH_POWER_STR[] PROGMEM = "power armed   :";
+  static const char VTX_BAND_STR[] PROGMEM =       "band          :";
+  static const char VTX_CHANNEL_STR[] PROGMEM =    "channel       :";
   static const char SET_EXIT_STR[] PROGMEM =       "set+exit";
 //static const char BACK_STR[] PROGMEM =           "back";
   
   uint8_t startRow = 1;
-  uint8_t startCol = settings.COLS/2 - (strlen_P(VTX_HIGH_POWER_STR)+6)/2;
+  uint8_t startCol = settings.COLS/2 - (strlen_P(VTX_HIGH_POWER_STR)+9)/2;
   static const char VTX_TITLE_STR[] PROGMEM = "vtx menu";
   OSD.printP( settings.COLS/2 - strlen_P(VTX_TITLE_STR)/2, ++startRow, VTX_TITLE_STR );
 
   static const char KNOB_STR[] PROGMEM = "knob";
-  OSD.printP(startCol, ++startRow, VTX_LOW_POWER_STR, activeVTXMenuItem);  
+  OSD.printP(startCol, ++startRow, VTX_LOW_POWER_STR, activeVTXMenuItem);
+  #ifdef BF32_MODE
+  if(vTxType == 4) OSD.printP(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, TRAMP_VTX_POWERS_STR[vTx_powerIDX]);
+  else OSD.printP(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, UNIFY_VTX_POWERS_STR[vTx_powerIDX]);
+  #else  
   if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, KNOB_STR);
   else OSD.printInt16(startCol + strlen_P(VTX_LOW_POWER_STR) + 1, startRow, vTxLowPower, 0, "mw", 1);
-
+  #endif
+  
   OSD.printP(startCol, ++startRow, VTX_HIGH_POWER_STR, activeVTXMenuItem);
   if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, KNOB_STR);
   else OSD.printInt16(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, vTxHighPower, 0, "mw", 1);
@@ -1397,7 +1431,11 @@ void* MainMenu()
         return (void*)vTxMenu;
       }
 #else
+#ifdef BF32_MODE
+      if(code &  inputChecker.ROLL_RIGHT && vTxType > 2)
+#else
       if(code &  inputChecker.ROLL_RIGHT && vTxType > 0)
+#endif
       {
         cleanScreen();
         return (void*)vTxMenu;

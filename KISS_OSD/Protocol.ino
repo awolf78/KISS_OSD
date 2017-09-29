@@ -291,6 +291,7 @@ boolean ReadTelemetry()
         #endif
 
         current_armed = serialBuf[16 + STARTCOUNT];
+        if(serialBuf[65 + STARTCOUNT] > 0) current_armed = serialBuf[65 + STARTCOUNT];
         if (current_armed < 0) return false;
 
         ArmDisarmEvents();
