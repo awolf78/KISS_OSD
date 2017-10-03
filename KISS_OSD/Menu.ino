@@ -1190,7 +1190,7 @@ void* vTxMenu()
       vTxSettingChanged |= checkCode(settings.s.m_vTxPower, 1, 0, maxPower);
     break;
     case 2:
-      vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, VTX_BAND_COUNT);
+      vTxSettingChanged |= checkCode(settings.s.m_vTxBand, 1, 0, VTX_BAND_COUNT-1);
       #ifdef AUSSIE_CHANNELS
       if(settings.s.m_vTxBand == 2 && settings.s.m_AussieChannels == 0)
       {
@@ -1199,7 +1199,7 @@ void* vTxMenu()
       #endif
     break;
     case 3:
-      vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, VTX_CHANNEL_COUNT);
+      vTxSettingChanged |= checkCode(settings.s.m_vTxChannel, 1, 0, VTX_CHANNEL_COUNT-1);
     break;
     case 4:
       if(code &  inputChecker.ROLL_RIGHT)
