@@ -129,7 +129,7 @@ static uint8_t oldvTxChannel = 0;
 static uint8_t oldvTxBand = 0;
 static uint8_t vTxBand = 0;
 static uint16_t vTxLowPower, vTxHighPower, oldvTxLowPower, oldvTxHighPower;
-const uint8_t VTX_BAND_COUNT = 5;
+const uint8_t VTX_BAND_COUNT = 6;
 const uint8_t VTX_CHANNEL_COUNT = 8;
 static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
     { 5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725 }, //A
