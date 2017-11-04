@@ -637,6 +637,8 @@ void SendFCSettings(uint8_t sMode)
 #define MSP_SET_VTX_CONFIG       89    //in message          Set vtx settings - betaflight
 #define MSP_FILTER_CONFIG        92
 #define MSP_SET_FILTER_CONFIG    93
+#define MSP_PID_ADVANCED         94
+#define MSP_SET_PID_ADVANCED     95
 
 #define MSP_IDENT                100   //out message         multitype + multiwii version + protocol version + capability variable
 #define MSP_STATUS               101   //out message         cycletime & errors_count & sensor present & box activation & current setting number
@@ -796,6 +798,7 @@ boolean ReadTelemetry()
               if(pidProfile == serialBuf[10 + STARTCOUNT])
               {
                 mspRequest(MSP_PID);
+                mspRequest(MSP_PID_ADVANCED);
                 pidProfileChanged = false;
               }
             }
@@ -890,6 +893,9 @@ boolean ReadTelemetry()
           case MSP_RC_TUNING:
             ReadFCSettings(false,MSP_RC_TUNING,false);
           break;
+          case MSP_PID_ADVANCED:
+            ReadFCSettings(false,MSP_PID_ADVANCED,false);
+          break;
           #endif
           default:
           return true;
@@ -967,6 +973,7 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = tru
         fcSettingsReceived = true;
         if(!skipValues)
         {
+          uint8_t copyLength;
           switch(mspCmd)
           {
             case MSP_API_VERSION:
@@ -1007,6 +1014,17 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode, boolean notReceived = tru
               {
                 if(serialBuf[i] == 0) armOnYaw = false;
               }
+            break;
+            case MSP_PID_ADVANCED:
+              if(serialBuf[3] > 55)
+              {
+                fcSettingsReceived = false;
+                return;
+              }
+              serialBuf[200] = serialBuf[3];
+              memcpy(&serialBuf[201], &serialBuf[STARTCOUNT], serialBuf[3]);
+              setpointRelaxRatio = serialBuf[STARTCOUNT + 8];
+              dtermSetpointWeight = serialBuf[STARTCOUNT + 9];
             break;
           }
         }
@@ -1072,6 +1090,12 @@ void SendFCSettings(uint8_t mspCmd)
              serialBuf[0] = 0;
              serialBuf[0] |= (1 << 7) | rateProfile;
            }
+    break;
+    case MSP_SET_PID_ADVANCED:
+      transLength = serialBuf[200];
+      memcpy(&serialBuf[0], &serialBuf[201], transLength);
+      serialBuf[8] = setpointRelaxRatio;
+      serialBuf[9] = dtermSetpointWeight;
     break;
     #ifdef CAMERA_CONTROL
     case MSP_CAMERA_CONTROL:

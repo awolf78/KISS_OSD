@@ -927,6 +927,12 @@ void* TuneMenu()
           }
       break;        
       case 5:
+          fcSettingModeChanged[FC_PIDS] |= checkCode(dtermSetpointWeight, 10, 0, 255);
+      break;
+      case 6:
+          fcSettingModeChanged[FC_PIDS] |= checkCode(setpointRelaxRatio, 10, 0, 100);
+      break;
+      case 7:
       #else
       case 4:
       #endif
@@ -937,8 +943,10 @@ void* TuneMenu()
     }
   }
 
-  #if defined(CUSTOM_TPA) || defined(BF32_MODE)
+  #if defined(CUSTOM_TPA)
   static const uint8_t TUNE_MENU_ITEMS = 6;
+  #elif defined(BF32_MODE)
+  static const uint8_t TUNE_MENU_ITEMS = 8;
   #else
   static const uint8_t TUNE_MENU_ITEMS = 5;
   #endif
@@ -952,13 +960,17 @@ void* TuneMenu()
   static const char CUSTOM_TPA_STR[] PROGMEM =  "custom tpa";
   #endif
   #ifdef BF32_MODE
-  static const char PID_PROFILE_STR[] PROGMEM = "pid profile:";
+  static const char PID_PROFILE_STR[] PROGMEM =     "pid profile:";
+  static const char SETPOINT_WEIGHT_STR[] PROGMEM = "setpoint wt:";
+  static const char SETPOINT_TRANS_STR[] PROGMEM =  "setpoint tr:";
   #endif  
 //static const char BACK_STR[] PROGMEM =        "back";
   
   uint8_t startRow = 1;
   #ifdef CUSTOM_TPA
   uint8_t startCol = settings.COLS/2 - strlen_P(CUSTOM_TPA_STR)/2;
+  #elif defined(BF32_MODE)
+  uint8_t startCol = settings.COLS/2 - (strlen_P(SETPOINT_WEIGHT_STR)+4)/2;
   #else
   uint8_t startCol = settings.COLS/2 - strlen_P(PITCH_STR)/2;
   #endif
@@ -974,6 +986,8 @@ void* TuneMenu()
   #endif
   #ifdef BF32_MODE
   OSD.printIntArrow( startCol, ++startRow, PID_PROFILE_STR, pidProfile, 0, activeTuneMenuItem);
+  OSD.printIntArrow( startCol, ++startRow, SETPOINT_WEIGHT_STR, dtermSetpointWeight, 2, activeTuneMenuItem);
+  OSD.printIntArrow( startCol, ++startRow, SETPOINT_TRANS_STR, setpointRelaxRatio, 2, activeTuneMenuItem);
   #endif
   OSD.printP( startCol, ++startRow, BACK_STR, activeTuneMenuItem);
   
@@ -1091,7 +1105,7 @@ void* BatteryMenu()
     #else
     case 6:
     #endif
-      checkCode(settings.s.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
+      settingChanged |= checkCode(settings.s.m_maxWatts, (int16_t)1000, (int16_t)1000, (int16_t)30000);
     break;
     #ifdef MAH_CORRECTION
     case 8:
@@ -1103,7 +1117,6 @@ void* BatteryMenu()
         menuActive = false;
         menuWasActive = true;
         activeBatteryMenuItem = 0;
-        settings.UpdateMaxWatt(settings.s.m_maxWatts);
       }
     break;
     #ifdef MAH_CORRECTION
@@ -1115,7 +1128,6 @@ void* BatteryMenu()
       {
         cleanScreen();
         activeBatteryMenuItem = 0;
-        settings.UpdateMaxWatt(settings.s.m_maxWatts);
         return (void*)MainMenu;
       }
     break;

@@ -98,7 +98,7 @@ unsigned long RCsplitChangeTime = 0;
 
 
 #ifdef STEELE_PDB
-static const char KISS_OSD_VER[] PROGMEM = "steele pdb v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "sean pdb v2.4.1";
 #elif defined(BF32_MODE)
 static const char KISS_OSD_VER[] PROGMEM = "bf32 osd v2.4.1";
 #else
@@ -329,6 +329,7 @@ static uint8_t vTx_powerIDX, oldvTx_powerIDX, vTx_pitmode;
 static uint8_t pid_p[10], pid_i[10], pid_d[10];
 static boolean pidProfileChanged = false, rateProfileChanged = false;
 static uint8_t rateProfile = 0, pidProfile = 0, oldPidProfile = 0, oldRateProfile = 0, rateProfileSelected = 0;
+static uint8_t setpointRelaxRatio, dtermSetpointWeight;
 #else
 static uint16_t pid_p[3], pid_i[3], pid_d[3];
 
@@ -429,10 +430,10 @@ static const uint8_t MAX_TELEMETRY_MSPS = 7;
 static const uint8_t telemetryMSPs[MAX_TELEMETRY_MSPS] = { 105, 110, 119, 150, 128, 129, 134 }; //FIXME: Move define for MSPs
 extern void mspRequest(uint8_t mspCommand);
 static const unsigned long minLoop = 5000;
-static const uint8_t MAX_SETTING_MODES = 6;
-static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 1, 112, 111, 92, 88, 34 }; //FIXME: Move define for MSPs
-static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0, 202, 204, 93, 89, 35 }; //FIXME: Move define for MSPs
-static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
+static const uint8_t MAX_SETTING_MODES = 7;
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 1, 112, 111, 92, 88, 34, 94 }; //FIXME: Move define for MSPs
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0, 202, 204, 93, 89, 35, 95 }; //FIXME: Move define for MSPs
+static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false, false };
 #else
 enum _SETTING_MODES 
 {
@@ -769,12 +770,12 @@ void loop(){
         OSD.print(fixPStr(impulseRC_logo2[i]));
         logoRow++;            
       }
-      #ifdef STEELE_PDB        
+      /*#ifdef STEELE_PDB        
       logoCol = settings.COLS/2-2;
       OSD.setCursor(logoCol, logoRow);
       static const char mustache[] PROGMEM = { 0x7F, 0x80, 0x81, 0x82, 0x00 };
       OSD.print(fixPStr(mustache));
-      #endif
+      #endif*/
       #else
       uint8_t logoCol = 11;
       uint8_t logoRow = 5;
@@ -1515,6 +1516,7 @@ void loop(){
             }
             else while(rssiVal > 120) rssiVal /= 10;          
           }
+          if(rssiVal < 0) rssiVal = 0;
           if(MinRSSI > rssiVal && armedOnce) MinRSSI = rssiVal;
         }
         if(settings.s.m_RSSIchannel > -1 && AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])

@@ -489,7 +489,7 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 
 void CSettings::UpdateMaxWatt(int16_t maxWatt)
 {
-  if(maxWatt >= s.m_maxWatts)
+  if(maxWatt > s.m_maxWatts)
   {
     s.m_maxWatts = maxWatt;
     WriteInt16_t(253, 254, s.m_maxWatts);
