@@ -448,10 +448,10 @@ void* RSSIMenu()
       settingChanged |= checkCode(settings.s.m_RSSIchannel, 1, -1, maxRSSIChannel);
     break;
     case 1:
-      settingChanged |= checkCode(settings.s.m_RSSImax, 10, -1001, 1000);
+      settingChanged |= checkCode(settings.s.m_RSSImin, 10, 0, 2000);
     break;
     case 2:
-      settingChanged |= checkCode(settings.s.m_RSSImin, 10, -1001, 1000);
+      settingChanged |= checkCode(settings.s.m_RSSImax, 10, 0, 2000);
     break;
     case 3:
       if(code &  inputChecker.ROLL_RIGHT)
@@ -466,8 +466,8 @@ void* RSSIMenu()
   activeRSSIMenuItem = checkMenuItem(activeRSSIMenuItem, RSSI_MENU_ITEMS);
   
   static const char RSSI_CHANNEL_STR[] PROGMEM =    "rssi channel: ";
-  static const char RSSI_MAX_PPM_STR[] PROGMEM =    "rssi max ppm: ";
   static const char RSSI_MIN_PPM_STR[] PROGMEM =    "rssi min ppm: ";
+  static const char RSSI_MAX_PPM_STR[] PROGMEM =    "rssi max ppm: ";
 //static const char BACK_STR[] PROGMEM =            "back";
   
   uint8_t startRow = 1;
@@ -486,7 +486,7 @@ void* RSSIMenu()
     {
       OSD.print( fixPStr(AUX_STR) );
       uint8_t tempCol = startCol + strlen_P(RSSI_CHANNEL_STR) + 4;
-      OSD.printInt16(tempCol, startRow, settings.s.m_RSSIchannel+1, 0, 1 );
+      OSD.printInt16(tempCol, startRow, settings.s.m_RSSIchannel+1, 0, 1, "", 5);
     }
     else
     {
@@ -495,9 +495,9 @@ void* RSSIMenu()
     }
   }
 
-  OSD.printIntArrow( startCol, ++startRow, RSSI_MAX_PPM_STR, settings.s.m_RSSImax+1000, 0, 0, activeRSSIMenuItem, "", 1);
-
-  OSD.printIntArrow( startCol, ++startRow, RSSI_MIN_PPM_STR, settings.s.m_RSSImin+1000, 0, 0, activeRSSIMenuItem, "", 1);
+  OSD.printIntArrow( startCol, ++startRow, RSSI_MIN_PPM_STR, settings.s.m_RSSImin, 0, 0, activeRSSIMenuItem, "", 1);
+  
+  OSD.printIntArrow( startCol, ++startRow, RSSI_MAX_PPM_STR, settings.s.m_RSSImax, 0, 0, activeRSSIMenuItem, "", 1);
   
   OSD.printP( startCol, ++startRow, BACK_STR, activeRSSIMenuItem );
   

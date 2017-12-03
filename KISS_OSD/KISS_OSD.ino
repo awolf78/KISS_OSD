@@ -1052,7 +1052,7 @@ void loop(){
       #endif
 
       //OSD.printInt16(0, settings.ROWS/2, settings.s.m_stats, 0);
-      if(!vTxPowerActive && DV_change_time == 0 && armed == 0 && armedOnce) 
+      if(!vTxPowerActive && DV_change_time == 0 && armed == 0 && armedOnce && time > 0) 
       {
         switch(settings.s.m_stats)
         {
@@ -1252,7 +1252,15 @@ void loop(){
         if(AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_RC_THROTTLE])
         {
           printCount++;
-          OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, "%", 2, THROTTLEp);
+          char *suffix;
+          char PERC_suffix[] = "%";
+          suffix = PERC_suffix;
+          char T_suffix[] = "%t";
+          if(settings.s.m_RSSImax > settings.s.m_RSSImin)
+          {
+            suffix = T_suffix;                 
+          }
+          OSD.printInt16( settings.m_OSDItems[THROTTLE][0], settings.m_OSDItems[THROTTLE][1], throttle, 0, suffix, 2, THROTTLEp);
         }
           
         if(AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_NICKNAME])
@@ -1506,17 +1514,17 @@ void loop(){
         if(settings.s.m_RSSIchannel > -1)
         {
           if(settings.s.m_RSSIchannel < 4) rssiVal = AuxChanVals[settings.s.m_RSSIchannel];
-          if(rssiVal > 100)
+          if (rssiVal > 100 || settings.s.m_RSSImax > settings.s.m_RSSImin)
           {
-            rssiVal = rssiFilter.ProcessValue(rssiVal);
-            if(settings.s.m_RSSImax > -1001 && settings.s.m_RSSImin > -1001)
+            if (settings.s.m_RSSImax > settings.s.m_RSSImin)
             {
-              int16_t rssiMin = settings.s.m_RSSImin+1000;
-              rssiVal = ((rssiVal+1000)-rssiMin)/((settings.s.m_RSSImax+1000)-rssiMin);
+              if ((rssiVal + 1000) <= settings.s.m_RSSImin) rssiVal = 0;
+              else rssiVal = (((uint32_t)((uint32_t)rssiVal + (uint32_t)1000) - (uint32_t)settings.s.m_RSSImin)*(uint32_t)100) / (uint32_t)(settings.s.m_RSSImax - settings.s.m_RSSImin);
             }
-            else while(rssiVal > 120) rssiVal /= 10;          
+            else while (rssiVal > 120) rssiVal /= 10;    
           }
-          if(rssiVal < 0) rssiVal = 0;
+          if (rssiVal < 0) rssiVal = 0;
+          rssiVal = rssiFilter.ProcessValue(rssiVal);
           if(MinRSSI > rssiVal && armedOnce) MinRSSI = rssiVal;
         }
         if(settings.s.m_RSSIchannel > -1 && AuxChanVals[settings.s.m_DVchannel] > DV_PPMs[DISPLAY_RSSI])
@@ -1547,7 +1555,15 @@ void loop(){
             else
             #endif
             {
-              OSD.printInt16(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], rssiVal, 0, "db", 1, RSSIp);
+              char *suffix;
+              char DB_suffix[] = "db";
+              suffix = DB_suffix;
+              char PERC_suffix[] = "%";
+              if(settings.s.m_RSSImax > settings.s.m_RSSImin)
+              {
+                suffix = PERC_suffix;                 
+              }
+              OSD.printInt16(settings.m_OSDItems[RSSIp][0], settings.m_OSDItems[RSSIp][1], rssiVal, 0, suffix, 1, RSSIp);
             }
           }
         }

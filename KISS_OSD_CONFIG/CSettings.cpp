@@ -16,6 +16,7 @@ CSettings::CSettings(uint8_t *byteBuf)
   s.m_maxWatts = 2500;
   LoadDefaults();
   m_byteBuf = byteBuf;
+  m_lastMAH = ReadInt16_t(251, 252);
 }
 
 bool CSettings::cleanEEPROM()
@@ -129,15 +130,19 @@ void CSettings::LoadDefaults()
   s.m_timerMode = 1;
   s.m_voltCorrect = 0;
   s.m_crossHair = 0;
+  #ifdef BF32_MODE
+  s.m_RSSIchannel = 4;
+  #else
   s.m_RSSIchannel = -1;
+  #endif
   for(i=0; i<ICON_SETTINGS_SIZE; i++)
   {
     m_IconSettings[i] = 1;  
   }
   m_IconSettings[MAH_ICON] = 0;
   s.m_vTxMaxPower = 0;
-  s.m_RSSImax = -1001;
-  s.m_RSSImin = -1001;
+  s.m_RSSImax = 2000;
+  s.m_RSSImin = 2000;
   for(i=0; i<4; i++)
   {
     s.m_ESCCorrection[i] = 100;
@@ -233,14 +238,18 @@ void CSettings::LoadDefaults()
   s.m_timerMode = 1;
   s.m_voltCorrect = 0;
   s.m_crossHair = 0;
+  #ifdef BF32_MODE
+  s.m_RSSIchannel = 4; //telemetry
+  #else
   s.m_RSSIchannel = 3; //AUX4
+  #endif
   for(i=0; i<ICON_SETTINGS_SIZE; i++)
   {
     m_IconSettings[i] = 1;  
   }
   s.m_vTxMaxPower = 0;
-  s.m_RSSImax = -1001;
-  s.m_RSSImin = -1001;
+  s.m_RSSImax = 2000;
+  s.m_RSSImin = 2000;
   for(i=0; i<4; i++)
   {
     s.m_ESCCorrection[i] = 100;
@@ -315,7 +324,6 @@ void CSettings::ReadSettingsInternal(bool readFromBuf, uint8_t sizeOverride)
 
   if(!readFromBuf)
   {
-    m_lastMAH = ReadInt16_t(251, 252);
     s.m_maxWatts = ReadInt16_t(253, 254);
   }
 }
@@ -398,18 +406,24 @@ void CSettings::UpgradeFromPreviousVersion(uint8_t ver)
       s.m_AussieChannels = 0;
       #endif
     }
+    if(ver < 0x1A)
+    {
+      s.m_RSSImin = 2000;
+      s.m_RSSImax = 2000;
+    }
   }
 }
 
 void CSettings::ReadSettings(bool readFromBuf, uint8_t sizeOverride)
 {
-  m_settingVersion = 0x19;
+  m_settingVersion = 0x1A;
   uint8_t settingsVer = EEPROM.read(0x01);
   if(settingsVer < m_settingVersion && !readFromBuf) //first start of OSD - or older version
   {
     UpgradeFromPreviousVersion(settingsVer);
+    m_lastMAH = 0;
+    WriteLastMAH();
     WriteSettings(); //write defaults
-    EEPROM.update(0x01,m_settingVersion);
   }
   else
   {
@@ -444,6 +458,7 @@ void CSettings::WriteSettings(bool bufWriteOnly)
   {
     for(i=0; i<sizeof(s); i++) EEPROM.update(i+3, m_byteBuf[i]);
     WriteInt16_t(253, 254, s.m_maxWatts);
+    EEPROM.update(0x01,m_settingVersion);
   }
 }
 
@@ -481,7 +496,7 @@ void CSettings::SetupPPMs(int16_t *dv_ppms, bool all)
 
 void CSettings::UpdateMaxWatt(int16_t maxWatt)
 {
-  if(maxWatt >= s.m_maxWatts)
+  if(maxWatt > s.m_maxWatts)
   {
     s.m_maxWatts = maxWatt;
     WriteInt16_t(253, 254, s.m_maxWatts);

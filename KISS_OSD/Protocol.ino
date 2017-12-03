@@ -114,7 +114,7 @@ inline void ArmDisarmEvents()
   if (armed == 0 && current_armed > 0)
   {
     triggerCleanScreen = true;
-    armedOnce = true;
+    if(current_armed == 1) armedOnce = true;
     last_Aux_Val = AuxChanVals[settings.s.m_DVchannel];
     DV_change_time = 0;
     #ifndef KISS_OSD_CONFIG

@@ -1379,8 +1379,13 @@ void* vTxMenu()
   #endif
   
   OSD.printP(startCol, ++startRow, VTX_HIGH_POWER_STR, activeVTXMenuItem);
+  #ifdef BF32_MODE
+  if(vTxType == 4) OSD.printP(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, TRAMP_VTX_POWERS_STR[vTx_powerIDX]);
+  else OSD.printP(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, UNIFY_VTX_POWERS_STR[vTx_powerIDX]);
+  #else
   if(vTxPowerKnobChannel > -1) OSD.printP(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, KNOB_STR);
   else OSD.printInt16(startCol + strlen_P(VTX_HIGH_POWER_STR) + 1, startRow, vTxHighPower, 0, "mw", 1);
+  #endif
 
   OSD.printP( startCol, ++startRow, VTX_BAND_STR, activeVTXMenuItem );
   OSD.print( fixPStr(bandSymbols[vTxBand]) );

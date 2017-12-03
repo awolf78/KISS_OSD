@@ -110,7 +110,7 @@ class CSettings
     uint8_t m_timerMode; // 0 = reset, 1 = continuous, 2 = race timer
     int8_t m_voltCorrect;
     uint8_t m_crossHair;
-    uint8_t m_RSSIchannel; // 0-3 for AUX1-AUX4; 4 for telemetry
+    int8_t m_RSSIchannel; // 0-3 for AUX1-AUX4; 4 for telemetry
     uint8_t m_OSDItemsRSSIp[2]; // RSSI OSD item position
     uint8_t m_DISPLAY_DV_RSSI; //order of RSSI OSD item
     uint8_t m_IconSettings_[6]; // for each icon in m_IconSettings_: 0 = off, 1 = on
