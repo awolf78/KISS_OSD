@@ -98,11 +98,11 @@ unsigned long RCsplitChangeTime = 0;
 
 
 #ifdef STEELE_PDB
-static const char KISS_OSD_VER[] PROGMEM = "sean pdb v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "sean pdb v2.5";
 #elif defined(BF32_MODE)
-static const char KISS_OSD_VER[] PROGMEM = "bf32 osd v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "bf32 osd v2.5";
 #else
-static const char KISS_OSD_VER[] PROGMEM = "kiss osd v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "kiss osd v2.5";
 #endif
 
 
@@ -1137,7 +1137,15 @@ void loop(){
             OSD.printInt16P( statCol, ++middle_infos_y, MAX_TEMP_STR, MaxTemp, 0, tempSymbol);
             if(settings.s.m_RSSIchannel > -1)
             {
-              OSD.printInt16P( statCol, ++middle_infos_y, MIN_RSSI_STR, MinRSSI, 0, "db");                    
+              char *suffix;
+              char DB_suffix[] = "db";
+              suffix = DB_suffix;
+              char PERC_suffix[] = "%";
+              if(settings.s.m_RSSImax > settings.s.m_RSSImin)
+              {
+                suffix = PERC_suffix;                 
+              }
+              OSD.printInt16P( statCol, ++middle_infos_y, MIN_RSSI_STR, MinRSSI, 0, suffix);                    
             }
             OSD.printInt16( 0, 1, LipoVoltage, 2, "v");
           break;

@@ -77,11 +77,11 @@ static const int16_t BAT_MAH_INCREMENT = 50;
 #include "Config.h"
 
 #ifdef STEELE_PDB
-static const char KISS_OSD_VER[] PROGMEM = "sean pdb config v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "sean pdb config v2.5";
 #elif defined(BF32_MODE)
-static const char KISS_OSD_VER[] PROGMEM = "bf32 osd config v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "bf32 osd config v2.5";
 #else
-static const char KISS_OSD_VER[] PROGMEM = "kiss osd config v2.4.1";
+static const char KISS_OSD_VER[] PROGMEM = "kiss osd config v2.5";
 #endif
 
 #if (defined(IMPULSERC_VTX) || defined(STEELE_PDB)) && !defined(STEELE_PDB_OVERRIDE)
