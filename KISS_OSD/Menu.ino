@@ -911,12 +911,17 @@ void* TuneMenu()
           cleanScreen();
           return (void*)TPAMenu;
       break;
-      #ifdef CUSTOM_TPA 
+      #ifndef BF32_MODE 
       case 4:
+          if(DsetpointAvailable) fcSettingModeChanged[FC_DSETPOINT] |= checkCode(Dsetpoint, 10, 0, 100);
+      break;
+      #endif
+      #ifdef CUSTOM_TPA 
+      case 5:
           cleanScreen();
           return (void*)CustomTPAMenu;
       break;        
-      case 5:
+      case 6:
       #elif defined(BF32_MODE)
       case 4:
           pidProfileChanged |= checkCode(pidProfile, 1, 0, 2);
@@ -934,7 +939,7 @@ void* TuneMenu()
       break;
       case 7:
       #else
-      case 4:
+      case 5:
       #endif
           cleanScreen();
           activeTuneMenuItem = 0;
@@ -944,11 +949,11 @@ void* TuneMenu()
   }
 
   #if defined(CUSTOM_TPA)
-  static const uint8_t TUNE_MENU_ITEMS = 6;
+  static const uint8_t TUNE_MENU_ITEMS = 7;
   #elif defined(BF32_MODE)
   static const uint8_t TUNE_MENU_ITEMS = 8;
   #else
-  static const uint8_t TUNE_MENU_ITEMS = 5;
+  static const uint8_t TUNE_MENU_ITEMS = 6;
   #endif
   activeTuneMenuItem = checkMenuItem(activeTuneMenuItem, TUNE_MENU_ITEMS);
   
@@ -956,12 +961,13 @@ void* TuneMenu()
 //static const char PITCH_STR[] PROGMEM =       "pitch";
 //static const char YAW_STR[] PROGMEM =         "yaw";
   static const char TPA_STR[] PROGMEM =         "tpa";
+  static const char SETPOINT_WEIGHT_STR[] PROGMEM = "setpoint wt:";
   #ifdef CUSTOM_TPA
   static const char CUSTOM_TPA_STR[] PROGMEM =  "custom tpa";
   #endif
   #ifdef BF32_MODE
   static const char PID_PROFILE_STR[] PROGMEM =     "pid profile:";
-  static const char SETPOINT_WEIGHT_STR[] PROGMEM = "setpoint wt:";
+//static const char SETPOINT_WEIGHT_STR[] PROGMEM = "setpoint wt:";
   static const char SETPOINT_TRANS_STR[] PROGMEM =  "setpoint tr:";
   #endif  
 //static const char BACK_STR[] PROGMEM =        "back";
@@ -972,7 +978,7 @@ void* TuneMenu()
   #elif defined(BF32_MODE)
   uint8_t startCol = settings.COLS/2 - (strlen_P(SETPOINT_WEIGHT_STR)+4)/2;
   #else
-  uint8_t startCol = settings.COLS/2 - strlen_P(PITCH_STR)/2;
+  uint8_t startCol = settings.COLS/2 - strlen_P(SETPOINT_WEIGHT_STR)/2;
   #endif
   static const char TUNE_MENU_TITLE_STR[] PROGMEM = "tune menu";
   OSD.printP(settings.COLS/2 - strlen_P(TUNE_MENU_TITLE_STR)/2, ++startRow, TUNE_MENU_TITLE_STR);
@@ -981,6 +987,9 @@ void* TuneMenu()
   OSD.printP( startCol, ++startRow, PITCH_STR, activeTuneMenuItem);
   OSD.printP( startCol, ++startRow, YAW_STR, activeTuneMenuItem);
   OSD.printP( startCol, ++startRow, TPA_STR, activeTuneMenuItem);
+  #ifndef BF32_MODE 
+  OSD.printIntArrow( startCol, ++startRow, SETPOINT_WEIGHT_STR, Dsetpoint, 0, activeTuneMenuItem, "%", 1);
+  #endif
   #ifdef CUSTOM_TPA
   OSD.printP( startCol, ++startRow, CUSTOM_TPA_STR, activeTuneMenuItem);  
   #endif

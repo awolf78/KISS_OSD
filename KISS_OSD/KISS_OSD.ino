@@ -98,7 +98,7 @@ unsigned long RCsplitChangeTime = 0;
 
 
 #ifdef STEELE_PDB
-static const char KISS_OSD_VER[] PROGMEM = "sean pdb v2.5";
+static const char KISS_OSD_VER[] PROGMEM = "steele pdb v2.5";
 #elif defined(BF32_MODE)
 static const char KISS_OSD_VER[] PROGMEM = "bf32 osd v2.5";
 #else
@@ -355,6 +355,9 @@ struct _FC_TPA
   uint8_t ctpa_bp2;
   uint8_t ctpa_infl[4];
 } fc_tpa;
+
+static bool DsetpointAvailable = false;
+static uint8_t Dsetpoint = 0;
 #endif
 static uint16_t rcrate[3], rate[3], rccurve[3];
 static uint16_t rcrate_roll, rate_roll, rccurve_roll, rcrate_pitch, rate_pitch, rccurve_pitch, rcrate_yaw, rate_yaw, rccurve_yaw;
@@ -442,13 +445,14 @@ enum _SETTING_MODES
   FC_PIDS, 
   FC_VTX, 
   FC_FILTERS,
-  FC_TPA
+  FC_TPA,
+  FC_DSETPOINT
 };
 static const unsigned long minLoop = 10000;
-static const uint8_t MAX_SETTING_MODES = 6;
-static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x30, 0x4D, 0x43, 0x45, 0x47, 0x4B }; 
-static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x10, 0x4E, 0x44, 0x46, 0x48, 0x4C };
-static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false };
+static const uint8_t MAX_SETTING_MODES = 7;
+static const uint8_t getSettingModes[MAX_SETTING_MODES] = { 0x30, 0x4D, 0x43, 0x45, 0x47, 0x4B, 0x52 }; 
+static const uint8_t setSettingModes[MAX_SETTING_MODES] = { 0x10, 0x4E, 0x44, 0x46, 0x48, 0x4C, 0x53 };
+static bool fcSettingModeChanged[MAX_SETTING_MODES] = { false, false, false, false, false, false, false };
 #endif
 static uint8_t settingMode = 0;
 
@@ -590,8 +594,9 @@ void loop(){
       }
       #endif
       ReadFCSettings(fcSettingChanged, settingMode);
-      if(!fcSettingsReceived) fcNotConnectedCount++;
-      else fcNotConnectedCount = 0;
+      if(!fcSettingsReceived && settingMode == 6) fcSettingsReceived = true; // override if D setpoint is not available
+      else if(!fcSettingsReceived) fcNotConnectedCount++;
+           else fcNotConnectedCount = 0;
       if(fcSettingsReceived && settingMode < MAX_SETTING_MODES)
       {
         settingMode++;

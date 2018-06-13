@@ -529,6 +529,10 @@ void ReadFCSettings(boolean skipValues, uint8_t sMode)
                 fc_tpa.tpa[i] = (uint16_t)((uint16_t)fc_tpa.tpa[i] >> 8) | ((uint16_t)fc_tpa.tpa[i] << 8);
               }
               break;
+            case FC_DSETPOINT:
+              DsetpointAvailable = true;
+              Dsetpoint = serialBuf[STARTCOUNT];
+              break;
           }
         }
         fcSettingsReceived = true;
@@ -613,6 +617,9 @@ void SendFCSettings(uint8_t sMode)
         serialBuf[STARTCOUNT + i + index] = (byte)fc_tpa.ctpa_infl[i];
       }
       index += 4;
+      break;
+    case FC_DSETPOINT:
+      serialBuf[STARTCOUNT + index++] = Dsetpoint;
       break;
   }
 
