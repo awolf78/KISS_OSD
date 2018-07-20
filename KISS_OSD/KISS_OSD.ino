@@ -98,11 +98,11 @@ unsigned long RCsplitChangeTime = 0;
 
 
 #ifdef STEELE_PDB
-static const char KISS_OSD_VER[] PROGMEM = "steele pdb v2.5";
+static const char KISS_OSD_VER[] PROGMEM = "steele pdb v2.5.1";
 #elif defined(BF32_MODE)
 static const char KISS_OSD_VER[] PROGMEM = "bf32 osd v2.5";
 #else
-static const char KISS_OSD_VER[] PROGMEM = "kiss osd v2.5";
+static const char KISS_OSD_VER[] PROGMEM = "kiss osd v2.5.1";
 #endif
 
 
