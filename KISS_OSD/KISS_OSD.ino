@@ -129,16 +129,17 @@ static uint8_t oldvTxChannel = 0;
 static uint8_t oldvTxBand = 0;
 static uint8_t vTxBand = 0;
 static uint16_t vTxLowPower, vTxHighPower, oldvTxLowPower, oldvTxHighPower;
-const uint8_t VTX_BAND_COUNT = 5;
+const uint8_t VTX_BAND_COUNT = 6;
 const uint8_t VTX_CHANNEL_COUNT = 8;
 static const uint16_t vtx_frequencies[VTX_BAND_COUNT][VTX_CHANNEL_COUNT] PROGMEM = {
     { 5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725 }, //A
     { 5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866 }, //B
     { 5705, 5685, 5665, 5645, 5885, 5905, 5925, 5945 }, //E
     { 5740, 5760, 5780, 5800, 5820, 5840, 5860, 5880 }, //F
-    { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }  //R
+    { 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917 }, //R
+    { 5362, 5399, 5436, 5473, 5510, 5547, 5584, 5621 }  //L
   };
-static const char bandSymbols[VTX_BAND_COUNT][2] PROGMEM = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}};
+static const char bandSymbols[VTX_BAND_COUNT][2] PROGMEM = { {'a',0x00} , {'b', 0x00}, {'e', 0x00}, {'f', 0x00}, {'r', 0x00}, {'l', 0x00}};
 
 #ifdef IMPULSERC_VTX
 static uint8_t vTxPower, vTxMinPower;

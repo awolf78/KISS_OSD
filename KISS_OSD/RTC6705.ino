@@ -73,7 +73,7 @@ void vtx_set_frequency(uint8_t band, uint8_t channel)
   uint16_t A = 0;
   uint32_t data0 = 0;
   uint8_t i = 0;
-  if (frequency <5956 && frequency> 5644)
+  if (frequency <5956 && frequency> 5361)
   {
     data0 = (1 << 4) |  (400 << 5);
 
